@@ -1,0 +1,15 @@
+module.exports = {
+  PORT: process.env.PORT || 5000,
+  JWT_SECRET: process.env.JWT_SECRET || 'change-this-admin-secret',
+  ADMIN_USERNAME: process.env.ADMIN_USERNAME || 'Treesadhi',
+  ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || 'TREESADHI2175',
+  RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID,
+  RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET,
+  UPI_ID: process.env.UPI_ID,
+  UPI_PASSWORD: process.env.UPI_PASSWORD,
+  DB_USER: process.env.DB_USER,
+  DB_HOST: process.env.DB_HOST,
+  DB_NAME: process.env.DB_NAME,
+  DB_PASSWORD: process.env.DB_PASSWORD,
+  DB_PORT: process.env.DB_PORT,
+};
