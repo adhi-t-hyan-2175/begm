@@ -1,8 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { supabase, isSupabaseReady, getBy, insertRow, updateWhere, getAll } from '../services/supabase';
+import { supabase, isSupabaseReady, getBy, updateWhere, getAll } from '../services/supabase';
 
 const AuthContext = createContext();
 export const useAuth = () => useContext(AuthContext);
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 // ─── VIP level helpers ────────────────────────────────────────────────────────
 export const getVipLevel = (totalRecharge = 0) => {
@@ -13,182 +15,134 @@ export const getVipLevel = (totalRecharge = 0) => {
   return                              { name: 'Bronze',  emoji: '🥉', color: '#b45309', bg: 'linear-gradient(135deg,#d97706,#b45309)',  min: 0      };
 };
 
-// ─── Simple in-memory password hash (no bcrypt on frontend) ──────────────────
-// We store the raw password in localStorage for offline mode and bcrypt hash in Supabase.
-// In a production app you'd hash only on the backend.
-const hashPassword = (pw) => btoa(encodeURIComponent(pw)); // base64 for localStorage fallback
-const checkPassword = (pw, hash) => hash === btoa(encodeURIComponent(pw));
+// ─── Ensure a user profile + wallet row exists after OAuth login ──────────────
+async function upsertProfile(session) {
+  const { user: authUser } = session;
+  if (!authUser) return null;
 
-// ─── localStorage helpers (offline / fallback mode) ──────────────────────────
-const LS_USERS = 'gambb_all_users';
-const LS_USER  = 'gambb_current_user';
-
-function lsGetUsers() {
-  try { return JSON.parse(localStorage.getItem(LS_USERS)) || []; } catch { return []; }
-}
-function lsSaveUsers(users) {
-  localStorage.setItem(LS_USERS, JSON.stringify(users));
-}
-function lsGetCurrentUser() {
-  try { return JSON.parse(localStorage.getItem(LS_USER)); } catch { return null; }
-}
-function lsSaveCurrentUser(user) {
-  if (user) localStorage.setItem(LS_USER, JSON.stringify(user));
-  else localStorage.removeItem(LS_USER);
-}
-
-// ─── Seed default admin if no users exist (offline mode) ─────────────────────
-function seedOfflineAdmin() {
-  const users = lsGetUsers();
-  if (!users.find(u => u.id === 7777)) {
-    const admin = {
-      id: 7777, phone: '8750743836', password_hash: hashPassword('password123'),
-      nickname: 'Admin', vip_level: 'Bronze', status: 'Active',
-      total_recharge: 0, created_at: new Date().toISOString()
-    };
-    lsSaveUsers([admin, {
-      id: 7778, phone: '9876543210', password_hash: hashPassword('password123'),
-      nickname: 'TestUser', vip_level: 'Bronze', status: 'Active',
-      total_recharge: 500, created_at: new Date().toISOString()
-    }]);
+  try {
+    // Call backend to upsert profile (creates row if not exists, returns it)
+    const res = await fetch(`${API_URL}/api/auth/upsert-profile`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+    });
+    const data = await res.json();
+    if (data.success) return data.user;
+  } catch (err) {
+    console.warn('[upsertProfile] Backend unavailable, using Supabase directly:', err.message);
   }
+
+  // Fallback: directly upsert in Supabase if backend is down
+  const email = authUser.email;
+  const nickname = authUser.user_metadata?.full_name || email?.split('@')[0] || 'Player';
+
+  // Check if profile already exists
+  const { data: existing } = await supabase
+    .from('users')
+    .select('*')
+    .eq('email', email)
+    .maybeSingle();
+
+  if (existing) {
+    // Fetch wallet too
+    const { data: wallet } = await supabase
+      .from('wallets')
+      .select('*')
+      .eq('user_id', existing.id)
+      .maybeSingle();
+    return { ...existing, main_balance: wallet?.main_balance || 0, bonus_balance: wallet?.bonus_balance || 0 };
+  }
+
+  // Insert new profile
+  const { data: newUser, error } = await supabase
+    .from('users')
+    .insert({
+      email,
+      google_id: authUser.id,
+      nickname,
+      vip_level: 'Bronze',
+      status: 'Active',
+      role: 'user',
+      total_recharge: 0,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('[upsertProfile] Failed to create user profile:', error.message);
+    return null;
+  }
+
+  // Create wallet for the new user
+  await supabase.from('wallets').insert({
+    user_id: newUser.id,
+    main_balance: 0,
+    bonus_balance: 0,
+  });
+
+  return { ...newUser, main_balance: 0, bonus_balance: 0 };
 }
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(lsGetCurrentUser);
-  const [allUsers, setAllUsers] = useState(lsGetUsers);
+  const [user, setUser] = useState(null);
+  const [allUsers, setAllUsers] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // On mount: seed offline admin + try to hydrate from Supabase
+  // On mount: subscribe to Supabase auth state changes
   useEffect(() => {
-    seedOfflineAdmin();
-
-    const fetchMe = async () => {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        setLoading(false);
-        return;
+    // Get initial session
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session) {
+        const profile = await upsertProfile(session);
+        setUser(profile);
+        // Store access_token so backend API calls can use it
+        localStorage.setItem('token', session.access_token);
       }
-      try {
-        const res = await fetch('http://localhost:5000/api/auth/me', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const data = await res.json();
-        if (data.success) {
-          setUser(data.user);
-          lsSaveCurrentUser(data.user);
-        } else {
-          localStorage.removeItem('token');
-          setUser(null);
-        }
-      } catch (err) {
-        console.warn('[Auth] Hydration failed:', err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
+      setLoading(false);
+    });
 
-    fetchMe();
+    // Listen for auth state changes (login, logout, token refresh)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        const profile = await upsertProfile(session);
+        setUser(profile);
+        localStorage.setItem('token', session.access_token);
+      } else if (event === 'TOKEN_REFRESHED' && session) {
+        // Update token in localStorage silently
+        localStorage.setItem('token', session.access_token);
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+        localStorage.removeItem('token');
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  // Keep localStorage in sync whenever allUsers changes
-  useEffect(() => { lsSaveUsers(allUsers); }, [allUsers]);
-  useEffect(() => { lsSaveCurrentUser(user); }, [user]);
-
-  // ── Send OTP ──────────────────────────────────────────────────────────────────
-  const sendOtp = useCallback(async (phone) => {
-    try {
-      const res = await fetch('http://localhost:5000/api/auth/send-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone })
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Failed to send OTP');
-      }
-      return data;
-    } catch (err) {
-      console.error('[SendOTP]', err);
-      throw err;
+  // ── Sign in with Google ───────────────────────────────────────────────────────
+  const signInWithGoogle = useCallback(async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin,
+      },
+    });
+    if (error) {
+      console.error('[signInWithGoogle]', error.message);
+      throw new Error(error.message || 'Google sign-in failed');
     }
   }, []);
 
-  // ── Register ─────────────────────────────────────────────────────────────────
-  const registerUser = useCallback(async (phone, password, otp, nickname = 'Player', inviteCode = '') => {
-    try {
-      const res = await fetch('http://localhost:5000/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, password, otp, nickname, inviteCode })
-      });
-      const data = await res.json();
-      
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Registration failed');
-      }
-
-      localStorage.setItem('token', data.token);
-      setUser(data.user);
-      lsSaveCurrentUser(data.user);
-      return data.user;
-    } catch (err) {
-      console.error('[Register]', err);
-      throw err;
-    }
-  }, []);
-
-  // ── Login ─────────────────────────────────────────────────────────────────────
-  const loginUser = useCallback(async (phone, password) => {
-    try {
-      const res = await fetch('http://localhost:5000/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, password })
-      });
-      const data = await res.json();
-      
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Login failed');
-      }
-
-      localStorage.setItem('token', data.token);
-      setUser(data.user);
-      lsSaveCurrentUser(data.user);
-      return data.user;
-    } catch (err) {
-      console.error('[Login]', err);
-      throw err;
-    }
-  }, []);
-
-  // ── Logout ────────────────────────────────────────────────────────────────────
-  const logout = useCallback(() => {
-    localStorage.removeItem('token');
+  // ── Sign out ──────────────────────────────────────────────────────────────────
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    lsSaveCurrentUser(null);
+    localStorage.removeItem('token');
   }, []);
-
-  // ── Update password ───────────────────────────────────────────────────────────
-  const updatePassword = useCallback(async (oldPass, newPass) => {
-    if (!user) throw new Error('Not logged in');
-    if (!checkPassword(oldPass, user.password_hash)) throw new Error('Old password is incorrect');
-    const newHash = hashPassword(newPass);
-    const updated = { ...user, password_hash: newHash };
-
-    if (isSupabaseReady()) {
-      try {
-        await updateWhere('users', 'id', user.id, { password_hash: newHash });
-      } catch (err) {
-        console.warn('[UpdatePassword] Supabase failed:', err.message);
-      }
-    }
-
-    setUser(updated);
-    setAllUsers(prev => prev.map(u => u.id === user.id ? updated : u));
-    return true;
-  }, [user]);
 
   // ── updateUserRecharge — called when a recharge is approved ──────────────────
   const updateUserRecharge = useCallback(async (userId, amount) => {
@@ -220,7 +174,6 @@ export const AuthProvider = ({ children }) => {
     if (!isSupabaseReady()) return;
     try {
       const dbUsers = await getAll('users', null, 'created_at');
-      lsSaveUsers(dbUsers);
       setAllUsers(dbUsers);
     } catch (err) {
       console.warn('[refreshAllUsers] Supabase failed:', err.message);
@@ -240,11 +193,8 @@ export const AuthProvider = ({ children }) => {
       user, setUser,
       allUsers, setAllUsers,
       loading,
-      registerUser,
-      sendOtp,
-      loginUser,
+      signInWithGoogle,
       logout,
-      updatePassword,
       updateUserRecharge,
       refreshAllUsers,
       setUserStatus,

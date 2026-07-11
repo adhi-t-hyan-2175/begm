@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Route, Routes, useLocation, Navigate } from 'r
 import BottomNav from './components/BottomNav';
 import Home from './pages/Home';
 import Login from './pages/Login';
-import Register from './pages/Register';
 import Wallet from './pages/Wallet';
 import Profile from './pages/Profile';
 import FastParity from './pages/FastParity';
@@ -26,7 +25,7 @@ import Leaderboard from './pages/Leaderboard';
 import { WalletProvider } from './contexts/WalletContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
-const PUBLIC_PATHS = ['/login', '/register'];
+const PUBLIC_PATHS = ['/login'];
 
 // Protect routes — if not logged in, go to /login
 const ProtectedRoute = ({ children }) => {
@@ -53,7 +52,7 @@ const App = () => {
 const MainApp = () => {
   const location = useLocation();
   const { user } = useAuth();
-  const hideBottomNav = ['/login', '/register', '/treesadhi', '/topup', '/leaderboard'].includes(location.pathname);
+  const hideBottomNav = ['/login', '/treesadhi', '/topup', '/leaderboard'].includes(location.pathname);
 
   return (
     <div className="app-wrapper">
@@ -61,7 +60,7 @@ const MainApp = () => {
         <Routes>
           {/* Public routes */}
           <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
-          <Route path="/register" element={user ? <Navigate to="/" replace /> : <Register />} />
+          <Route path="/register" element={<Navigate to="/login" replace />} />
           <Route path="/treesadhi" element={<Admin />} />
 
           {/* Protected routes */}

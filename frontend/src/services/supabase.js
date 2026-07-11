@@ -14,7 +14,11 @@ export const supabase = createClient(
   supabaseUrl || 'https://placeholder.supabase.co',
   supabaseAnonKey || 'placeholder',
   {
-    auth: { persistSession: false }, // We handle our own auth
+    auth: {
+      persistSession: true,       // Let Supabase manage the Google OAuth session
+      autoRefreshToken: true,     // Auto-refresh tokens before they expire
+      detectSessionInUrl: true,   // Pick up the OAuth callback hash from the URL
+    },
     global: { headers: { 'x-app-name': 'gambb-platform' } },
   }
 );

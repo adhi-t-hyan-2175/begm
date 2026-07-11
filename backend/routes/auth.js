@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { login, register, me, sendOtp } = require('../controllers/auth');
+const { me, upsertProfile } = require('../controllers/auth');
 
-router.post('/register', register);
-router.post('/login', login);
+// Called after Google OAuth to create/retrieve the user profile
+router.post('/upsert-profile', upsertProfile);
+
+// Get current user info from Supabase JWT
 router.get('/me', me);
-router.post('/send-otp', sendOtp);
 
 module.exports = router;
