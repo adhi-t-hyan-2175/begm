@@ -1,7 +1,7 @@
-# ─── Supabase Database Migration ──────────────────────────────────────────────
-# Run these SQL statements in Supabase Dashboard → SQL Editor
-# in order, top to bottom.
-# ─────────────────────────────────────────────────────────────────────────────
+-- ─── Supabase Database Migration ──────────────────────────────────────────────
+-- Run these SQL statements in Supabase Dashboard → SQL Editor
+-- in order, top to bottom.
+-- ─────────────────────────────────────────────────────────────────────────────
 
 -- 1. Add Google OAuth fields to users table
 ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT UNIQUE;
@@ -63,7 +63,7 @@ CREATE INDEX IF NOT EXISTS idx_wallets_user_id ON wallets(user_id);
 -- 8. ADMIN BOOTSTRAP — Change the email to YOUR Google email before running
 -- This makes the first Google OAuth login with this email get admin role.
 -- After running this, your next Google login will automatically have admin access.
-UPDATE users SET role = 'admin' WHERE email = 'your_admin_email@gmail.com';
+UPDATE users SET role = 'admin' WHERE email = 'adithyan3847@gmail.com';
 -- If no row is updated, it means you haven't logged in yet with Google.
 -- That's fine — the backend ADMIN_EMAIL env var handles this automatically on first login.
 
@@ -74,8 +74,12 @@ ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bets ENABLE ROW LEVEL SECURITY;
 
 -- Allow users to read only their own wallet
-CREATE POLICY IF NOT EXISTS "Users see own wallet"
-  ON wallets FOR SELECT USING (auth.uid()::TEXT = user_id::TEXT);
+DROP POLICY IF EXISTS "Users see own wallet" ON wallets;
+
+CREATE POLICY "Users see own wallet"
+ON wallets
+FOR SELECT
+USING (auth.uid()::TEXT = user_id::TEXT);
 
 -- Allow backend service role to bypass RLS (already true for service_role key)
 
