@@ -26,10 +26,11 @@ const Profile = () => {
     return null;
   }
 
-  const totalRecharge = user.totalRecharge || 0;
+  const totalRecharge = user.total_recharge || user.totalRecharge || 0;
   const vip = getVipLevel(totalRecharge);
-  const bonusBalance = user.bonusBalance || 0;
-  const referralLink = `http://localhost:3000/register?ref=${user.id}`;
+  const bonusBalance = user.bonus_balance || user.bonusBalance || 0;
+  const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
+  const referralLink = `${appUrl}/register?ref=${user.id}`;
 
   // Next tier
   const nextTierIndex = VIP_TIERS.findIndex(t => t.name === vip.name) + 1;
@@ -63,7 +64,7 @@ const Profile = () => {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: '1.2rem', fontWeight: '800', color: '#24324a' }}>{user.nickname}</div>
           <div style={{ fontSize: '0.85rem', color: '#64748b' }}>ID: {user.id}</div>
-          <div style={{ fontSize: '0.85rem', color: '#64748b' }}>{user.phone}</div>
+          <div style={{ fontSize: '0.85rem', color: '#64748b' }}>{user.email}</div>
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
           <div style={{ fontSize: '0.75rem', color: vip.color, fontWeight: '700', marginBottom: 2 }}>VIP</div>

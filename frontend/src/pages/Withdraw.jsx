@@ -57,7 +57,7 @@ const Withdraw = () => {
       else alert('Please enter a valid amount');
       return;
     }
-    requestWithdrawal(user.id, user.phone, numAmount, `${name} - ${upiId}`);
+    requestWithdrawal(user.id, user.email || '', numAmount, `${name} - ${upiId}`);
     setAmount('');
     setSubmitted(true);
     setTimeout(() => setSubmitted(false), 4000);

@@ -10,7 +10,9 @@ const {
   rejectWithdrawal,
   getUserTransactions,
   setUserStatus,
+  getStats,
 } = require('../controllers/admin');
+
 
 // Apply verifyAdmin middleware to all routes in this file
 router.use(verifyAdmin);
@@ -31,4 +33,8 @@ router.post('/reject-withdrawal', rejectWithdrawal);
 // History
 router.get('/transactions/:userId', getUserTransactions);
 
+// Stats dashboard
+router.get('/stats', getStats);
+
 module.exports = router;
+

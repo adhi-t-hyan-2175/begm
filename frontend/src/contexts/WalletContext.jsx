@@ -2,6 +2,9 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { useAuth } from './AuthContext';
 import { supabase, isSupabaseReady, getBy, insertRow, updateWhere, getAll } from '../services/supabase';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY || '';
+
 const WalletContext = createContext();
 
 export const useWallet = () => useContext(WalletContext);
@@ -317,7 +320,7 @@ export const WalletProvider = ({ children }) => {
         if (!resLoaded) throw new Error("Failed to load Razorpay SDK");
 
         // Create Order
-        const orderRes = await fetch('http://localhost:5000/api/wallet/create-order', {
+        const orderRes = await fetch(`${API_URL}/api/wallet/create-order`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ amount })
@@ -326,15 +329,15 @@ export const WalletProvider = ({ children }) => {
         if (!orderRes.ok) throw new Error(orderData.message || 'Order creation failed');
 
         const options = {
-          key: "YOUR_RAZORPAY_KEY", // Note: The backend should ideally return the key_id
-          amount: orderData.amount,
-          currency: orderData.currency,
+          key: orderData.order?.key_id || RAZORPAY_KEY,
+          amount: orderData.order?.amount || amount * 100,
+          currency: orderData.order?.currency || 'INR',
           name: "FastWin",
           description: "Wallet Recharge",
-          order_id: orderData.id,
+          order_id: orderData.order?.id || orderData.id,
           handler: async function (response) {
             // Verify Payment
-            const verifyRes = await fetch('http://localhost:5000/api/wallet/verify-payment', {
+            const verifyRes = await fetch(`${API_URL}/api/wallet/verify-payment`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
               body: JSON.stringify({
@@ -397,7 +400,7 @@ export const WalletProvider = ({ children }) => {
   const approveRecharge = async (requestId) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/admin/approve-recharge', {
+      const res = await fetch(`${API_URL}/api/admin/approve-recharge`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ requestId })
@@ -534,7 +537,7 @@ export const WalletProvider = ({ children }) => {
   const approveWithdrawal = async (requestId) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/admin/approve-withdrawal', {
+      const res = await fetch(`${API_URL}/api/admin/approve-withdrawal`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ requestId })
@@ -554,7 +557,7 @@ export const WalletProvider = ({ children }) => {
   const rejectWithdrawal = async (requestId) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/admin/reject-withdrawal', {
+      const res = await fetch(`${API_URL}/api/admin/reject-withdrawal`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ requestId })

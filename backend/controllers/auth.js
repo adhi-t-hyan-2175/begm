@@ -45,6 +45,10 @@ exports.upsertProfile = async (req, res) => {
     let profile = existing;
 
     if (!profile) {
+      // Auto-assign admin role if email matches ADMIN_EMAIL env var
+      const adminEmail = process.env.ADMIN_EMAIL;
+      const role = (adminEmail && email === adminEmail) ? 'admin' : 'user';
+
       // Create new profile
       const { data: newUser, error: insertErr } = await supabase
         .from('users')
@@ -54,7 +58,7 @@ exports.upsertProfile = async (req, res) => {
           nickname,
           vip_level: 'Bronze',
           status: 'Active',
-          role: 'user',
+          role,
           total_recharge: 0,
         })
         .select()
