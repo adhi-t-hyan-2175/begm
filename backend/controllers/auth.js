@@ -35,6 +35,10 @@ exports.upsertProfile = async (req, res) => {
                      email?.split('@')[0] ||
                      'Player';
 
+    // Auto-assign admin role if email matches ADMIN_EMAIL env var
+    const adminEmail = process.env.ADMIN_EMAIL;
+    const computedRole = (adminEmail && email === adminEmail) ? 'admin' : 'user';
+
     // Check if profile already exists
     const { data: existing } = await supabase
       .from('users')
@@ -42,13 +46,9 @@ exports.upsertProfile = async (req, res) => {
       .eq('email', email)
       .maybeSingle();
 
-    let profile = existing;
+    let profile;
 
-    if (!profile) {
-      // Auto-assign admin role if email matches ADMIN_EMAIL env var
-      const adminEmail = process.env.ADMIN_EMAIL;
-      const role = (adminEmail && email === adminEmail) ? 'admin' : 'user';
-
+    if (!existing) {
       // Create new profile
       const { data: newUser, error: insertErr } = await supabase
         .from('users')
@@ -58,7 +58,7 @@ exports.upsertProfile = async (req, res) => {
           nickname,
           vip_level: 'Bronze',
           status: 'Active',
-          role,
+          role: computedRole,
           total_recharge: 0,
         })
         .select()
@@ -73,9 +73,46 @@ exports.upsertProfile = async (req, res) => {
         main_balance: 0,
         bonus_balance: 0,
       });
+    } else {
+      // Update existing profile (sync nickname, email, google_id, and check role)
+      const updates = {
+        nickname,
+        google_id: googleId,
+        email,
+      };
+      
+      // Upgrade to admin if necessary, but don't demote existing admins
+      if (computedRole === 'admin' && existing.role !== 'admin') {
+        updates.role = 'admin';
+      }
+
+      const { data: updatedUser, error: updateErr } = await supabase
+        .from('users')
+        .update(updates)
+        .eq('id', existing.id)
+        .select()
+        .single();
+
+      if (updateErr) throw updateErr;
+      profile = updatedUser;
+
+      // Ensure wallet exists just in case
+      const { data: walletExists } = await supabase
+        .from('wallets')
+        .select('id')
+        .eq('user_id', profile.id)
+        .maybeSingle();
+        
+      if (!walletExists) {
+        await supabase.from('wallets').insert({
+          user_id: profile.id,
+          main_balance: 0,
+          bonus_balance: 0,
+        });
+      }
     }
 
-    // Fetch wallet
+    // Fetch final wallet state
     const { data: wallet } = await supabase
       .from('wallets')
       .select('*')
