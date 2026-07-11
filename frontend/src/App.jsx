@@ -30,6 +30,7 @@ const PUBLIC_PATHS = ['/login'];
 const ProtectedRoute = ({ children }) => {
   const { user } = useAuth();
   const location = useLocation();
+
   if (!user && !PUBLIC_PATHS.includes(location.pathname)) {
     return <Navigate to="/login" replace />;
   }
@@ -50,8 +51,19 @@ const App = () => {
 
 const MainApp = () => {
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const hideBottomNav = ['/login', '/treesadhi', '/leaderboard'].includes(location.pathname);
+
+  // If auth is still initializing, show a full-screen loading spinner
+  // This ensures a smooth redirect to Home after Google Auth completes.
+  if (loading) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#080808' }}>
+        <div style={{ width: 40, height: 40, border: '3px solid rgba(255,255,255,0.1)', borderTopColor: '#C8A96E', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
 
   return (
     <div className="app-wrapper">
