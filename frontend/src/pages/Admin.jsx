@@ -842,7 +842,8 @@ const Admin = () => {
                     <button className="admin-btn danger" onClick={() => rejectWithdrawal(request.id)}>Reject</button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
