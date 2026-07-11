@@ -791,7 +791,7 @@ const Admin = () => {
                 return (
                 <div key={request.id} className="admin-request-row">
                   <div>
-                    <strong>Player ID #{request.userId}</strong>
+                    <strong>Player ID #{playerData ? (playerData.player_id || request.userId) : request.userId}</strong>
                     {playerData && <span style={{ marginLeft: 8, fontSize: '0.8rem', color: '#94a3b8' }}>({playerData.nickname} • {playerData.vipLevel || 'Bronze'})</span>}
                     {isFirstRecharge && <span style={{ marginLeft: 8, fontSize: '0.75rem', background: '#10b981', color: 'white', borderRadius: 999, padding: '2px 7px' }}>🌟 First Recharge (+10%)</span>}
                     <p>Amount: ₹{request.amount} • {new Date(request.timestamp).toLocaleString()}</p>
@@ -823,10 +823,12 @@ const Admin = () => {
             <p className="admin-empty">No withdrawals awaiting action.</p>
           ) : (
             <div className="admin-list-stack">
-              {pendingWithdrawals.map((request) => (
+              {pendingWithdrawals.map((request) => {
+                const playerData = allUsers.find(u => u.id.toString() === request.userId?.toString());
+                return (
                 <div key={request.id} className="admin-request-row">
                   <div>
-                    <strong>{request.userId} • {request.phone}</strong>
+                    <strong>Player ID #{playerData ? (playerData.player_id || request.userId) : request.userId}</strong>
                     <p>UPI: {request.upiId} • Amount ₹{request.amount}</p>
                     <p>Status: {request.status || 'pending'}</p>
                   </div>

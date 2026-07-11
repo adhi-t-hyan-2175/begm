@@ -3,11 +3,14 @@
 -- in order, top to bottom.
 -- ─────────────────────────────────────────────────────────────────────────────
 
--- 1. Add Google OAuth fields to users table and relax old constraints
+-- 1. Add Google OAuth fields and Player ID to users table
 ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT UNIQUE;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id TEXT UNIQUE;
 ALTER TABLE users ALTER COLUMN phone DROP NOT NULL;
 ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;
+
+CREATE SEQUENCE IF NOT EXISTS player_id_seq START 7778;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS player_id BIGINT DEFAULT nextval('player_id_seq') UNIQUE;
 
 -- 2. Add idempotency field to transactions (prevents Razorpay replay attacks)
 ALTER TABLE transactions ADD COLUMN IF NOT EXISTS razorpay_payment_id TEXT UNIQUE;
@@ -106,3 +109,10 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- 8. Add Performance Indexes
+CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON transactions(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_bets_user_id ON bets(user_id);
+CREATE INDEX IF NOT EXISTS idx_bets_created_at ON bets(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_recharge_requests_status ON recharge_requests(status);
+CREATE INDEX IF NOT EXISTS idx_withdrawal_requests_status ON withdrawal_requests(status);

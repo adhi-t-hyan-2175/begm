@@ -332,7 +332,7 @@ export const WalletProvider = ({ children }) => {
           key: orderData.order?.key_id || RAZORPAY_KEY,
           amount: orderData.order?.amount || amount * 100,
           currency: orderData.order?.currency || 'INR',
-          name: "FastWin",
+          name: "BETX",
           description: "Wallet Recharge",
           order_id: orderData.order?.id || orderData.id,
           handler: async function (response) {

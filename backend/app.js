@@ -49,7 +49,7 @@ app.use('/api/wallet/verify-payment', paymentLimiter);
 
 // ─── Health check ─────────────────────────────────────────────────────────────
 app.get('/', (req, res) => {
-  res.json({ message: 'Gambling Platform API is running', status: 'ok', timestamp: new Date().toISOString() });
+  res.json({ message: 'BETX API is running', status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // ─── Routes ───────────────────────────────────────────────────────────────────

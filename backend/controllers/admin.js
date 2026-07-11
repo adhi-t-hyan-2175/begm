@@ -40,7 +40,7 @@ exports.getAllUsers = async (req, res) => {
     const { data: users, error } = await supabase
       .from('users')
       .select(`
-        id, email, nickname, vip_level, status, role, total_recharge, created_at,
+        id, player_id, email, nickname, vip_level, status, role, total_recharge, created_at,
         wallets ( main_balance, bonus_balance )
       `)
       .order('created_at', { ascending: false });
@@ -49,6 +49,7 @@ exports.getAllUsers = async (req, res) => {
 
     const mapped = users.map(u => ({
       id: u.id,
+      player_id: u.player_id,
       email: u.email,
       nickname: u.nickname,
       vip_level: u.vip_level,
@@ -87,14 +88,19 @@ exports.approveRecharge = async (req, res) => {
   try {
     const { requestId } = req.body;
 
-    const { data: req_, error } = await supabase
+    // ATOMIC UPDATE: Only update if it is currently 'pending'. 
+    // This strictly prevents double-clicks from crediting twice.
+    const { data: req_, error: updateErr } = await supabase
       .from('recharge_requests')
-      .select('*')
+      .update({ status: 'approved' })
       .eq('id', requestId)
+      .eq('status', 'pending')
+      .select()
       .single();
 
-    if (error || !req_) return res.status(404).json({ success: false, error: 'Request not found' });
-    if (req_.status !== 'pending') return res.status(400).json({ success: false, error: 'Already processed' });
+    if (updateErr || !req_) {
+      return res.status(400).json({ success: false, error: 'Request not found or already processed' });
+    }
 
     const { data: wallet } = await supabase
       .from('wallets')
@@ -129,8 +135,6 @@ exports.approveRecharge = async (req, res) => {
     if (bonus > 0) {
       await supabase.from('transactions').insert({ user_id: req_.user_id, type: 'First Recharge Bonus (10%)', amount: bonus, status: 'Success', notes: 'Auto applied' });
     }
-
-    await supabase.from('recharge_requests').update({ status: 'approved' }).eq('id', requestId);
 
     res.json({ success: true, credited: totalCredit, bonus, newVip });
   } catch (err) {

@@ -123,6 +123,7 @@ exports.upsertProfile = async (req, res) => {
       success: true,
       user: {
         id: profile.id,
+        player_id: profile.player_id,
         email: profile.email,
         nickname: profile.nickname,
         vip_level: profile.vip_level,
@@ -172,6 +173,7 @@ exports.me = async (req, res) => {
       success: true,
       user: {
         id: user.id,
+        player_id: user.player_id,
         email: user.email,
         nickname: user.nickname,
         vip_level: user.vip_level,

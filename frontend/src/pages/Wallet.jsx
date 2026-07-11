@@ -124,9 +124,6 @@ const Wallet = () => {
         <h2 style={{ marginTop: 60, color: '#333' }}>Waiting for Approval</h2>
         <p style={{ color: '#666', marginBottom: 40 }}>Your payment is being verified. Please wait a few minutes while the admin grants your recharge token.</p>
         <div style={{ width: 40, height: 40, margin: '0 auto', border: '4px solid #ccc', borderTopColor: '#007bff', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-        <div style={{ marginTop: 40, padding: 16, background: '#fff3cd', color: '#856404', borderRadius: 8, fontSize: '0.9rem' }}>
-          <strong>Developer Note:</strong> Open <code>/treesadhi</code> in a new tab to access the admin panel for approval.
-        </div>
       </div>
     );
   }

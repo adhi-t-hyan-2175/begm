@@ -63,7 +63,7 @@ const Profile = () => {
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: '1.2rem', fontWeight: '800', color: '#24324a' }}>{user.nickname}</div>
-          <div style={{ fontSize: '0.85rem', color: '#64748b' }}>ID: {user.id}</div>
+          <div style={{ fontSize: '0.85rem', color: '#64748b' }}>Player ID: {user.player_id || user.id}</div>
           <div style={{ fontSize: '0.85rem', color: '#64748b' }}>{user.email}</div>
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
