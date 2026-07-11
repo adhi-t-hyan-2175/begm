@@ -51,8 +51,8 @@ const deposit = async (req, res) => {
     if (fetchErr) throw fetchErr;
     if (!wallet) return res.status(404).json({ success: false, message: 'Wallet not found' });
 
-    const newBalance = parseFloat(wallet.main_balance || 0) + amount;
-    await supabase.from('wallets').update({ main_balance: newBalance, updated_at: new Date().toISOString() }).eq('user_id', userId);
+    const { data: newBalance, error: updateErr } = await supabase.rpc('increment_wallet_balance', { p_user_id: userId, p_amount: amount });
+    if (updateErr) throw updateErr;
 
     await supabase.from('transactions').insert({
       user_id: userId,
@@ -96,8 +96,8 @@ const withdraw = async (req, res) => {
     }
 
     // Deduct immediately and create a pending withdrawal request
-    const newBalance = parseFloat(wallet.main_balance) - amount;
-    await supabase.from('wallets').update({ main_balance: newBalance, updated_at: new Date().toISOString() }).eq('user_id', userId);
+    const { data: newBalance, error: updateErr } = await supabase.rpc('increment_wallet_balance', { p_user_id: userId, p_amount: -amount });
+    if (updateErr) throw updateErr;
 
     await supabase.from('withdrawal_requests').insert({
       user_id: userId,
@@ -247,12 +247,8 @@ const verifyPayment = async (req, res) => {
     const bonus = isFirst ? parseFloat((parsedAmount * 0.1).toFixed(2)) : 0;
     const totalCredit = parsedAmount + bonus;
 
-    const newBalance = parseFloat(wallet.main_balance || 0) + totalCredit;
-
-    await supabase
-      .from('wallets')
-      .update({ main_balance: newBalance, updated_at: new Date().toISOString() })
-      .eq('user_id', userId);
+    const { data: newBalance, error: updateErr } = await supabase.rpc('increment_wallet_balance', { p_user_id: userId, p_amount: totalCredit });
+    if (updateErr) throw updateErr;
 
     // Log the transaction with payment ID for idempotency
     await supabase.from('transactions').insert({

@@ -78,3 +78,25 @@ CREATE POLICY IF NOT EXISTS "Users see own wallet"
   ON wallets FOR SELECT USING (auth.uid()::TEXT = user_id::TEXT);
 
 -- Allow backend service role to bypass RLS (already true for service_role key)
+
+-- 10. ATOMIC WALLET OPERATIONS (RPC) — prevents race conditions and duplicate credits
+CREATE OR REPLACE FUNCTION increment_wallet_balance(
+  p_user_id UUID,
+  p_amount NUMERIC
+)
+RETURNS NUMERIC AS $$
+DECLARE
+  v_new_balance NUMERIC;
+BEGIN
+  UPDATE wallets
+  SET 
+    main_balance = main_balance + p_amount,
+    updated_at = NOW()
+  WHERE user_id = p_user_id
+  RETURNING main_balance INTO v_new_balance;
+
+  -- If wallet didn't exist, this returns NULL. We could optionally insert here if needed.
+  RETURN v_new_balance;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+

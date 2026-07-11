@@ -20,7 +20,6 @@ import Admin from './pages/Admin';
 import Withdraw from './pages/Withdraw';
 import About from './pages/About';
 import Support from './pages/Support';
-import TopUp from './pages/TopUp';
 import Leaderboard from './pages/Leaderboard';
 import { WalletProvider } from './contexts/WalletContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -52,7 +51,7 @@ const App = () => {
 const MainApp = () => {
   const location = useLocation();
   const { user } = useAuth();
-  const hideBottomNav = ['/login', '/treesadhi', '/topup', '/leaderboard'].includes(location.pathname);
+  const hideBottomNav = ['/login', '/treesadhi', '/leaderboard'].includes(location.pathname);
 
   return (
     <div className="app-wrapper">
@@ -75,7 +74,6 @@ const MainApp = () => {
           <Route path="/withdraw" element={<ProtectedRoute><Withdraw /></ProtectedRoute>} />
           <Route path="/about" element={<ProtectedRoute><About /></ProtectedRoute>} />
           <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
-          <Route path="/topup" element={<ProtectedRoute><TopUp /></ProtectedRoute>} />
           <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
           <Route path="/game/fast-parity" element={<ProtectedRoute><FastParity /></ProtectedRoute>} />
           <Route path="/game/parity" element={<ProtectedRoute><Parity /></ProtectedRoute>} />

@@ -58,7 +58,6 @@ app.use('/api/game', routes.game);
 app.use('/api/user', routes.user);
 app.use('/api/wallet', routes.wallet);
 app.use('/api/admin', routes.admin);
-app.use('/api/topup', routes.topup);
 app.use('/api/community', routes.community);
 
 // ─── 404 handler ─────────────────────────────────────────────────────────────

@@ -180,7 +180,6 @@ const Profile = () => {
       {/* Menu Options */}
       <div style={{ background: 'white', margin: '0 16px 12px', borderRadius: '20px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
         {[
-          { icon: <Gift size={18} color="#ec4899" />, label: 'Free Fire Top-Up', path: '/topup' },
           { icon: <FileText size={18} color="#4b6fff" />, label: 'Recent Orders', path: '/order-record' },
           { icon: <Wallet size={18} color="#4b6fff" />, label: 'Financial Details', path: '/financial-details' },
           { icon: <HelpCircle size={18} color="#64748b" />, label: 'Support', path: '/support' },

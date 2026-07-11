@@ -30,11 +30,8 @@ const placeBet = async (req, res) => {
     }
 
     // Deduct bet amount from wallet
-    const newBalance = parseFloat(wallet.main_balance) - betAmount;
-    await supabase
-      .from('wallets')
-      .update({ main_balance: newBalance, updated_at: new Date().toISOString() })
-      .eq('user_id', userId);
+    const { data: newBalance, error: updateErr } = await supabase.rpc('increment_wallet_balance', { p_user_id: userId, p_amount: -betAmount });
+    if (updateErr) throw updateErr;
 
     // Record the bet
     const { data: bet, error: betErr } = await supabase
@@ -98,12 +95,8 @@ const resolveBet = async (req, res) => {
 
     if (won && payoutAmount > 0) {
       // Credit wallet
-      const { data: wallet } = await supabase.from('wallets').select('*').eq('user_id', bet.user_id).maybeSingle();
-      if (wallet) {
-        await supabase.from('wallets').update({
-          main_balance: parseFloat(wallet.main_balance || 0) + payoutAmount,
-          updated_at: new Date().toISOString()
-        }).eq('user_id', bet.user_id);
+      const { error: updateErr } = await supabase.rpc('increment_wallet_balance', { p_user_id: bet.user_id, p_amount: payoutAmount });
+      if (updateErr) console.error(`Failed to credit ${bet.user_id}:`, updateErr);
 
         await supabase.from('transactions').insert({
           user_id: bet.user_id,
@@ -112,7 +105,6 @@ const resolveBet = async (req, res) => {
           status: 'Success',
           notes: `${bet.game_type} Period ${bet.period} — Won`,
         });
-      }
     }
 
     res.json({ success: true, won, payout: payoutAmount, status: newStatus });

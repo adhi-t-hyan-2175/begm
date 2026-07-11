@@ -1,4 +1,6 @@
+const http = require('http');
 const app = require('./app');
+const startCronJobs = require('./jobs/cron');
 
 // Global error handlers to keep server responsive even if DB is down
 process.on('unhandledRejection', (reason, p) => {
@@ -12,5 +14,6 @@ process.on('uncaughtException', (err) => {
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
+  startCronJobs();
 });

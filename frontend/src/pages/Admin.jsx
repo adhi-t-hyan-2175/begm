@@ -319,7 +319,7 @@ const AdminGameCard = ({ game, timerState, liveBets, selectedWinner, onSetWinner
   );
 };
 
-const tabs = ['dashboard', 'topups', 'recharges', 'withdrawals', 'games', 'users', 'settings'];
+const tabs = ['dashboard', 'recharges', 'withdrawals', 'games', 'users', 'settings'];
 
 const gameStatus = [
   { name: 'Fast Parity', status: 'Live', countdown: '00:18' },
@@ -563,11 +563,10 @@ const Admin = () => {
       </div>
 
       <div className="admin-tabs">
-        {['dashboard', 'games', 'topups', 'recharges', 'withdrawals', 'users', 'settings'].map((tab) => (
+        {['dashboard', 'games', 'recharges', 'withdrawals', 'users', 'settings'].map((tab) => (
           <button key={tab} className={`admin-tab ${activeTab === tab ? 'active' : ''}`} onClick={() => setActiveTab(tab)}>
             {tab === 'dashboard' && '📊 Dashboard'}
             {tab === 'games' && '🎮 Live Games'}
-            {tab === 'topups' && '💎 Top-Ups'}
             {tab === 'recharges' && '➕ Recharges'}
             {tab === 'withdrawals' && '➖ Withdrawals'}
             {tab === 'users' && '👥 Users'}
@@ -811,33 +810,6 @@ const Admin = () => {
               })}
             </div>
           )}
-        </div>
-      )}
-
-      {activeTab === 'topups' && (
-        <div className="admin-card">
-          <div className="admin-section-title-row">
-            <h3>Free Fire Top-Up Orders</h3>
-            <span className="admin-pill">Processing queue</span>
-          </div>
-          <div className="admin-list-stack">
-            {[
-              { id: 'ORD-101', uid: '3123456789', package: '520 Diamonds', amount: 400, user: 'User 7777', status: 'Pending' },
-              { id: 'ORD-102', uid: '1987654321', package: '100 Diamonds', amount: 80, user: 'User 1234', status: 'Pending' }
-            ].map((order) => (
-              <div key={order.id} className="admin-request-row">
-                <div>
-                  <strong>{order.id} • {order.package}</strong>
-                  <p>FF UID: <span style={{ color: '#0ff' }}>{order.uid}</span> • Paid ₹{order.amount}</p>
-                  <p>Ordered by: {order.user} • Status: {order.status}</p>
-                </div>
-                <div className="admin-actions">
-                  <button className="admin-btn primary" onClick={() => alert('Order marked as Completed!')}>Complete</button>
-                  <button className="admin-btn danger" onClick={() => alert('Order Cancelled!')}>Cancel</button>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       )}
 
