@@ -13,7 +13,7 @@ ALTER TABLE transactions ADD COLUMN IF NOT EXISTS razorpay_payment_id TEXT UNIQU
 -- 3. Bets table (game history)
 CREATE TABLE IF NOT EXISTS bets (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
   game_type TEXT NOT NULL,
   period TEXT NOT NULL,
   amount NUMERIC(12, 2) NOT NULL,
@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS bets (
 -- 4. Notifications table
 CREATE TABLE IF NOT EXISTS notifications (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
   message TEXT NOT NULL,
   is_read BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW()
@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS notifications (
 -- 5. Ensure recharge_requests table has the right columns
 CREATE TABLE IF NOT EXISTS recharge_requests (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
   amount NUMERIC(12, 2) NOT NULL,
   status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
   created_at TIMESTAMPTZ DEFAULT NOW()
@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS recharge_requests (
 -- 6. Ensure withdrawal_requests table
 CREATE TABLE IF NOT EXISTS withdrawal_requests (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
   amount NUMERIC(12, 2) NOT NULL,
   upi_id TEXT NOT NULL,
   upi_name TEXT DEFAULT '',
@@ -85,7 +85,7 @@ USING (auth.uid()::TEXT = user_id::TEXT);
 
 -- 10. ATOMIC WALLET OPERATIONS (RPC) — prevents race conditions and duplicate credits
 CREATE OR REPLACE FUNCTION increment_wallet_balance(
-  p_user_id UUID,
+  p_user_id BIGINT,
   p_amount NUMERIC
 )
 RETURNS NUMERIC AS $$
