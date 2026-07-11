@@ -1,4 +1,4 @@
-const { Wallet, Transaction } = require('../models');
+const supabase = require('../config/supabase');
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
 
@@ -141,21 +141,29 @@ const verifyPayment = async (req, res) => {
     const isAuthentic = expectedSignature === razorpay_signature;
 
     if (isAuthentic) {
-      const wallet = await Wallet.findOne({ where: { userId } });
+      const { data: wallet } = await supabase
+        .from('wallets')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
       if (!wallet) return res.status(404).json({ message: 'Wallet not found' });
       
-      wallet.balance += parseFloat(amount);
-      await wallet.save();
+      const newBalance = parseFloat(wallet.main_balance || 0) + parseFloat(amount);
+      await supabase
+        .from('wallets')
+        .update({ main_balance: newBalance })
+        .eq('user_id', userId);
       
-      await Transaction.create({
-        userId,
+      await supabase.from('transactions').insert({
+        user_id: userId,
         amount,
-        currencyType: 'Main',
-        transactionType: 'Deposit',
-        description: `RazorPay Deposit (${razorpay_payment_id})`
+        type: 'Deposit',
+        status: 'Success',
+        notes: `RazorPay Deposit (${razorpay_payment_id})`
       });
 
-      res.json({ success: true, message: 'Payment verified and wallet credited', wallet });
+      res.json({ success: true, message: 'Payment verified and wallet credited', wallet: { ...wallet, main_balance: newBalance } });
     } else {
       res.status(400).json({ success: false, message: 'Invalid payment signature' });
     }

@@ -1,7 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { User, Wallet, Transaction } = require('../models');
-const msg91 = require('../services/msg91');
+const supabase = require('../config/supabase');
+const otpService = require('../services/otp');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'gambb_secret_2175';
 
@@ -23,9 +23,7 @@ exports.sendOtp = async (req, res) => {
     }
     
     // Country code fallback logic. MSG91 expects it. E.g. '919876543210'
-    const mobile = phone.startsWith('91') ? phone : `91${phone}`;
-    
-    const result = await msg91.sendOTP(mobile);
+    const result = await otpService.sendOTP(phone);
     return res.json({ success: true, message: 'OTP sent successfully' });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });
@@ -42,11 +40,14 @@ exports.register = async (req, res) => {
     }
 
     // Verify OTP first
-    const mobile = phone.startsWith('91') ? phone : `91${phone}`;
-    await msg91.verifyOTP(mobile, otp);
+    await otpService.verifyOTP(phone, otp);
 
     // Check duplicate
-    const existing = await User.findOne({ where: { phone } });
+    const { data: existing } = await supabase
+      .from('users')
+      .select('id')
+      .eq('phone', phone)
+      .single();
 
     if (existing) {
       return res.status(400).json({ success: false, error: 'Phone number already registered' });
@@ -58,51 +59,59 @@ exports.register = async (req, res) => {
     // Resolve invite code
     let referredById = null;
     if (inviteCode) {
-      const referrer = await User.findOne({ 
-        where: { 
-          $or: [
-            { id: inviteCode },
-            { nickname: inviteCode }
-          ]
-        }
-      });
+      const { data: referrer } = await supabase
+        .from('users')
+        .select('id')
+        .or(`id.eq.${inviteCode},nickname.ilike.${inviteCode}`)
+        .single();
       if (referrer) referredById = referrer.id;
     }
 
     // Insert user
-    const newUser = await User.create({
-      phone,
-      password_hash: passwordHash,
-      nickname,
-      vipStatus: 'Bronze',
-      status: 'Active',
-      role: 'user',
-      totalRecharge: 0,
-      referredBy: referredById,
-    });
+    const { data: newUser, error: insertErr } = await supabase
+      .from('users')
+      .insert({
+        phone,
+        password_hash: passwordHash,
+        nickname,
+        vip_level: 'Bronze',
+        status: 'Active',
+        role: 'user',
+        total_recharge: 0,
+        referred_by: referredById,
+      })
+      .select()
+      .single();
+
+    if (insertErr) throw insertErr;
 
     // Create wallet
-    await Wallet.create({
-      userId: newUser.id,
-      balance: 0,
-      bonusBalance: 0,
+    await supabase.from('wallets').insert({
+      user_id: newUser.id,
+      main_balance: 0,
+      bonus_balance: 0,
     });
 
     // Credit referrer ₹25
     if (referredById) {
-      const refWallet = await Wallet.findOne({ where: { userId: referredById } });
+      const { data: refWallet } = await supabase
+        .from('wallets')
+        .select('*')
+        .eq('user_id', referredById)
+        .single();
 
       if (refWallet) {
-        refWallet.balance += 25;
-        await refWallet.save();
+        await supabase
+          .from('wallets')
+          .update({ main_balance: (refWallet.main_balance || 0) + 25 })
+          .eq('user_id', referredById);
 
-        await Transaction.create({
-          userId: referredById,
-          currencyType: 'Main',
-          transactionType: 'Referral Reward',
+        await supabase.from('transactions').insert({
+          user_id: referredById,
+          type: 'Referral Reward',
           amount: 25,
           status: 'Success',
-          description: `Friend ${nickname} joined via invite`,
+          notes: `Friend ${nickname} joined via invite`,
         });
       }
     }
@@ -116,10 +125,10 @@ exports.register = async (req, res) => {
         id: newUser.id,
         phone: newUser.phone,
         nickname: newUser.nickname,
-        vip_level: newUser.vipStatus,
+        vip_level: newUser.vip_level,
         status: newUser.status,
         role: newUser.role,
-        total_recharge: newUser.totalRecharge,
+        total_recharge: newUser.total_recharge,
       },
     });
   } catch (err) {
@@ -137,7 +146,11 @@ exports.login = async (req, res) => {
       return res.status(400).json({ success: false, error: 'Phone and password are required' });
     }
 
-    const user = await User.findOne({ where: { phone } });
+    const { data: user } = await supabase
+      .from('users')
+      .select('*')
+      .eq('phone', phone)
+      .single();
 
     if (!user) {
       return res.status(401).json({ success: false, error: 'Phone number not registered' });
@@ -153,7 +166,11 @@ exports.login = async (req, res) => {
     }
 
     // Fetch wallet
-    const wallet = await Wallet.findOne({ where: { userId: user.id } });
+    const { data: wallet } = await supabase
+      .from('wallets')
+      .select('*')
+      .eq('user_id', user.id)
+      .single();
 
     const token = jwt.sign({ id: user.id, phone: user.phone, role: user.role }, JWT_SECRET, { expiresIn: '30d' });
 
@@ -164,12 +181,12 @@ exports.login = async (req, res) => {
         id: user.id,
         phone: user.phone,
         nickname: user.nickname,
-        vip_level: user.vipStatus,
+        vip_level: user.vip_level,
         status: user.status,
         role: user.role,
-        total_recharge: user.totalRecharge,
-        main_balance: wallet ? wallet.balance : 0,
-        bonus_balance: wallet ? wallet.bonusBalance : 0,
+        total_recharge: user.total_recharge,
+        main_balance: wallet?.main_balance || 0,
+        bonus_balance: wallet?.bonus_balance || 0,
       },
     });
   } catch (err) {
@@ -189,8 +206,17 @@ exports.me = async (req, res) => {
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, JWT_SECRET);
 
-    const user = await User.findByPk(decoded.id);
-    const wallet = await Wallet.findOne({ where: { userId: decoded.id } });
+    const { data: user } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', decoded.id)
+      .single();
+
+    const { data: wallet } = await supabase
+      .from('wallets')
+      .select('*')
+      .eq('user_id', decoded.id)
+      .single();
 
     if (!user) return res.status(404).json({ success: false, error: 'User not found' });
 
@@ -200,12 +226,12 @@ exports.me = async (req, res) => {
         id: user.id,
         phone: user.phone,
         nickname: user.nickname,
-        vip_level: user.vipStatus,
+        vip_level: user.vip_level,
         status: user.status,
         role: user.role,
-        total_recharge: user.totalRecharge,
-        main_balance: wallet ? wallet.balance : 0,
-        bonus_balance: wallet ? wallet.bonusBalance : 0,
+        total_recharge: user.total_recharge,
+        main_balance: wallet?.main_balance || 0,
+        bonus_balance: wallet?.bonus_balance || 0,
       },
     });
   } catch (err) {
