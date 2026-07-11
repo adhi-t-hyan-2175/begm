@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { verifyAdmin } = require('../middleware/auth');
 const {
+  adminLogin,
+  adminMe,
   getAllUsers,
   getRechargeRequests,
   approveRecharge,
@@ -13,8 +15,11 @@ const {
   getStats,
 } = require('../controllers/admin');
 
+// Unprotected Admin Login Routes
+router.post('/login', adminLogin);
+router.get('/me', adminMe);
 
-// Apply verifyAdmin middleware to all routes in this file
+// Apply verifyAdmin middleware to all subsequent routes
 router.use(verifyAdmin);
 
 // Users

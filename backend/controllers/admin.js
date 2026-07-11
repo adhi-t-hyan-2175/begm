@@ -1,4 +1,38 @@
 const supabase = require('../config/supabase');
+const jwt = require('jsonwebtoken');
+
+// ─── POST /api/admin/login ───────────────────────────────────────────────────
+exports.adminLogin = async (req, res) => {
+  const { username, password } = req.body;
+  if (username === 'Treesadhi' && password === 'TREESADHI2175@') {
+    const token = jwt.sign(
+      { admin: true, username },
+      process.env.JWT_SECRET || 'super_secret_admin_key',
+      { expiresIn: '24h' }
+    );
+    return res.json({ success: true, token, admin: { username } });
+  }
+  return res.status(401).json({ success: false, message: 'Invalid username or password' });
+};
+
+// ─── GET /api/admin/me ───────────────────────────────────────────────────────
+exports.adminMe = async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) {
+    return res.status(401).json({ admin: null });
+  }
+  
+  const token = authHeader.split(' ')[1];
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'super_secret_admin_key');
+    if (decoded.admin) {
+      return res.json({ admin: { username: decoded.username } });
+    }
+    return res.status(401).json({ admin: null });
+  } catch (err) {
+    return res.status(401).json({ admin: null });
+  }
+};
 
 // ─── GET /api/admin/users — all users with wallets ───────────────────────────
 exports.getAllUsers = async (req, res) => {
