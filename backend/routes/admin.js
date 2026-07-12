@@ -14,7 +14,6 @@ const {
   getUserTransactions,
   setUserStatus,
   getStats,
-  getStats,
   getAllDeposits,
   getSettings,
   updateSettings,
