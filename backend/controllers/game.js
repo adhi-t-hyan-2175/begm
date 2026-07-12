@@ -100,7 +100,7 @@ const resolveBet = async (req, res) => {
       return res.status(400).json({ success: false, error: 'Bet already resolved' });
     }
 
-    const won = bet.selection === result;
+    const won = String(bet.selection).toLowerCase().trim() === String(result).toLowerCase().trim();
     const payoutAmount = won ? parseFloat(payout || bet.amount * 2) : 0;
     const profit = won ? payoutAmount - bet.amount : -bet.amount;
     const newStatus = won ? 'won' : 'lost';
@@ -108,17 +108,41 @@ const resolveBet = async (req, res) => {
     let finalWalletAfter = bet.wallet_after;
 
     if (won && payoutAmount > 0) {
-      // Credit wallet
-      const { data: updatedBalance, error: updateErr } = await supabase.rpc('credit_wallet_and_log', { 
-        p_user_id: bet.user_id, 
-        p_amount: payoutAmount,
-        p_type: 'Win',
-        p_notes: `${bet.game_type} Period ${bet.period} — Won`
-      });
-      if (updateErr) {
-        console.error(`Failed to credit ${bet.user_id}:`, updateErr);
+      // Fetch current wallet
+      const { data: wallet, error: walletErr } = await supabase
+        .from('wallets')
+        .select('*')
+        .eq('user_id', bet.user_id)
+        .maybeSingle();
+
+      if (wallet && !walletErr) {
+        const oldBalance = parseFloat(wallet.main_balance || 0);
+        const newBalance = oldBalance + payoutAmount;
+
+        // Credit wallet
+        const { error: updateErr } = await supabase
+          .from('wallets')
+          .update({ main_balance: newBalance, updated_at: new Date().toISOString() })
+          .eq('user_id', bet.user_id);
+
+        if (updateErr) {
+          console.error(`Failed to credit ${bet.user_id}:`, updateErr);
+        } else {
+          finalWalletAfter = newBalance;
+          
+          // Log transaction
+          await supabase.from('transactions').insert({
+            user_id: bet.user_id,
+            amount: payoutAmount,
+            type: 'Win',
+            status: 'Success',
+            notes: `${bet.game_type} Period ${bet.period} — Won`,
+            previous_balance: oldBalance,
+            new_balance: newBalance
+          });
+        }
       } else {
-        finalWalletAfter = updatedBalance;
+         console.error(`Wallet fetch failed for ${bet.user_id}:`, walletErr);
       }
     }
 
