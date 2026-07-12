@@ -366,7 +366,7 @@ export const WalletProvider = ({ children }) => {
           streak: prev.streak >= 6 ? 0 : prev.streak + 1,
           lastCheckInTime: now
         }));
-        setBonusBalance(data.bonus_balance || (bonusBalance + rewardAmount));
+        setBalance(data.main_balance || (balance + rewardAmount));
         hydrateWallet();
         return true;
       } else {
@@ -404,7 +404,7 @@ export const WalletProvider = ({ children }) => {
       
       if (data.success) {
         updateTask(taskId, 'claimed', 100);
-        setBonusBalance(data.newBonus);
+        setBalance(data.newBalance);
         
         // Refresh financial records to show the new transaction
         hydrateWallet();

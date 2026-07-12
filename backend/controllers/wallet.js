@@ -146,8 +146,8 @@ const checkIn = async (req, res) => {
       return res.status(403).json({ success: false, message: 'You must complete your first recharge to unlock Daily Check-In.' });
     }
 
-    const newBonus = parseFloat(wallet.bonus_balance || 0) + bonusAmount;
-    await supabase.from('wallets').update({ bonus_balance: newBonus, updated_at: new Date().toISOString() }).eq('user_id', userId);
+    const newBalance = parseFloat(wallet.main_balance || 0) + bonusAmount;
+    await supabase.from('wallets').update({ main_balance: newBalance, updated_at: new Date().toISOString() }).eq('user_id', userId);
 
     await supabase.from('transactions').insert({
       user_id: userId,
@@ -157,7 +157,7 @@ const checkIn = async (req, res) => {
       notes: 'Daily Check-In Reward',
     });
 
-    res.json({ success: true, message: 'Check-In successful', bonusEarned: bonusAmount, bonus_balance: newBonus });
+    res.json({ success: true, message: 'Check-In successful', bonusEarned: bonusAmount, main_balance: newBalance });
   } catch (err) {
     console.error('[checkIn]', err.message);
     res.status(500).json({ success: false, error: err.message });
@@ -341,9 +341,9 @@ async function claimTask(req, res) {
       await supabase.from('users').update({ completed_tasks: completedTasks }).eq('id', userId);
     }
     
-    // Credit reward to bonus balance
-    const newBonus = parseFloat(wallet.bonus_balance || 0) + rewardAmount;
-    await supabase.from('wallets').update({ bonus_balance: newBonus, updated_at: new Date().toISOString() }).eq('user_id', userId);
+    // Credit reward to main balance
+    const newBalance = parseFloat(wallet.main_balance || 0) + rewardAmount;
+    await supabase.from('wallets').update({ main_balance: newBalance, updated_at: new Date().toISOString() }).eq('user_id', userId);
     
     // Add transaction record
     await supabase.from('transactions').insert({
@@ -354,7 +354,7 @@ async function claimTask(req, res) {
       notes: `Task Reward: ${taskTitle}`,
     });
     
-    res.json({ success: true, message: 'Reward claimed successfully', rewardAmount, newBonus });
+    res.json({ success: true, message: 'Reward claimed successfully', rewardAmount, newBalance });
   } catch (err) {
     console.error('[claimTask]', err.message);
     res.status(500).json({ success: false, error: err.message });
