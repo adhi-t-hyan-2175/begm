@@ -46,13 +46,13 @@ export const generateHistory = (gameType, currentPeriod, count = 50) => {
       if (selected === 'Green') result.color = ['#28a745'];
       if (selected === 'Violet') result.color = ['#6f42c1'];
     } else if (gameType === 'Wheelocity') {
-      const choices = ['Two Bits', 'Three Bits', 'Five Bits'];
+      const choices = ['2 Hits', '3 Hits', '5 Hits'];
       const selected = choices[Math.floor(rnd * choices.length)];
       result.label = selected;
       result.number = undefined;
-      if (selected === 'Two Bits') result.color = ['#6ec1ff'];
-      if (selected === 'Three Bits') result.color = ['#ff8cec'];
-      if (selected === 'Five Bits') result.color = ['#88f29f'];
+      if (selected === '2 Hits') result.color = ['#0ea5e9'];
+      if (selected === '3 Hits') result.color = ['#ff8cec'];
+      if (selected === '5 Hits') result.color = ['#88f29f'];
     } else if (gameType === 'Dice') {
       const die1 = (Math.floor(rnd * 6) + 1);
       const die2 = (Math.floor((deterministicRandom(gameType + pStr + '-2')) * 6) + 1);
@@ -63,7 +63,7 @@ export const generateHistory = (gameType, currentPeriod, count = 50) => {
         result.color = ['#f1c40f']; // yellow
       } else if (sum >= 2 && sum <= 6) {
         result.label = 'Small';
-        result.color = ['#6ec1ff']; // sky blue
+        result.color = ['#0ea5e9']; // sky blue
       } else {
         result.label = 'Large';
         result.color = ['#dc3545']; // red
@@ -101,13 +101,13 @@ export const getPossibleOutcomes = (gameType) => {
     ];
   } else if (normalized.includes('wheelocity')) {
     return [
-      { label: 'Two Bits', color: ['#6ec1ff'] },
-      { label: 'Three Bits', color: ['#ff8cec'] },
-      { label: 'Five Bits', color: ['#88f29f'] },
+      { label: '2 Hits', color: ['#0ea5e9'] },
+      { label: '3 Hits', color: ['#ff8cec'] },
+      { label: '5 Hits', color: ['#88f29f'] },
     ];
   } else if (normalized.includes('dice')) {
     return [
-      { label: 'Small', color: ['#6ec1ff'], number: 3 }, 
+      { label: 'Small', color: ['#0ea5e9'], number: 3 }, 
       { label: 'Large', color: ['#dc3545'], number: 10 },
       { label: 'Tie', color: ['#f1c40f'], number: 7 },
     ];
@@ -200,9 +200,9 @@ const OVERRIDE_COLORS = {
   violet: '#6f42c1',
   andar: '#3b78d8',
   bahar: '#e74c3c',
-  'two bits': '#6ec1ff',
-  'three bits': '#ff8cec',
-  'five bits': '#88f29f',
+  '2 hits': '#0ea5e9',
+  '3 hits': '#ff8cec',
+  '5 hits': '#88f29f',
   '2x': '#333',
   '3x': '#dc3545',
   '5x': '#007bff',
@@ -245,7 +245,7 @@ export const normalizeResultOverride = (override, gameType, period) => {
     const key = override.toLowerCase();
     if (key === 'small') {
       const sum = deterministicDiceSumInRange(period, 2, 6, 'small');
-      return { label: 'Small', number: sum, color: ['#6ec1ff'] };
+      return { label: 'Small', number: sum, color: ['#0ea5e9'] };
     }
     if (key === 'large') {
       const sum = deterministicDiceSumInRange(period, 8, 12, 'large');
@@ -283,7 +283,7 @@ export const getOrderBadgeColor = (selection) => {
   if (normalized.includes('blue')) return '#007bff';
   if (normalized.includes('violet')) return '#6f42c1';
   // Dice mapping: Small = Sky Blue, Tie/7 = Yellow, Large = Red
-  if (normalized === 'small') return '#6ec1ff';
+  if (normalized === 'small') return '#0ea5e9';
   if (normalized === 'large') return '#dc3545';
   if (normalized === '7' || normalized === 'tie' || normalized === 'seven') return '#f1c40f';
   if (normalized.includes('tie')) return '#f1c40f';
@@ -305,7 +305,7 @@ const deterministicOrder = (seed) => {
 
 export const generateFakeOrders = (gameType, currentPeriod, count = 20) => {
   const selections = {
-    Wheelocity: (seed) => ['Two Bits', 'Three Bits', 'Five Bits'][Math.floor(deterministicOrder(seed + '-sel') * 3)],
+    Wheelocity: (seed) => ['2 Hits', '3 Hits', '5 Hits'][Math.floor(deterministicOrder(seed + '-sel') * 3)],
     AndarBahar: (seed) => ['Andar', 'Bahar', 'Tie'][Math.floor(deterministicOrder(seed + '-sel') * 3)],
     FastParty:  (seed) => ['Green', 'Red', 'Violet'][Math.floor(deterministicOrder(seed + '-sel') * 3)],
     Dice: (seed) => {

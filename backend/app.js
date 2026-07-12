@@ -5,6 +5,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const routes = require('./routes');
+const maintenanceMiddleware = require('./middleware/maintenance');
 
 // ─── Security headers ─────────────────────────────────────────────────────────
 app.use(helmet());
@@ -28,6 +29,9 @@ app.use(cors({
 }));
 
 app.use(express.json({ limit: '10kb' })); // Prevent oversized payloads
+
+// ─── Maintenance Mode ─────────────────────────────────────────────────────────
+app.use(maintenanceMiddleware);
 
 // ─── Global rate limiter ──────────────────────────────────────────────────────
 const globalLimiter = rateLimit({

@@ -30,7 +30,7 @@ const Profile = () => {
   const vip = getVipLevel(totalRecharge);
   const bonusBalance = user.bonus_balance || user.bonusBalance || 0;
   const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
-  const referralLink = `${appUrl}/register?ref=${user.id}`;
+  const referralLink = `${appUrl}/register?ref=${user.player_id || user.id}`;
 
   // Next tier
   const nextTierIndex = VIP_TIERS.findIndex(t => t.name === vip.name) + 1;

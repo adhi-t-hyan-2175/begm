@@ -17,7 +17,7 @@ const getSelectionBadge = (sel, game) => {
   if (s.includes('green')) color = '#48b85c';
   else if (s.includes('red') || s === 'large') color = '#e0413c';
   else if (s.includes('violet')) color = '#7c4ab8';
-  else if (s === 'small' || s.includes('two')) color = '#4da6e8';
+  else if (s === 'small' || s.includes('two')) color = '#0ea5e9';
   else if (s === 'tie' || s === '7') color = '#e8b84d';
   else if (s.includes('three')) color = '#e87fb0';
   else if (s.includes('five')) color = '#48b85c';

@@ -94,9 +94,9 @@ const Wallet = () => {
           </p>
           
           <div style={{ background: '#f8f9fa', padding: 16, borderRadius: 8, marginBottom: 24, border: '1px solid #e9ecef', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.85rem', color: '#6c757d', marginBottom: 8 }}>BETX Receiver Name</div>
+            <div style={{ fontSize: '0.85rem', color: '#6c757d', marginBottom: 8 }}>Receiver Name</div>
             <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#000', marginBottom: 12 }}>
-              BETX Official
+              {adminSettings?.adminUpiName || 'BETX Official'}
             </div>
             <div style={{ fontSize: '0.85rem', color: '#6c757d', marginBottom: 8 }}>Admin UPI ID</div>
             <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#000', marginBottom: 16 }}>

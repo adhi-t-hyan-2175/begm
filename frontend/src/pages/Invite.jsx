@@ -9,10 +9,10 @@ const Invite = () => {
   const { addBalance } = useWallet();
   const { user } = useAuth();
   
-  const [invitedTotal, setInvitedTotal] = useState(20); // Mock data
-  const [bonusEarned, setBonusEarned] = useState(1500); // Mock data
+  const [invitedTotal, setInvitedTotal] = useState(0); 
+  const [bonusEarned, setBonusEarned] = useState(0);
   
-  const inviteCode = String(user.id);
+  const inviteCode = String(user.player_id || user.id);
   const referralLink = `${window.location.origin}/register?ref=${inviteCode}`;
 
   const copyToClipboard = () => {

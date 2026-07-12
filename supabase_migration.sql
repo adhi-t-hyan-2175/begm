@@ -25,8 +25,20 @@ CREATE TABLE IF NOT EXISTS admin_settings (
   max_recharge NUMERIC(12, 2) DEFAULT 50000,
   min_withdrawal NUMERIC(12, 2) DEFAULT 300,
   max_withdrawal NUMERIC(12, 2) DEFAULT 50000,
-  admin_upi_id TEXT DEFAULT 'admin@upi'
+  admin_upi_id TEXT DEFAULT 'admin@upi',
+  admin_upi_name TEXT DEFAULT 'Admin Name',
+  support_email TEXT DEFAULT 'support@example.com',
+  telegram_link TEXT DEFAULT 'https://t.me/example',
+  maintenance_mode TEXT DEFAULT 'Off',
+  first_recharge_bonus_percent NUMERIC(5, 2) DEFAULT 0
 );
+
+ALTER TABLE admin_settings ADD COLUMN IF NOT EXISTS admin_upi_name TEXT DEFAULT 'Admin Name';
+ALTER TABLE admin_settings ADD COLUMN IF NOT EXISTS support_email TEXT DEFAULT 'support@example.com';
+ALTER TABLE admin_settings ADD COLUMN IF NOT EXISTS telegram_link TEXT DEFAULT 'https://t.me/example';
+ALTER TABLE admin_settings ADD COLUMN IF NOT EXISTS maintenance_mode TEXT DEFAULT 'Off';
+ALTER TABLE admin_settings ADD COLUMN IF NOT EXISTS first_recharge_bonus_percent NUMERIC(5, 2) DEFAULT 0;
+ALTER TABLE admin_settings ADD COLUMN IF NOT EXISTS forced_game_result TEXT;
 
 INSERT INTO admin_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
 
@@ -140,3 +152,62 @@ CREATE INDEX IF NOT EXISTS idx_bets_user_id ON bets(user_id);
 CREATE INDEX IF NOT EXISTS idx_bets_created_at ON bets(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_recharge_requests_status ON recharge_requests(status);
 CREATE INDEX IF NOT EXISTS idx_withdrawal_requests_status ON withdrawal_requests(status);
+
+-- 11. Add ledger tracking columns to transactions
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS previous_balance NUMERIC(12, 2) DEFAULT 0;
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS new_balance NUMERIC(12, 2) DEFAULT 0;
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS admin_id BIGINT REFERENCES users(id);
+
+-- 12. Create Admin Audit Logs
+CREATE TABLE IF NOT EXISTS admin_audit_logs (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  admin_name TEXT NOT NULL,
+  player_id BIGINT,
+  action TEXT NOT NULL,
+  old_value TEXT,
+  new_value TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_audit_created_at ON admin_audit_logs(created_at DESC);
+
+-- 13. Atomic Ledger Function
+CREATE OR REPLACE FUNCTION credit_wallet_and_log(
+  p_user_id BIGINT,
+  p_amount NUMERIC,
+  p_type TEXT,
+  p_notes TEXT,
+  p_admin_id BIGINT DEFAULT NULL,
+  p_razorpay_payment_id TEXT DEFAULT NULL,
+  p_status TEXT DEFAULT 'Success'
+)
+RETURNS NUMERIC AS $$
+DECLARE
+  v_old_balance NUMERIC;
+  v_new_balance NUMERIC;
+BEGIN
+  -- Get current balance and lock row
+  SELECT main_balance INTO v_old_balance FROM wallets WHERE user_id = p_user_id FOR UPDATE;
+  
+  IF v_old_balance IS NULL THEN
+    RAISE EXCEPTION 'Wallet not found for user %', p_user_id;
+  END IF;
+
+  v_new_balance := v_old_balance + p_amount;
+
+  -- Update wallet
+  UPDATE wallets
+  SET 
+    main_balance = v_new_balance,
+    updated_at = NOW()
+  WHERE user_id = p_user_id;
+
+  -- Insert ledger transaction
+  INSERT INTO transactions (
+    user_id, amount, type, status, notes, previous_balance, new_balance, admin_id, razorpay_payment_id, created_at
+  ) VALUES (
+    p_user_id, p_amount, p_type, p_status, p_notes, v_old_balance, v_new_balance, p_admin_id, p_razorpay_payment_id, NOW()
+  );
+
+  RETURN v_new_balance;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

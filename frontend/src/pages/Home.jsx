@@ -45,7 +45,7 @@ const GAME_CARDS = [
 ];
 
 const Home = () => {
-  const { balance } = useWallet();
+  const { balance, adminSettings } = useWallet();
   const { user } = useAuth();
 
   return (
@@ -92,10 +92,37 @@ const Home = () => {
       {/* Referral Banner */}
       <div className="referral-banner">
         <div>
-          <div className="referral-caption">Refer a friend and earn 500 bonus for each legitimate invite you send.</div>
-          <div className="referral-subtitle">Upon invitation, the invitee will receive a reward of 40</div>
+          <div className="referral-caption">🎁 Invite Friends & Earn ₹25 Instantly</div>
+          <div className="referral-subtitle" style={{ lineHeight: '1.4', marginTop: '4px' }}>
+            Earn ₹25 in your Main Wallet for every successful referral.<br/>
+            Your friend must complete registration and first recharge for the reward to be credited.
+          </div>
         </div>
-        <button className="referral-button">Refer Now</button>
+        <Link to="/invite" style={{ textDecoration: 'none' }}>
+          <button className="referral-button">Refer Now</button>
+        </Link>
+      </div>
+
+      {/* Promotion & Updates */}
+      <div className="referral-banner" style={{ background: 'linear-gradient(135deg, #0f172a, #1e293b)' }}>
+        <div>
+          <div className="referral-caption">📢 Promotion & Updates</div>
+          <div className="referral-subtitle" style={{ lineHeight: '1.5', marginTop: '8px', opacity: 0.9 }}>
+            Join our official Telegram Channel for:<br/>
+            • Daily promotions<br/>
+            • Bonus announcements<br/>
+            • Event updates<br/>
+            • Support information
+          </div>
+        </div>
+        <a 
+          href={adminSettings?.telegramLink || '#'} 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          style={{ textDecoration: 'none' }}
+        >
+          <button className="referral-button" style={{ background: '#0088cc', color: 'white' }}>Join Now</button>
+        </a>
       </div>
 
       {/* Game Cards — image backgrounds */}

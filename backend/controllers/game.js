@@ -30,8 +30,25 @@ const placeBet = async (req, res) => {
     }
 
     // Deduct bet amount from wallet
-    const { data: newBalance, error: updateErr } = await supabase.rpc('increment_wallet_balance', { p_user_id: userId, p_amount: -betAmount });
-    if (updateErr) throw updateErr;
+    const walletBefore = parseFloat(wallet.main_balance || 0);
+    const { data: newBalance, error: updateErr } = await supabase.rpc('deduct_wallet_balance', { 
+      p_user_id: userId, 
+      p_amount: betAmount
+    });
+    if (updateErr || newBalance === null) {
+      return res.status(400).json({ success: false, error: 'Failed to place bet. Try again.' });
+    }
+
+    // Insert ledger transaction manually since we bypassed credit_wallet_and_log for atomic deduction
+    await supabase.from('transactions').insert({
+      user_id: userId,
+      amount: -betAmount,
+      type: 'Bet',
+      status: 'Success',
+      notes: `${game_type} Period ${period} — ${selection}`,
+      previous_balance: walletBefore,
+      new_balance: newBalance
+    });
 
     // Record the bet
     const { data: bet, error: betErr } = await supabase
@@ -43,20 +60,17 @@ const placeBet = async (req, res) => {
         amount: betAmount,
         selection,
         status: 'pending',
+        wallet_before: walletBefore,
+        wallet_after: newBalance,
+        odds: 1.96 // Standard odds
       })
       .select()
       .single();
 
-    if (betErr) throw betErr;
-
-    // Log transaction
-    await supabase.from('transactions').insert({
-      user_id: userId,
-      amount: -betAmount,
-      type: 'Bet',
-      status: 'Success',
-      notes: `${game_type} Period ${period} — ${selection}`,
-    });
+    if (betErr) {
+      console.error('Failed to create bet row:', betErr);
+      throw betErr;
+    }
 
     res.json({ success: true, message: 'Bet placed successfully', bet, main_balance: newBalance });
   } catch (err) {
@@ -88,24 +102,34 @@ const resolveBet = async (req, res) => {
 
     const won = bet.selection === result;
     const payoutAmount = won ? parseFloat(payout || bet.amount * 2) : 0;
+    const profit = won ? payoutAmount - bet.amount : -bet.amount;
     const newStatus = won ? 'won' : 'lost';
 
-    // Update bet record
-    await supabase.from('bets').update({ result, payout: payoutAmount, status: newStatus }).eq('id', betId);
+    let finalWalletAfter = bet.wallet_after;
 
     if (won && payoutAmount > 0) {
       // Credit wallet
-      const { error: updateErr } = await supabase.rpc('increment_wallet_balance', { p_user_id: bet.user_id, p_amount: payoutAmount });
-      if (updateErr) console.error(`Failed to credit ${bet.user_id}:`, updateErr);
-
-        await supabase.from('transactions').insert({
-          user_id: bet.user_id,
-          amount: payoutAmount,
-          type: 'Win',
-          status: 'Success',
-          notes: `${bet.game_type} Period ${bet.period} — Won`,
-        });
+      const { data: updatedBalance, error: updateErr } = await supabase.rpc('credit_wallet_and_log', { 
+        p_user_id: bet.user_id, 
+        p_amount: payoutAmount,
+        p_type: 'Win',
+        p_notes: `${bet.game_type} Period ${bet.period} — Won`
+      });
+      if (updateErr) {
+        console.error(`Failed to credit ${bet.user_id}:`, updateErr);
+      } else {
+        finalWalletAfter = updatedBalance;
+      }
     }
+
+    // Update bet record
+    await supabase.from('bets').update({ 
+      result, 
+      payout: payoutAmount, 
+      status: newStatus,
+      profit: profit,
+      wallet_after: finalWalletAfter
+    }).eq('id', betId);
 
     res.json({ success: true, won, payout: payoutAmount, status: newStatus });
   } catch (err) {

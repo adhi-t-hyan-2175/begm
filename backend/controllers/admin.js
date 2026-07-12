@@ -1,6 +1,16 @@
 const supabase = require('../config/supabase');
 const jwt = require('jsonwebtoken');
 
+const logAdminAction = async (adminName, action, playerId = null, oldValue = null, newValue = null) => {
+  await supabase.from('admin_audit_logs').insert({
+    admin_name: adminName || 'Unknown Admin',
+    action,
+    player_id: playerId,
+    old_value: oldValue ? String(oldValue) : null,
+    new_value: newValue ? String(newValue) : null
+  });
+};
+
 // ─── POST /api/admin/login ───────────────────────────────────────────────────
 exports.adminLogin = async (req, res) => {
   const { username, password } = req.body;
@@ -122,28 +132,30 @@ exports.approveRecharge = async (req, res) => {
       .eq('user_id', targetUserId)
       .single();
 
+    const { data: adminSettings } = await supabase.from('admin_settings').select('*').eq('id', 1).single();
+
     let bonusAmount = 0;
     let mainBalanceAdd = targetAmount;
     let updateFirstRecharge = false;
 
     // First Recharge Bonus
     if (user && !user.first_recharge_bonus_claimed) {
-      if (targetAmount >= 1000) {
-        bonusAmount = 500;
+      if (adminSettings?.first_recharge_bonus_percent > 0) {
+        bonusAmount = Math.floor(targetAmount * (adminSettings.first_recharge_bonus_percent / 100));
         updateFirstRecharge = true;
       } else {
-        updateFirstRecharge = true; // Still marked as claimed so they don't get it later
+        bonusAmount = Math.floor(targetAmount * 0.25); // STRICT 25% BONUS AS PER REQUIREMENTS
+        updateFirstRecharge = true;
       }
     }
 
-    await supabase
-      .from('wallets')
-      .update({ 
-        main_balance: (wallet?.main_balance || 0) + mainBalanceAdd,
-        bonus_balance: (wallet?.bonus_balance || 0) + bonusAmount,
-        updated_at: new Date().toISOString() 
-      })
-      .eq('user_id', targetUserId);
+    // 1. Credit the recharge
+    await supabase.rpc('credit_wallet_and_log', {
+      p_user_id: targetUserId,
+      p_amount: targetAmount,
+      p_type: 'Recharge',
+      p_notes: 'Admin approved'
+    });
 
     // Update VIP and mark first_recharge_bonus_claimed if needed
     const newTotal = (user?.total_recharge || 0) + targetAmount;
@@ -155,10 +167,13 @@ exports.approveRecharge = async (req, res) => {
     }
     await supabase.from('users').update(userUpdates).eq('id', targetUserId);
 
-    await supabase.from('transactions').insert({ user_id: targetUserId, type: 'Recharge', amount: targetAmount, status: 'Success', notes: 'Admin approved' });
-
     if (bonusAmount > 0) {
-      await supabase.from('transactions').insert({ user_id: targetUserId, type: 'Bonus', amount: bonusAmount, status: 'Success', notes: 'First Recharge Bonus' });
+      await supabase.rpc('credit_wallet_and_log', {
+        p_user_id: targetUserId,
+        p_amount: bonusAmount,
+        p_type: 'First Recharge Bonus',
+        p_notes: 'Admin approved first recharge bonus'
+      });
       await supabase.from('notifications').insert({ user_id: targetUserId, message: `Congratulations! You received a First Recharge Bonus of ₹${bonusAmount}.` });
     }
 
@@ -166,21 +181,17 @@ exports.approveRecharge = async (req, res) => {
     if (user && user.referred_by && updateFirstRecharge && targetAmount >= 500) {
       // It's their first recharge AND it's >= 500 AND they have an inviter
       const { data: adminSettings } = await supabase.from('admin_settings').select('referral_bonus_amount').eq('id', 1).single();
-      const refBonus = adminSettings?.referral_bonus_amount || 100;
+      const refBonus = adminSettings?.referral_bonus_amount || 25; // Hardcoded to 25 if not set
 
       // Find the inviter by player_id
       const { data: inviter } = await supabase.from('users').select('id, nickname').eq('player_id', user.referred_by).single();
       if (inviter) {
         // Credit the inviter's main balance (since prompt says "Reward goes into Main Balance")
-        await supabase.rpc('increment_wallet_balance', { p_user_id: inviter.id, p_amount: refBonus });
-        
-        // Log transaction
-        await supabase.from('transactions').insert({ 
-          user_id: inviter.id, 
-          type: 'Bonus', 
-          amount: refBonus, 
-          status: 'Success', 
-          notes: `Referral Bonus for inviting ${user.nickname}` 
+        await supabase.rpc('credit_wallet_and_log', {
+          p_user_id: inviter.id,
+          p_amount: refBonus,
+          p_type: 'Referral Bonus',
+          p_notes: `Referral Bonus for inviting ${user.nickname}`
         });
 
         // Send notification
@@ -190,6 +201,8 @@ exports.approveRecharge = async (req, res) => {
         });
       }
     }
+
+    await logAdminAction(req.user?.username, 'Approved Recharge', user?.player_id, null, targetAmount);
 
     res.json({ success: true, credited: targetAmount, bonus: bonusAmount, newVip });
   } catch (err) {
@@ -207,6 +220,8 @@ exports.rejectRecharge = async (req, res) => {
       .from('recharge_requests')
       .update({ status: 'rejected' })
       .eq('id', requestId);
+
+    await logAdminAction(req.user?.username, 'Rejected Recharge', null, null, requestId);
 
     res.json({ success: true });
   } catch (err) {
@@ -253,6 +268,8 @@ exports.approveWithdrawal = async (req, res) => {
 
     await supabase.from('withdrawal_requests').update({ status: 'completed' }).eq('id', requestId);
 
+    await logAdminAction(req.user?.username, 'Approved Withdrawal', wr.user_id, null, wr.amount);
+
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -276,21 +293,16 @@ exports.rejectWithdrawal = async (req, res) => {
     // Refund the amount back to wallet
     const { data: wallet } = await supabase.from('wallets').select('*').eq('user_id', wr.user_id).maybeSingle();
     if (wallet) {
-      await supabase.from('wallets').update({
-        main_balance: parseFloat(wallet.main_balance || 0) + wr.amount,
-        updated_at: new Date().toISOString()
-      }).eq('user_id', wr.user_id);
-
-      await supabase.from('transactions').insert({
-        user_id: wr.user_id,
-        amount: wr.amount,
-        type: 'Withdrawal Refund',
-        status: 'Success',
-        notes: 'Admin rejected withdrawal request',
+      await supabase.rpc('credit_wallet_and_log', {
+        p_user_id: wr.user_id,
+        p_amount: wr.amount,
+        p_type: 'Withdrawal Refund',
+        p_notes: 'Admin rejected withdrawal request'
       });
     }
 
     await supabase.from('withdrawal_requests').update({ status: 'rejected' }).eq('id', requestId);
+    await logAdminAction(req.user?.username, 'Rejected Withdrawal', wr.user_id, null, wr.amount);
 
     res.json({ success: true });
   } catch (err) {
@@ -323,6 +335,7 @@ exports.setUserStatus = async (req, res) => {
       return res.status(400).json({ success: false, error: 'Invalid status. Use Active or Frozen.' });
     }
     await supabase.from('users').update({ status }).eq('id', userId);
+    await logAdminAction(req.user?.username, 'Set User Status', userId, null, status);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -340,9 +353,19 @@ exports.editUser = async (req, res) => {
     }
     
     if (mainBalance !== undefined) {
-      await supabase.from('wallets').update({ main_balance: Number(mainBalance) }).eq('user_id', userId);
+      const { data: w } = await supabase.from('wallets').select('main_balance').eq('user_id', userId).single();
+      const diff = Number(mainBalance) - (w?.main_balance || 0);
+      if (diff !== 0) {
+        await supabase.rpc('credit_wallet_and_log', {
+          p_user_id: userId,
+          p_amount: diff,
+          p_type: 'Admin Adjustment',
+          p_notes: 'Admin manually edited wallet balance'
+        });
+      }
     }
     
+    await logAdminAction(req.user?.username, 'Edited User', userId, null, `Nickname: ${nickname}, VIP: ${vipLevel}, Balance: ${mainBalance}`);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -385,6 +408,93 @@ exports.getStats = async (req, res) => {
     const totalRevenue = totalBets - bets.filter(b => b.status === 'won').reduce((s, b) => s + parseFloat(b.amount || 0), 0);
 
     res.json({ success: true, stats: { totalUsers, totalDeposits, totalWithdrawals, totalBets, totalRevenue } });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// ─── GET /api/admin/settings ──────────────────────────────────────────────────
+exports.getSettings = async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('admin_settings').select('*').eq('id', 1).single();
+    if (error && error.code !== 'PGRST116') throw error; // PGRST116 is no rows
+    res.json({ success: true, settings: data || {} });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// ─── POST /api/admin/update-settings ──────────────────────────────────────────
+exports.updateSettings = async (req, res) => {
+  try {
+    const updates = req.body;
+    const { error } = await supabase.from('admin_settings').upsert({ id: 1, ...updates });
+    if (error) throw error;
+    await logAdminAction(req.user?.username, 'Updated Settings', null, null, JSON.stringify(updates));
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// ─── GET /api/admin/audit-logs ────────────────────────────────────────────────
+exports.getAuditLogs = async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('admin_audit_logs').select('*').order('created_at', { ascending: false }).limit(500);
+    if (error) throw error;
+    res.json({ success: true, logs: data || [] });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// ─── GET /api/admin/game-analytics ───────────────────────────────────────────
+exports.getGameAnalytics = async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('bets').select('game_type, amount, payout, status, created_at, user_id').order('created_at', { ascending: false }).limit(5000);
+    if (error) throw error;
+    res.json({ success: true, bets: data || [] });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// ─── GET /api/admin/financial-analytics ──────────────────────────────────────
+exports.getFinancialAnalytics = async (req, res) => {
+  try {
+    const [recharges, withdrawals, users, txns] = await Promise.all([
+      supabase.from('recharge_requests').select('amount, status, created_at').order('created_at', { ascending: false }).limit(5000),
+      supabase.from('withdrawal_requests').select('amount, status, created_at').order('created_at', { ascending: false }).limit(5000),
+      supabase.from('users').select('created_at').order('created_at', { ascending: false }).limit(5000),
+      supabase.from('transactions').select('amount, type, status, created_at').order('created_at', { ascending: false }).limit(5000)
+    ]);
+    
+    res.json({ 
+      success: true, 
+      recharges: recharges.data || [], 
+      withdrawals: withdrawals.data || [], 
+      users: users.data || [],
+      transactions: txns.data || []
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// ─── POST /api/admin/set-game-result ─────────────────────────────────────────
+exports.setGameResult = async (req, res) => {
+  try {
+    const { gameType, result } = req.body;
+    
+    // Store in admin_settings to override the next spin
+    const { error } = await supabase.from('admin_settings').update({ 
+      forced_game_result: JSON.stringify({ gameType, result, timestamp: Date.now() })
+    }).eq('id', 1);
+    
+    if (error) throw error;
+
+    await logAdminAction(req.user?.username, 'Force Game Result', null, null, `Game: ${gameType}, Result: ${result}`);
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }

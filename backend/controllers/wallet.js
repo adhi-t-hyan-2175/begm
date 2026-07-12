@@ -39,16 +39,13 @@ const deposit = async (req, res) => {
     if (fetchErr) throw fetchErr;
     if (!wallet) return res.status(404).json({ success: false, message: 'Wallet not found' });
 
-    const { data: newBalance, error: updateErr } = await supabase.rpc('increment_wallet_balance', { p_user_id: userId, p_amount: amount });
-    if (updateErr) throw updateErr;
-
-    await supabase.from('transactions').insert({
-      user_id: userId,
-      amount,
-      type: 'Deposit',
-      status: 'Success',
-      notes: 'Manual deposit',
+    const { data: newBalance, error: updateErr } = await supabase.rpc('credit_wallet_and_log', { 
+      p_user_id: userId, 
+      p_amount: amount,
+      p_type: 'Deposit',
+      p_notes: 'Manual deposit'
     });
+    if (updateErr) throw updateErr;
 
     res.json({ success: true, message: 'Deposit successful', main_balance: newBalance });
   } catch (err) {
@@ -83,9 +80,26 @@ const withdraw = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Insufficient balance' });
     }
 
-    // Deduct immediately and create a pending withdrawal request
-    const { data: newBalance, error: updateErr } = await supabase.rpc('increment_wallet_balance', { p_user_id: userId, p_amount: -amount });
-    if (updateErr) throw updateErr;
+    // Deduct immediately (atomically) and create a pending withdrawal request
+    const walletBefore = parseFloat(wallet.main_balance || 0);
+    const { data: newBalance, error: updateErr } = await supabase.rpc('deduct_wallet_balance', { 
+      p_user_id: userId, 
+      p_amount: amount
+    });
+    if (updateErr || newBalance === null) {
+      return res.status(400).json({ success: false, message: 'Failed to process withdrawal. Try again.' });
+    }
+
+    // Insert transaction log
+    await supabase.from('transactions').insert({
+      user_id: userId,
+      amount: -amount,
+      type: 'Withdraw',
+      status: 'Pending',
+      notes: `Withdrawal to UPI: ${upi_id}`,
+      previous_balance: walletBefore,
+      new_balance: newBalance
+    });
 
     await supabase.from('withdrawal_requests').insert({
       user_id: userId,
@@ -93,14 +107,6 @@ const withdraw = async (req, res) => {
       upi_id,
       upi_name: upi_name || '',
       status: 'pending',
-    });
-
-    await supabase.from('transactions').insert({
-      user_id: userId,
-      amount: -amount,
-      type: 'Withdraw',
-      status: 'Pending',
-      notes: `Withdrawal to UPI: ${upi_id}`,
     });
 
     res.json({ success: true, message: 'Withdrawal request submitted', main_balance: newBalance });
@@ -233,24 +239,20 @@ const handleWebhook = async (req, res) => {
       const bonus = isFirst ? parseFloat((amount * 0.1).toFixed(2)) : 0;
       const totalCredit = amount + bonus;
 
-      await supabase.rpc('increment_wallet_balance', { p_user_id: userId, p_amount: totalCredit });
-
-      await supabase.from('transactions').insert({
-        user_id: userId,
-        amount: amount,
-        type: 'Deposit',
-        status: 'Success',
-        notes: `Razorpay (${razorpay_payment_id}) via Webhook`,
-        razorpay_payment_id,
+      await supabase.rpc('credit_wallet_and_log', {
+        p_user_id: userId,
+        p_amount: amount,
+        p_type: 'Deposit',
+        p_notes: `Razorpay (${razorpay_payment_id}) via Webhook`,
+        p_razorpay_payment_id: razorpay_payment_id
       });
 
       if (bonus > 0) {
-        await supabase.from('transactions').insert({
-          user_id: userId,
-          amount: bonus,
-          type: 'First Recharge Bonus (10%)',
-          status: 'Success',
-          notes: 'Auto applied on first deposit via Webhook',
+        await supabase.rpc('credit_wallet_and_log', {
+          p_user_id: userId,
+          p_amount: bonus,
+          p_type: 'First Recharge Bonus (10%)',
+          p_notes: 'Auto applied on first deposit via Webhook'
         });
       }
 

@@ -18,13 +18,13 @@ const randAvatar = (seed) => AVATARS[Math.abs(String(seed).split('').reduce((a,c
 const getDiceColor = (num) => {
   const n = parseInt(num);
   if (n === 7) return '#e8b84d';
-  if (n >= 2 && n <= 6) return '#4da6e8';
+  if (n >= 2 && n <= 6) return '#0ea5e9';
   if (n >= 8 && n <= 12) return '#e0413c';
   return '#3d4477';
 };
 const getLabelColor = (lbl) => {
   const l = String(lbl||'').toLowerCase();
-  if (l === 'small') return '#4da6e8';
+  if (l === 'small') return '#0ea5e9';
   if (l === 'large') return '#e0413c';
   if (l === 'tie' || l === '7') return '#e8b84d';
   return '#888';

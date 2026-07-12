@@ -19,29 +19,64 @@ export const WalletProvider = ({ children }) => {
   });
 
   // ── Hydrate balance from Supabase when user changes ─────────────────────────
-  useEffect(() => {
+  const hydrateWallet = useCallback(async () => {
     if (!currentUser || !isSupabaseReady()) return;
-    (async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (token) {
-          const res = await fetch(`${API_URL}/api/wallet`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          const data = await res.json();
-          if (data.success && data.wallet) {
-            const wallet = data.wallet;
-            setBalance(parseFloat(wallet.main_balance) || 0);
-            setBonusBalance(parseFloat(wallet.bonus_balance) || 0);
-            localStorage.setItem('wallet_balance', String(wallet.main_balance || 0));
-            localStorage.setItem('bonus_balance', String(wallet.bonus_balance || 0));
-          }
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        const res = await fetch(`${API_URL}/api/wallet`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success && data.wallet) {
+          const wallet = data.wallet;
+          setBalance(parseFloat(wallet.main_balance) || 0);
+          setBonusBalance(parseFloat(wallet.bonus_balance) || 0);
+          localStorage.setItem('wallet_balance', String(wallet.main_balance || 0));
+          localStorage.setItem('bonus_balance', String(wallet.bonus_balance || 0));
         }
-      } catch (err) {
-        console.warn('[Wallet] Backend hydration failed:', err.message);
       }
-    })();
-  }, [currentUser?.id]);
+    } catch (err) {
+      console.warn('[Wallet] Backend hydration failed:', err.message);
+    }
+  }, [currentUser]);
+
+  const hydrateOrders = useCallback(async () => {
+    if (!currentUser || !isSupabaseReady()) return;
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        const res = await fetch(`${API_URL}/api/game/history`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success && data.bets) {
+          const mappedOrders = data.bets.map(b => ({
+            id: b.id,
+            game: b.game_type,
+            period: b.period,
+            amount: b.amount,
+            selection: b.selection,
+            status: b.status === 'won' ? 'Won' : b.status === 'lost' ? 'Lost' : 'Pending',
+            result: b.result,
+            profit: b.profit,
+            walletBefore: b.wallet_before,
+            walletAfter: b.wallet_after,
+            odds: b.odds,
+            timestamp: b.created_at
+          }));
+          setMyOrders(mappedOrders);
+        }
+      }
+    } catch (err) {
+      console.warn('[Wallet] Failed to fetch orders:', err.message);
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    hydrateWallet();
+    hydrateOrders();
+  }, [hydrateWallet, hydrateOrders]);
 
   // ── Supabase wallet write helper ─────────────────────────────────────────────
   const syncWalletToSupabase = useCallback(async (mainBal, bonusBal) => {
@@ -80,6 +115,8 @@ export const WalletProvider = ({ children }) => {
       try {
         // Pending recharges for admin panel
         const recharges = await getAll('recharge_requests', null, 'created_at');
+        // The actual settlement is handled by the backend. We just re-hydrate the orders.
+        await hydrateOrders();
         if (recharges.length > 0) {
           const mapped = recharges
             .filter(r => r.status === 'pending')
@@ -142,7 +179,7 @@ export const WalletProvider = ({ children }) => {
 
   const [bonusBalance, setBonusBalance] = useState(() => {
     const saved = localStorage.getItem('bonus_balance');
-    return saved ? parseFloat(saved) : 500.00; // Default mock bonus
+    return saved ? parseFloat(saved) : 0;
   });
 
   const [checkInState, setCheckInState] = useState(() => {
@@ -174,10 +211,7 @@ export const WalletProvider = ({ children }) => {
     return saved ? JSON.parse(saved) : [];
   });
 
-  const [myOrders, setMyOrders] = useState(() => {
-    const saved = localStorage.getItem('my_orders');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [myOrders, setMyOrders] = useState([]);
 
   const [gameResultOverrides, setGameResultOverrides] = useState(() => {
     const saved = localStorage.getItem('game_result_overrides');
@@ -211,15 +245,36 @@ export const WalletProvider = ({ children }) => {
       if (e.key === 'financial_records') setFinancialRecords(JSON.parse(e.newValue || '[]'));
       if (e.key === 'pending_recharges') setPendingRecharges(JSON.parse(e.newValue || '[]'));
       if (e.key === 'pending_withdrawals') setPendingWithdrawals(JSON.parse(e.newValue || '[]'));
-      if (e.key === 'my_orders') setMyOrders(JSON.parse(e.newValue || '[]'));
       if (e.key === 'game_result_overrides') setGameResultOverrides(JSON.parse(e.newValue || '{}'));
       if (e.key === 'live_bets') setLiveBets(JSON.parse(e.newValue || '{}'));
-      if (e.key === 'wallet_balance') setBalance(parseFloat(e.newValue || '1535.62'));
+      if (e.key === 'wallet_balance') setBalance(parseFloat(e.newValue || '0'));
       if (e.key === 'admin_settings') setAdminSettings(JSON.parse(e.newValue || '{}'));
       if (e.key === 'profit_records') setProfitRecords(JSON.parse(e.newValue || '[]'));
     };
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/admin/settings`);
+        const data = await res.json();
+        if (data.success && data.settings) {
+          setAdminSettings(prev => ({
+            ...prev,
+            ...data.settings,
+            telegramLink: data.settings.telegram_link,
+            adminUpiId: data.settings.admin_upi_id,
+            adminUpiName: data.settings.admin_upi_name,
+            maintenanceMode: data.settings.maintenance_mode,
+            firstRechargeBonusPercent: data.settings.first_recharge_bonus_percent
+          }));
+        }
+      } catch (err) {
+         console.warn('[Wallet] Failed to fetch admin settings:', err.message);
+      }
+    })();
   }, []);
 
   useEffect(() => {
@@ -555,133 +610,153 @@ export const WalletProvider = ({ children }) => {
 
   const placeBet = async (gameName, period, selection, amount) => {
     if (balance < amount) return false;
-    addBalance(-amount);
-    const localId = Date.now().toString();
-    const newOrder = {
-      id: localId,
+    
+    let orderId = Date.now().toString();
+
+    if (currentUser) {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_URL}/api/game/place-bet`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ game_type: gameName, period, amount, selection })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+          orderId = String(data.bet.id);
+          setBalance(parseFloat(data.main_balance) || 0); // Use exact backend balance
+        } else {
+          console.error('[placeBet] API failed:', data.error);
+          alert(`Bet failed: ${data.error}`);
+          return false; 
+        }
+      } catch (err) {
+        console.error('[placeBet] Network error:', err.message);
+        alert('Network error placing bet');
+        return false;
+      }
+    } else {
+      addBalance(-amount); // Fallback for unauthenticated dev testing
+    }
+
+    setMyOrders(prev => {
+        const newOrders = [{
+          id: orderId,
+          game: gameName,
+          period,
+          amount,
+          selection,
+          status: 'Pending',
+          timestamp: Date.now()
+        }, ...prev];
+        return newOrders;
+      });
+
+    addLiveBet(gameName, period, selection, amount, {
+      id: orderId,
       game: gameName,
       period,
       selection,
       amount,
       status: 'Pending',
       timestamp: Date.now()
-    };
-
-    if (isSupabaseReady() && currentUser) {
-      try {
-        const savedBet = await insertRow('game_bets', {
-          user_id: currentUser.id,
-          game: gameName,
-          period,
-          selection,
-          amount,
-          result: 'pending',
-          payout: 0
-        });
-        newOrder.id = String(savedBet.id);
-
-        const wallet = await getBy('wallets', 'user_id', currentUser.id);
-        if (wallet) {
-          await updateWhere('wallets', 'user_id', currentUser.id, {
-            main_balance: parseFloat(wallet.main_balance) - amount,
-            updated_at: new Date().toISOString()
-          });
-        }
-        await addTransactionToSupabase(`${gameName} Bet`, -amount, 'Success', `Period: ${period}`);
-      } catch (err) {
-        console.warn('[placeBet] Supabase sync failed:', err.message);
-      }
-    }
-
-    setMyOrders(prev => [newOrder, ...prev]);
-    addLiveBet(gameName, period, selection, amount, newOrder);
+    });
     setFinancialRecords(records => [{
       type: `${gameName} Bet`,
-      id: newOrder.id,
+      id: orderId,
       amount: `- ₹${amount}`,
       status: 'Deducted',
       time: new Date().toLocaleString('en-US', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }),
       color: '#dc3545',
       timestamp: Date.now()
     }, ...records]);
-    return newOrder.id;
+    return orderId;
   };
 
   // Settle bets for a completed period — call this when period ends
-  // resultLabel: the winning selection (e.g. 'Green', 'Red', 'Small', 'Large')
-  // multipliers: { Green: 2, Red: 2, Violet: 4.5, Small: 1.98, Large: 1.98, Tie: 12 }
   const settleGameBets = async (gameName, period, resultLabel, multiplierMap) => {
-    // 1. First fetch bets from local state that match the game/period
-    let myBetsToUpdate = [];
-    setMyOrders(prev => {
-      myBetsToUpdate = prev.filter(order => order.game === gameName && order.period === period && order.status === 'Pending');
-      const updated = prev.map(order => {
-        if (order.game !== gameName || order.period !== period || order.status !== 'Pending') return order;
+    const { calculatePayout } = await import('../utils/payout');
+    // 1. Get pending bets for this period
+    const betsToSettle = myOrders.filter(order => order.game === gameName && order.period === period && order.status === 'Pending');
+    if (betsToSettle.length === 0) return;
 
-        const sel = String(order.selection).toLowerCase().trim();
-        const res = String(resultLabel).toLowerCase().trim();
-        const won = sel === res;
-        const multiplier = multiplierMap?.[order.selection] || multiplierMap?.[sel] || 2;
-        const winAmount = won ? parseFloat((order.amount * multiplier).toFixed(2)) : 0;
+    // 2. Process all settlements in parallel via backend API
+    const promises = betsToSettle.map(async (order) => {
+      const sel = String(order.selection).toLowerCase().trim();
+      const res = String(resultLabel).toLowerCase().trim();
+      const won = sel === res;
+      const customMultiplier = multiplierMap?.[order.selection] || multiplierMap?.[sel] || null;
+      
+      let winAmount = 0;
+      if (won) {
+        const payoutData = calculatePayout(order.selection, order.amount, 2, customMultiplier);
+        winAmount = payoutData.winningAmount;
+      }
 
-        if (won && winAmount > 0) {
-          setBalance(b => {
-            const newBal = parseFloat((b + winAmount).toFixed(2));
-            localStorage.setItem('wallet_balance', newBal.toString());
-            return newBal;
+      if (currentUser) {
+        try {
+          const token = localStorage.getItem('token');
+          await fetch(`${API_URL}/api/game/resolve-bet`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ betId: order.id, result: resultLabel, payout: winAmount })
           });
-          setFinancialRecords(records => [{
-            type: `${gameName} Win`,
-            id: order.id + '-win',
-            amount: `+ ₹${winAmount.toFixed(2)}`,
-            status: 'Won',
-            time: new Date().toLocaleString('en-US', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }),
-            color: '#28a745',
-            timestamp: Date.now()
-          }, ...records.slice(0, 49)]);
+        } catch (err) {
+          console.error('[settleGameBets] API failed for bet:', order.id, err);
         }
+      }
 
-        return { ...order, status: won ? 'Won' : 'Lost', result: resultLabel, winAmount: won ? winAmount : 0, settledAt: Date.now() };
-      });
-      return updated;
+      return {
+        ...order,
+        status: won ? 'Won' : 'Lost',
+        result: resultLabel,
+        winAmount: won ? winAmount : 0,
+        settledAt: Date.now()
+      };
     });
 
-    // 2. Sync to Supabase
-    if (isSupabaseReady() && currentUser && myBetsToUpdate.length > 0) {
-      let totalWinnings = 0;
-      for (const order of myBetsToUpdate) {
-        const sel = String(order.selection).toLowerCase().trim();
-        const res = String(resultLabel).toLowerCase().trim();
-        const won = sel === res;
-        const multiplier = multiplierMap?.[order.selection] || multiplierMap?.[sel] || 2;
-        const winAmount = won ? parseFloat((order.amount * multiplier).toFixed(2)) : 0;
-        
-        if (won) totalWinnings += winAmount;
+    const resolvedBets = await Promise.all(promises);
 
-        try {
-          await updateWhere('game_bets', 'id', order.id, {
-            result: won ? 'won' : 'lost',
-            payout: winAmount
-          });
-        } catch (err) {
-           console.warn(`Failed to update bet ${order.id} in Supabase`, err);
-        }
-      }
+    // 3. Update local orders state
+    setMyOrders(prev => prev.map(order => {
+      const resolved = resolvedBets.find(rb => rb.id === order.id);
+      return resolved ? resolved : order;
+    }));
 
-      if (totalWinnings > 0) {
-        try {
-          const wallet = await getBy('wallets', 'user_id', currentUser.id);
-          if (wallet) {
-            await updateWhere('wallets', 'user_id', currentUser.id, {
-              main_balance: parseFloat(wallet.main_balance) + totalWinnings,
-              updated_at: new Date().toISOString()
-            });
-          }
-          await addTransactionToSupabase(`${gameName} Win`, totalWinnings, 'Success', `Period: ${period}`);
-        } catch (err) {
-          console.warn('[settleGameBets] Wallet sync failed:', err.message);
-        }
+    // 4. Update financial records locally
+    let totalWinnings = 0;
+    resolvedBets.forEach(order => {
+      if (order.status === 'Won') {
+        totalWinnings += order.winAmount;
+        setFinancialRecords(records => [{
+          type: `${gameName} Win`,
+          id: order.id + '-win',
+          amount: `+ ₹${order.winAmount.toFixed(2)}`,
+          status: 'Won',
+          time: new Date().toLocaleString('en-US', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }),
+          color: '#28a745',
+          timestamp: Date.now()
+        }, ...records.slice(0, 49)]);
       }
+    });
+
+    // 5. Refresh exact balance directly from backend! No race conditions!
+    if (currentUser) {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_URL}/api/wallet`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success && data.wallet) {
+          setBalance(parseFloat(data.wallet.main_balance) || 0);
+        }
+      } catch (err) {
+        console.error('[settleGameBets] Backend hydration failed:', err.message);
+      }
+    } else {
+       setBalance(b => parseFloat((b + totalWinnings).toFixed(2))); // local unauthenticated fallback
     }
   };
 
@@ -694,6 +769,7 @@ export const WalletProvider = ({ children }) => {
   return (
     <WalletContext.Provider value={{
       balance,
+      hydrateWallet,
       addBalance,
       bonusBalance,
       addBonusBalance,

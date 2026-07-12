@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { useWallet } from '../contexts/WalletContext';
+import { calculatePayout } from '../utils/payout';
 
 const BetCardModal = ({
   isOpen,
@@ -28,23 +29,7 @@ const BetCardModal = ({
 
   if (!isOpen) return null;
 
-  const fee = Math.max(1, Math.round((contractAmount * feePercent) / 100));
-  const total = contractAmount + fee;
-
-  const getSelectionMultiplier = (selection) => {
-    const sel = String(selection || '').toLowerCase();
-    if (sel.includes('5x')) return 5;
-    if (sel.includes('3x')) return 3;
-    if (sel.includes('2x')) return 2;
-    if (sel.includes('tie')) return 14;
-    if (sel.includes('andar') || sel.includes('bahar')) return 1.9;
-    if (sel.includes('green') || sel.includes('red') || sel.includes('violet')) return 2;
-    if (sel.includes('even') || sel.includes('odd')) return 2;
-    return 2;
-  };
-
-  const multiplier = getSelectionMultiplier(selection);
-  const potentialReturn = Math.max(0, Math.round(contractAmount * multiplier - fee));
+  const { fee, winningAmount: potentialReturn } = calculatePayout(selection, contractAmount, feePercent);
 
   const contractOptions = [10, 100, 1000, 10000];
 

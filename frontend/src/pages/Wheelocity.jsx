@@ -10,29 +10,29 @@ import BetCardModal from '../components/BetCardModal';
 import ResultCard from '../components/ResultCard';
 
 const GAME = 'Wheelocity';
-const MULTIPLIERS = { 'Two Bits': 1.9, 'Three Bits': 3, 'Five Bits': 5, 'two bits': 1.9, 'three bits': 3, 'five bits': 5, '2x': 1.9, '3x': 3, '5x': 5 };
+const MULTIPLIERS = { '2 Hits': 1.9, '3 Hits': 3, '5 Hits': 5, '2 hits': 1.9, '3 hits': 3, '5 hits': 5, '2x': 1.9, '3x': 3, '5x': 5 };
 
 const AVATARS = ['🧑','👩','👦','👧','🧔','👱','🧕','🧑‍🦱'];
 const randAvatar = (seed) => AVATARS[Math.abs(String(seed).split('').reduce((a,c)=>a+c.charCodeAt(0),0)) % AVATARS.length];
 
 const WHEEL_SEGMENTS = [
-  { label: 'Two Bits',   ratio: '1:1.9',  color: '#4da6e8' },
-  { label: 'Three Bits', ratio: '1:3',  color: '#e87fb0' },
-  { label: 'Five Bits',  ratio: '1:5',  color: '#48b85c' },
+  { label: '2 Hits',   ratio: '1:1.9',  color: '#4da6e8' },
+  { label: '3 Hits', ratio: '1:3',  color: '#e87fb0' },
+  { label: '5 Hits',  ratio: '1:5',  color: '#48b85c' },
 ];
 
 const getWheelColor = (rec) => {
   if (!rec) return '#3d4477';
-  if (rec.label === 'Two Bits')   return '#4da6e8';
-  if (rec.label === 'Three Bits') return '#e87fb0';
-  if (rec.label === 'Five Bits')  return '#48b85c';
+  if (rec.label === '2 Hits')   return '#4da6e8';
+  if (rec.label === '3 Hits') return '#e87fb0';
+  if (rec.label === '5 Hits')  return '#48b85c';
   return rec.color?.[0] || '#3d4477';
 };
 const getSelColor = (sel) => {
   const s = String(sel||'').toLowerCase();
-  if (s === 'two bits' || s === '2x') return '#4da6e8';
-  if (s === 'three bits' || s === '3x') return '#e87fb0';
-  if (s === 'five bits' || s === '5x') return '#48b85c';
+  if (s === '2 hits' || s === '2x') return '#4da6e8';
+  if (s === '3 hits' || s === '3x') return '#e87fb0';
+  if (s === '5 hits' || s === '5x') return '#48b85c';
   return '#888';
 };
 
@@ -45,7 +45,7 @@ const Wheelocity = () => {
   const [showRule, setShowRule] = useState(false);
   const [activeTab, setActiveTab] = useState('everyone');
   const [betModalOpen, setBetModalOpen] = useState(false);
-  const [pendingSelection, setPendingSelection] = useState('Two Bits');
+  const [pendingSelection, setPendingSelection] = useState('2 Hits');
   const [wheelRotation, setWheelRotation] = useState(0);
   const [resultCard, setResultCard] = useState(null);
   const [liveOrders, setLiveOrders] = useState([]);
@@ -111,9 +111,9 @@ const Wheelocity = () => {
       
       let won = false;
       if (sel === res) won = true;
-      if ((sel === '2x' && res === 'two bits') || (sel === 'two bits' && res === '2x')) won = true;
-      if ((sel === '3x' && res === 'three bits') || (sel === 'three bits' && res === '3x')) won = true;
-      if ((sel === '5x' && res === 'five bits') || (sel === 'five bits' && res === '5x')) won = true;
+      if ((sel === '2x' && res === '2 hits') || (sel === '2 hits' && res === '2x')) won = true;
+      if ((sel === '3x' && res === '3 hits') || (sel === '3 hits' && res === '3x')) won = true;
+      if ((sel === '5x' && res === '5 hits') || (sel === '5 hits' && res === '5x')) won = true;
 
       const multiplier = MULTIPLIERS[bet.selection] || MULTIPLIERS[sel] || 2;
       setTimeout(() => setResultCard({
@@ -265,9 +265,9 @@ const Wheelocity = () => {
             <div className="rui-modal-header"><span className="rui-modal-title">Wheelocity Rules</span><button className="rui-modal-close" onClick={() => setShowRule(false)}>×</button></div>
             <p style={{ color: '#555', lineHeight: 1.6, fontSize: '0.9rem' }}>
               1 minute per round. 15 seconds to bet. The wheel spins and lands on a segment.<br /><br />
-              <strong>Two Bits</strong>: 2x multiplier<br />
-              <strong>Three Bits</strong>: 3x multiplier<br />
-              <strong>Five Bits</strong>: 5x multiplier
+              <strong>2 Hits</strong>: 2x multiplier<br />
+              <strong>3 Hits</strong>: 3x multiplier<br />
+              <strong>5 Hits</strong>: 5x multiplier
             </p>
             <button onClick={() => setShowRule(false)} style={{ width: '100%', marginTop: 16, background: '#007bff', color: '#fff', border: 'none', borderRadius: 10, padding: '13px', fontWeight: 700, cursor: 'pointer' }}>I GOT IT</button>
           </div>
