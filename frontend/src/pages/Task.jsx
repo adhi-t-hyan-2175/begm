@@ -38,8 +38,8 @@ const Task = () => {
   const taskList = [
     {
       id: 'registerEmail',
-      title: 'Register with Email',
-      desc: 'Create an account using your email',
+      title: 'Register with Google',
+      desc: 'Create an account using your Google account',
       reward: 10,
       icon: <Gift size={24} />,
       iconBg: '#fbad3c'
