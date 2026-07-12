@@ -7,6 +7,7 @@ const {
   getAllUsers,
   getRechargeRequests,
   approveRecharge,
+  rejectRecharge,
   getWithdrawalRequests,
   approveWithdrawal,
   rejectWithdrawal,
@@ -30,6 +31,7 @@ router.post('/set-user-status', setUserStatus);
 // Recharges
 router.get('/recharge-requests', getRechargeRequests);
 router.post('/approve-recharge', approveRecharge);
+router.post('/reject-recharge', rejectRecharge);
 router.get('/all-deposits', getAllDeposits);
 
 // Withdrawals

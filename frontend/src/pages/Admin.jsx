@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useWallet } from '../contexts/WalletContext';
 import { useAuth } from '../contexts/AuthContext';
 import { calculateTimerState, useGameTimer, getSettledResult, generateFakeOrders } from '../hooks/useGameTimer';
@@ -851,9 +851,14 @@ const Admin = () => {
                 <div key={request.id} className="admin-request-row">
                   <div>
                     <strong>Player ID #{playerData ? (playerData.player_id || request.userId) : request.userId}</strong>
-                    {playerData && <span style={{ marginLeft: 8, fontSize: '0.8rem', color: '#94a3b8' }}>({playerData.nickname} â€¢ {playerData.vipLevel || 'Bronze'})</span>}
-                    {isFirstRecharge && <span style={{ marginLeft: 8, fontSize: '0.75rem', background: '#10b981', color: 'white', borderRadius: 999, padding: '2px 7px' }}>ðŸŒŸ First Recharge (+10%)</span>}
-                    <p>Amount: â‚¹{request.amount} â€¢ {new Date(request.timestamp).toLocaleString()}</p>
+                    {playerData && <span style={{ marginLeft: 8, fontSize: '0.8rem', color: '#94a3b8' }}>({playerData.nickname} • {playerData.vipLevel || 'Bronze'})</span>}
+                    {isFirstRecharge && <span style={{ marginLeft: 8, fontSize: '0.75rem', background: '#10b981', color: 'white', borderRadius: 999, padding: '2px 7px' }}>🌟 First Recharge (+10%)</span>}
+                    <p>Amount: ₹{request.amount} • {new Date(request.timestamp).toLocaleString()}</p>
+                    {request.utrNumber && (
+                      <p style={{ margin: '4px 0 0 0', color: '#10b981', fontWeight: 'bold' }}>
+                        UTR / Ref: {request.utrNumber}
+                      </p>
+                    )}
                   </div>
                   <div className="admin-actions">
                     <button className="admin-btn" style={{ background: '#4b5563', color: 'white' }} onClick={() => {
@@ -982,12 +987,22 @@ const Admin = () => {
                 />
               </li>
               <li>
-                <span>Max Withdrawal (â‚¹)</span>
+                <span>Max Withdrawal (₹)</span>
                 <input 
                   type="number" 
                   value={adminSettings.maxWithdrawal} 
                   onChange={e => setAdminSettings({...adminSettings, maxWithdrawal: Number(e.target.value)})}
                   style={{ background: '#0a0a1a', border: '1px solid #2a2a4e', color: '#fff', padding: '6px 12px', borderRadius: 4, width: '100px', textAlign: 'right' }}
+                />
+              </li>
+              <li>
+                <span>Admin UPI ID</span>
+                <input 
+                  type="text" 
+                  value={adminSettings.adminUpiId || ''} 
+                  onChange={e => setAdminSettings({...adminSettings, adminUpiId: e.target.value})}
+                  placeholder="e.g. admin@upi"
+                  style={{ background: '#0a0a1a', border: '1px solid #2a2a4e', color: '#fff', padding: '6px 12px', borderRadius: 4, width: '200px', textAlign: 'right' }}
                 />
               </li>
               <li>

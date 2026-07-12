@@ -88,6 +88,7 @@ export const WalletProvider = ({ children }) => {
               id: String(r.id),
               userId: String(r.user_id),
               amount: r.amount,
+              utrNumber: r.utr_number,
               status: r.status,
               timestamp: r.created_at,
             }));
@@ -196,7 +197,8 @@ export const WalletProvider = ({ children }) => {
       maxRecharge: 10000,
       minWithdrawal: 500,
       maxWithdrawal: 50000,
-      maintenanceMode: 'Off'
+      maintenanceMode: 'Off',
+      adminUpiId: ''
     };
   });
 
@@ -323,84 +325,18 @@ export const WalletProvider = ({ children }) => {
     });
   };
 
-  const requestRecharge = async (userId, amount) => {
-    const localId = Date.now().toString();
-    const token = localStorage.getItem('token');
-
-    // 1. Try Razorpay automatically if backend responds
-    if (token) {
-      try {
-        const resLoaded = await loadRazorpayScript();
-        if (!resLoaded) throw new Error("Failed to load Razorpay SDK");
-
-        // Create Order
-        const orderRes = await fetch(`${API_URL}/api/wallet/create-order`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ amount })
-        });
-        const orderData = await orderRes.json();
-        if (!orderRes.ok) throw new Error(orderData.message || 'Order creation failed');
-
-        const options = {
-          key: orderData.order?.key_id || RAZORPAY_KEY,
-          amount: orderData.order?.amount || amount * 100,
-          currency: orderData.order?.currency || 'INR',
-          name: "BETX",
-          description: "Wallet Recharge",
-          order_id: orderData.order?.id || orderData.id,
-          handler: async function (response) {
-            // Verify Payment
-            try {
-              const verifyRes = await fetch(`${API_URL}/api/wallet/verify-payment`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                body: JSON.stringify({
-                  razorpay_order_id: response.razorpay_order_id,
-                  razorpay_payment_id: response.razorpay_payment_id,
-                  razorpay_signature: response.razorpay_signature,
-                  amount: amount // backend will securely verify this via razorpay API
-                })
-              });
-              const verifyData = await verifyRes.json();
-              if (verifyRes.ok && verifyData.success) {
-                if (verifyData.main_balance !== undefined) setBalance(verifyData.main_balance);
-                alert(verifyData.message || "Recharge successful!");
-                // Reload page to reflect new transactions in history cleanly
-                window.location.reload(); 
-              } else {
-                alert(verifyData.message || "Payment verification failed.");
-              }
-            } catch (err) {
-              alert("Error verifying payment: " + err.message);
-            }
-          },
-          prefill: {
-            contact: "" 
-          },
-          theme: {
-            color: "#d4af37" // BETX Gold
-          }
-        };
-
-        const paymentObject = new window.Razorpay(options);
-        paymentObject.on('payment.failed', function (response) {
-          alert("Payment failed: " + response.error.description);
-        });
-        paymentObject.open();
-        
-        // Return null to tell the frontend NOT to show the "waiting for admin" screen
-        return null; 
-      } catch (err) {
-        console.warn('Razorpay failed, falling back to manual request:', err);
-      }
+  const requestRecharge = async (userId, amount, utrNumber) => {
+    if (!utrNumber) {
+      alert("UTR / Reference number is required.");
+      return null;
     }
 
-    // 2. Fallback to manual approval via Admin Panel
+    const localId = Date.now().toString();
     const newRequest = {
       id: localId,
       userId: String(userId),
       amount,
+      utrNumber,
       status: 'pending',
       timestamp: new Date().toISOString()
     };
@@ -410,6 +346,7 @@ export const WalletProvider = ({ children }) => {
         const saved = await insertRow('recharge_requests', {
           user_id: userId,
           amount,
+          utr_number: utrNumber,
           status: 'pending',
         });
         newRequest.id = String(saved.id); 
@@ -456,10 +393,23 @@ export const WalletProvider = ({ children }) => {
   };
 
   const rejectRecharge = async (requestId) => {
-    // Ideally you'd have a reject-recharge endpoint, for now we will just use Supabase if we must, 
-    // but the plan says move to backend. Let's assume we can add it or just remove from local state for now.
-    // Actually, let's keep it simple and just remove it from pending state (no-op in DB or add route later)
-    setPendingRecharges(prev => prev.filter(r => r.id !== requestId));
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/api/admin/reject-recharge`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ requestId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPendingRecharges(prev => prev.filter(r => r.id !== requestId));
+      } else {
+        alert(data.error || 'Failed to reject recharge');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error rejecting recharge');
+    }
   };
 
   const requestWithdrawal = async (userId, phone, amount, upiId) => {

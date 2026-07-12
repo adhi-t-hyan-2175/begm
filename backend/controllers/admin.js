@@ -140,6 +140,23 @@ exports.approveRecharge = async (req, res) => {
   }
 };
 
+// ─── POST /api/admin/reject-recharge ────────────────────────────────────────
+exports.rejectRecharge = async (req, res) => {
+  try {
+    const { requestId } = req.body;
+    if (!requestId) return res.status(400).json({ success: false, error: 'requestId required' });
+
+    await supabase
+      .from('recharge_requests')
+      .update({ status: 'rejected' })
+      .eq('id', requestId);
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
 // ─── GET /api/admin/withdrawal-requests ──────────────────────────────────────
 exports.getWithdrawalRequests = async (req, res) => {
   try {

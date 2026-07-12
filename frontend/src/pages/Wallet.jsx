@@ -10,8 +10,9 @@ const Wallet = () => {
   const { user } = useAuth();
   
   const [amount, setAmount] = useState('');
-  const [status, setStatus] = useState('input'); // 'input', 'razorpay', 'waiting', 'success'
+  const [status, setStatus] = useState('input'); // 'input', 'payment', 'waiting', 'success'
   const [currentRequestId, setCurrentRequestId] = useState(null);
+  const [utrNumber, setUtrNumber] = useState('');
 
   const quickAmounts = [100, 150, 1400, 4500, 10000, 40000];
 
@@ -43,7 +44,7 @@ const Wallet = () => {
     }
   }, [pendingRecharges, status, currentRequestId]);
 
-  const handleRecharge = async () => {
+  const handleRechargeClick = () => {
     const numAmount = parseInt(amount, 10);
     const minAmount = adminSettings?.minRecharge || 100;
     const maxAmount = adminSettings?.maxRecharge || 10000;
@@ -52,17 +53,74 @@ const Wallet = () => {
       return;
     }
     
-    // Directly trigger Razorpay integration
+    // Transition to payment upload screen
+    setStatus('payment');
+  };
+
+  const handleSubmitUtr = async () => {
+    if (!utrNumber || utrNumber.length < 12) {
+      alert('Please enter a valid 12-digit UTR or Reference Number.');
+      return;
+    }
     try {
-      const reqId = await requestRecharge(user.id, numAmount);
+      const numAmount = parseInt(amount, 10);
+      const reqId = await requestRecharge(user.id, numAmount, utrNumber);
       if (reqId) {
         setCurrentRequestId(reqId);
         setStatus('waiting');
       }
     } catch (err) {
-      alert(err.message || "Failed to start payment");
+      alert(err.message || "Failed to submit request");
     }
   };
+
+  if (status === 'payment') {
+    return (
+      <div style={{ background: '#f5f5f5', minHeight: '100vh', padding: 24 }}>
+        <h2 style={{ marginTop: 20, color: '#333', textAlign: 'center' }}>Make Payment</h2>
+        <div style={{ background: 'white', padding: 24, borderRadius: 12, marginTop: 20, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+          <p style={{ color: '#666', fontSize: '0.95rem', marginBottom: 20 }}>
+            Please pay <strong>₹{amount}</strong> to the UPI ID below using any UPI app (GPay, PhonePe, Paytm), then enter the 12-digit UTR/Reference number.
+          </p>
+          
+          <div style={{ background: '#f8f9fa', padding: 16, borderRadius: 8, marginBottom: 24, border: '1px solid #e9ecef', textAlign: 'center' }}>
+            <div style={{ fontSize: '0.85rem', color: '#6c757d', marginBottom: 8 }}>Admin UPI ID</div>
+            <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#000' }}>
+              {adminSettings?.adminUpiId || 'admin@upi'}
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ display: 'block', fontSize: '0.9rem', color: '#495057', marginBottom: 8, fontWeight: '600' }}>
+              12-Digit UTR / Reference No.
+            </label>
+            <input 
+              type="text" 
+              value={utrNumber}
+              onChange={(e) => setUtrNumber(e.target.value)}
+              placeholder="e.g. 312345678901"
+              maxLength={12}
+              style={{ width: '100%', padding: '12px 16px', borderRadius: 8, border: '1px solid #ced4da', fontSize: '1rem', outline: 'none' }}
+            />
+          </div>
+
+          <button 
+            onClick={handleSubmitUtr}
+            style={{ width: '100%', background: '#007bff', color: 'white', padding: 14, borderRadius: 8, border: 'none', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer', marginBottom: 12 }}
+          >
+            Submit Request
+          </button>
+          
+          <button 
+            onClick={() => setStatus('input')}
+            style={{ width: '100%', background: 'transparent', color: '#6c757d', padding: 14, borderRadius: 8, border: '1px solid #ced4da', fontSize: '1rem', cursor: 'pointer' }}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (status === 'waiting') {
     return (
@@ -143,7 +201,7 @@ const Wallet = () => {
           </div>
 
           <button 
-            onClick={handleRecharge}
+            onClick={handleRechargeClick}
             style={{ 
               width: '100%', background: 'linear-gradient(135deg, #4b6fff, #2563eb)', color: 'white', border: 'none', 
               padding: '14px', borderRadius: 14, fontSize: '1rem', fontWeight: '700', 
