@@ -755,9 +755,8 @@ export const WalletProvider = ({ children }) => {
     const betsToSettle = myOrders.filter(order => order.game === gameName && order.period === period && order.status === 'Pending');
     if (betsToSettle.length === 0) return;
 
-    // 2. Process all settlements sequentially to prevent backend wallet race conditions
-    const resolvedBets = [];
-    for (const order of betsToSettle) {
+    // 2. Prepare payload for batch resolution
+    const betsPayload = betsToSettle.map(order => {
       const sel = String(order.selection).toLowerCase().trim();
       const res = String(resultLabel).toLowerCase().trim();
       const won = sel === res;
@@ -769,27 +768,38 @@ export const WalletProvider = ({ children }) => {
         winAmount = payoutData.winningAmount;
       }
 
-      if (currentUser) {
-        try {
-          const token = localStorage.getItem('token');
-          await fetch(`${API_URL}/api/game/resolve-bet`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ betId: order.id, result: resultLabel, payout: winAmount })
-          });
-        } catch (err) {
-          console.error('[settleGameBets] API failed for bet:', order.id, err);
-        }
-      }
-
-      resolvedBets.push({
-        ...order,
-        status: won ? 'Won' : 'Lost',
+      return {
+        betId: order.id,
         result: resultLabel,
-        winAmount: won ? winAmount : 0,
-        settledAt: Date.now()
-      });
+        payout: winAmount,
+        won
+      };
+    });
+
+    // 3. Process settlements via backend batch API
+    if (currentUser) {
+      try {
+        const token = localStorage.getItem('token');
+        await fetch(`${API_URL}/api/game/resolve-bets-batch`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ bets: betsPayload })
+        });
+      } catch (err) {
+        console.error('[settleGameBets] API failed for batch:', err);
+      }
     }
+
+    const resolvedBets = betsToSettle.map(order => {
+      const payloadMatch = betsPayload.find(p => p.betId === order.id);
+      return {
+        ...order,
+        status: payloadMatch.won ? 'Won' : 'Lost',
+        result: resultLabel,
+        winAmount: payloadMatch.won ? payloadMatch.payout : 0,
+        settledAt: Date.now()
+      };
+    });
 
     // 3. Update local orders state
     setMyOrders(prev => prev.map(order => {

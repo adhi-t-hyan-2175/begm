@@ -183,4 +183,93 @@ const getBetHistory = async (req, res) => {
   }
 };
 
-module.exports = { placeBet, resolveBet, getBetHistory };
+// ─── POST /api/game/resolve-bets-batch ─ batch process to prevent race conditions ───
+const resolveBetsBatch = async (req, res) => {
+  const { bets } = req.body;
+  const userId = req.user.id;
+
+  if (!bets || !Array.isArray(bets) || bets.length === 0) {
+    return res.status(400).json({ success: false, error: 'Missing bets array' });
+  }
+
+  try {
+    let totalPayout = 0;
+    const resolvedIds = [];
+    const transactions = [];
+
+    // 1. Fetch current wallet balance
+    const { data: wallet, error: walletErr } = await supabase
+      .from('wallets')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (walletErr) throw walletErr;
+    let currentBalance = parseFloat(wallet?.main_balance || 0);
+
+    // 2. Process each bet sequentially for database records
+    for (const betInput of bets) {
+      const { betId, result, payout } = betInput;
+
+      const { data: bet } = await supabase
+        .from('bets')
+        .select('*')
+        .eq('id', betId)
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (!bet || bet.status !== 'pending') continue;
+
+      const won = String(bet.selection).toLowerCase().trim() === String(result).toLowerCase().trim();
+      const payoutAmount = won ? parseFloat(payout || bet.amount * 2) : 0;
+      const profit = won ? payoutAmount - bet.amount : -bet.amount;
+      const newStatus = won ? 'won' : 'lost';
+
+      if (won && payoutAmount > 0) {
+        totalPayout += payoutAmount;
+        const newBalance = currentBalance + payoutAmount;
+        
+        transactions.push({
+          user_id: userId,
+          amount: payoutAmount,
+          type: 'Win',
+          status: 'Success',
+          notes: `${bet.game_type} Period ${bet.period} — Won`,
+          previous_balance: currentBalance,
+          new_balance: newBalance
+        });
+        
+        currentBalance = newBalance;
+      }
+
+      await supabase.from('bets').update({ 
+        result, 
+        payout: payoutAmount, 
+        status: newStatus,
+        profit: profit,
+        wallet_after: currentBalance
+      }).eq('id', betId);
+      
+      resolvedIds.push(betId);
+    }
+
+    // 3. One atomic wallet update for the total payout
+    if (totalPayout > 0) {
+      await supabase
+        .from('wallets')
+        .update({ main_balance: currentBalance, updated_at: new Date().toISOString() })
+        .eq('user_id', userId);
+        
+      if (transactions.length > 0) {
+        await supabase.from('transactions').insert(transactions);
+      }
+    }
+
+    res.json({ success: true, message: 'Batch resolved', resolvedCount: resolvedIds.length, main_balance: currentBalance });
+  } catch (err) {
+    console.error('[resolveBetsBatch]', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+module.exports = { placeBet, resolveBet, resolveBetsBatch, getBetHistory };
