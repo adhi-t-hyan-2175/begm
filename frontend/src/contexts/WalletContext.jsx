@@ -24,15 +24,22 @@ export const WalletProvider = ({ children }) => {
     if (!currentUser || !isSupabaseReady()) return;
     (async () => {
       try {
-        const wallet = await getBy('wallets', 'user_id', currentUser.id);
-        if (wallet) {
-          setBalance(parseFloat(wallet.main_balance) || 0);
-          setBonusBalance(parseFloat(wallet.bonus_balance) || 0);
-          localStorage.setItem('wallet_balance', String(wallet.main_balance || 0));
-          localStorage.setItem('bonus_balance', String(wallet.bonus_balance || 0));
+        const token = localStorage.getItem('token');
+        if (token) {
+          const res = await fetch(`${API_URL}/api/wallet`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          const data = await res.json();
+          if (data.success && data.wallet) {
+            const wallet = data.wallet;
+            setBalance(parseFloat(wallet.main_balance) || 0);
+            setBonusBalance(parseFloat(wallet.bonus_balance) || 0);
+            localStorage.setItem('wallet_balance', String(wallet.main_balance || 0));
+            localStorage.setItem('bonus_balance', String(wallet.bonus_balance || 0));
+          }
         }
       } catch (err) {
-        console.warn('[Wallet] Supabase hydration failed:', err.message);
+        console.warn('[Wallet] Backend hydration failed:', err.message);
       }
     })();
   }, [currentUser?.id]);
@@ -104,20 +111,27 @@ export const WalletProvider = ({ children }) => {
           setPendingWithdrawals(mapped);
         }
 
-        // Transactions history for the current user
-        const txns = await getAll('transactions', { column: 'user_id', value: currentUser.id }, 'created_at');
-        if (txns.length > 0) {
-          const mapped = txns.map(t => ({
-            id: String(t.id),
-            userId: String(t.user_id),
-            type: t.type,
-            amount: t.amount > 0 ? `+ ₹${t.amount}` : `- ₹${Math.abs(t.amount)}`,
-            status: t.status,
-            time: new Date(t.created_at).toLocaleString('en-US', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }),
-            color: t.status === 'Success' ? '#28a745' : '#dc3545',
-            timestamp: new Date(t.created_at).getTime(),
-          }));
-          setFinancialRecords(mapped);
+        // Transactions history for the current user via secure backend route
+        const token = localStorage.getItem('token');
+        if (token) {
+          const res = await fetch(`${API_URL}/api/wallet/transactions`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          const txData = await res.json();
+          
+          if (txData.success && txData.transactions.length > 0) {
+            const mapped = txData.transactions.map(t => ({
+              id: String(t.id),
+              userId: String(t.user_id),
+              type: t.type,
+              amount: t.amount > 0 ? `+ ₹${t.amount}` : `- ₹${Math.abs(t.amount)}`,
+              status: t.status,
+              time: new Date(t.created_at).toLocaleString('en-US', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }),
+              color: t.status === 'Success' ? '#28a745' : '#dc3545',
+              timestamp: new Date(t.created_at).getTime(),
+            }));
+            setFinancialRecords(mapped);
+          }
         }
       } catch (err) {
         console.warn('[Wallet] Supabase data hydration failed:', err.message);
@@ -337,35 +351,46 @@ export const WalletProvider = ({ children }) => {
           order_id: orderData.order?.id || orderData.id,
           handler: async function (response) {
             // Verify Payment
-            const verifyRes = await fetch(`${API_URL}/api/wallet/verify-payment`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-              body: JSON.stringify({
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                amount: amount
-              })
-            });
-            const verifyData = await verifyRes.json();
-            if (verifyRes.ok && verifyData.success) {
-              setBalance(prev => prev + amount);
-              alert("Recharge successful!");
-            } else {
-              alert("Payment verification failed.");
+            try {
+              const verifyRes = await fetch(`${API_URL}/api/wallet/verify-payment`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                  amount: amount // backend will securely verify this via razorpay API
+                })
+              });
+              const verifyData = await verifyRes.json();
+              if (verifyRes.ok && verifyData.success) {
+                if (verifyData.main_balance !== undefined) setBalance(verifyData.main_balance);
+                alert(verifyData.message || "Recharge successful!");
+                // Reload page to reflect new transactions in history cleanly
+                window.location.reload(); 
+              } else {
+                alert(verifyData.message || "Payment verification failed.");
+              }
+            } catch (err) {
+              alert("Error verifying payment: " + err.message);
             }
           },
           prefill: {
-            contact: "9999999999" // Can be filled with currentUser phone
+            contact: "" 
           },
           theme: {
-            color: "#3399cc"
+            color: "#d4af37" // BETX Gold
           }
         };
 
         const paymentObject = new window.Razorpay(options);
+        paymentObject.on('payment.failed', function (response) {
+          alert("Payment failed: " + response.error.description);
+        });
         paymentObject.open();
-        return localId; // Exit early since Razorpay is handling it
+        
+        // Return null to tell the frontend NOT to show the "waiting for admin" screen
+        return null; 
       } catch (err) {
         console.warn('Razorpay failed, falling back to manual request:', err);
       }
@@ -397,18 +422,30 @@ export const WalletProvider = ({ children }) => {
     return newRequest.id;
   };
 
-  const approveRecharge = async (requestId) => {
+  const approveRecharge = async (requestId, userId, amount) => {
     try {
       const token = localStorage.getItem('token');
       const res = await fetch(`${API_URL}/api/admin/approve-recharge`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ requestId })
+        body: JSON.stringify({ requestId, userId, amount })
       });
       const data = await res.json();
       if (data.success) {
         setPendingRecharges(prev => prev.filter(r => r.id !== requestId));
-        // Balance will be updated dynamically on next app hydration, or we can just refetch here
+        if (currentUser && currentUser.id.toString() === userId.toString()) {
+          setBalance(prev => prev + amount);
+          setFinancialRecords(prev => [{
+            id: requestId,
+            userId: String(userId),
+            type: 'Recharge',
+            amount: `+ ₹${amount}`,
+            status: 'Success',
+            time: new Date().toLocaleString('en-US', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }),
+            color: '#28a745',
+            timestamp: Date.now(),
+          }, ...prev]);
+        }
       } else {
         alert(data.error || 'Failed to approve recharge');
       }

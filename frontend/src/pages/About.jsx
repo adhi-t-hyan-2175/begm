@@ -14,9 +14,9 @@ const About = () => {
         <div style={{ width: 28 }}></div>
       </div>
       <div style={{ padding: 24, color: '#444', lineHeight: 1.6 }}>
-        <h3 style={{ marginBottom: 16 }}>Welcome to Gambb</h3>
+        <h3 style={{ marginBottom: 16 }}>Welcome to BETX</h3>
         <p style={{ marginBottom: 16 }}>
-          Gambb is the ultimate destination for fun, fast-paced games where you can win real rewards. 
+          BETX is the ultimate destination for fun, fast-paced games where you can win real rewards.
           Our platform is designed to provide a secure and entertaining experience for all our users.
         </p>
         <p style={{ marginBottom: 16 }}>

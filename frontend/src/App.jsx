@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes, useLocation, Navigate } from 'react-router-dom';
 import BottomNav from './components/BottomNav';
+import LoadingScreen from './components/LoadingScreen';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Wallet from './pages/Wallet';
@@ -53,22 +54,25 @@ const MainApp = () => {
   const location = useLocation();
   const { user, loading } = useAuth();
   const hideBottomNav = ['/login', '/treesadhi', '/leaderboard'].includes(location.pathname);
+  const [showSplash, setShowSplash] = React.useState(true);
 
-  // If auth is still initializing, show a full-screen loading spinner
-  // This ensures a smooth redirect to Home after Google Auth completes.
-  if (loading) {
-    return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#080808' }}>
-        <div style={{ width: 40, height: 40, border: '3px solid rgba(255,255,255,0.1)', borderTopColor: '#C8A96E', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      </div>
-    );
-  }
+  // Keep the splash screen alive for 3 seconds to let the animation play out
+  React.useEffect(() => {
+    const timer = setTimeout(() => setShowSplash(false), 3000);
+    return () => clearTimeout(timer);
+  }, []);
 
+  // If auth finishes before 3 seconds, showSplash keeps the animation playing.
+  // We render LoadingScreen at the top level so it never unmounts/remounts.
   return (
-    <div className="app-wrapper">
-      <div className="page-content">
-        <Routes>
+    <>
+      {(loading || showSplash) && <LoadingScreen />}
+      
+      {/* Only render the actual app once auth is finished loading */}
+      {!loading && (
+        <div className="app-wrapper">
+          <div className="page-content">
+            <Routes>
           {/* Public routes */}
           <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
           <Route path="/register" element={<Navigate to="/login" replace />} />
@@ -100,6 +104,8 @@ const MainApp = () => {
       </div>
       {!hideBottomNav && user && <BottomNav />}
     </div>
+    )}
+    </>
   );
 };
 

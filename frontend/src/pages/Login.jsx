@@ -32,7 +32,7 @@ const Login = () => {
         <div style={styles.logoWrap}>
           <div style={styles.logoIcon}>⚡</div>
           <div style={styles.logoText}>
-            Fast<span style={styles.logoAccent}>Win</span>
+            BET<span style={styles.logoAccent}>X</span>
           </div>
           <p style={styles.tagline}>Play. Win. Repeat.</p>
         </div>

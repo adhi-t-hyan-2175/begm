@@ -19,7 +19,7 @@ export const supabase = createClient(
       autoRefreshToken: true,     // Auto-refresh tokens before they expire
       detectSessionInUrl: true,   // Pick up the OAuth callback hash from the URL
     },
-    global: { headers: { 'x-app-name': 'gambb-platform' } },
+    global: { headers: { 'x-app-name': 'betx-platform' } },
   }
 );
 

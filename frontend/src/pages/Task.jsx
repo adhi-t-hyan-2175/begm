@@ -11,15 +11,12 @@ const Task = () => {
   const [rewardAmount, setRewardAmount] = useState(0);
 
   const handleStartTask = (taskId, amount) => {
-    const task = tasks[taskId];
+    const task = tasks[taskId] || { status: 'pending', progress: 0 };
     if (task.status === 'pending') {
-      // Simulate task completion after a short delay
-      alert('Simulating task completion... Please wait 2 seconds.');
-      setTimeout(() => {
-        updateTask(taskId, 'completed', 100);
-      }, 2000);
+      updateTask(taskId, 'in_progress', 50);
+    } else if (task.status === 'in_progress') {
+      updateTask(taskId, 'completed', 100);
     } else if (task.status === 'completed') {
-      // Claim reward
       claimTaskReward(taskId, amount);
       setRewardAmount(amount);
       setModalOpen(true);
@@ -28,12 +25,14 @@ const Task = () => {
 
   const getButtonText = (status) => {
     if (status === 'pending') return 'Start task';
+    if (status === 'in_progress') return 'Continue task';
     if (status === 'completed') return 'Claim Reward';
     if (status === 'claimed') return 'Completed';
   };
 
   const getButtonStyle = (status) => {
     if (status === 'pending') return { background: '#e0f0ff', color: '#007bff', border: '1px solid #007bff' };
+    if (status === 'in_progress') return { background: '#fff3cd', color: '#856404', border: '1px solid #ffeeba' };
     if (status === 'completed') return { background: '#28a745', color: 'white', border: 'none' };
     if (status === 'claimed') return { background: '#f5f5f5', color: '#999', border: 'none' };
   };

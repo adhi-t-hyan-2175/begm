@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import LoadingScreen from '../components/LoadingScreen';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -21,6 +22,7 @@ const Register = () => {
   const [error, setError] = useState('');
   const [countdown, setCountdown] = useState(0);
   const [isSending, setIsSending] = useState(false);
+  const [showLoading, setShowLoading] = useState(false);
   
   const handleSendOTP = async () => {
     if (!phone) {
@@ -80,11 +82,20 @@ const Register = () => {
       // Store full international number (without +)
       const fullPhone = `${countryCode.replace('+', '')}${phone}`;
       await registerUser(fullPhone, password, otp, 'NewUser', referralCode);
-      navigate('/');
+      
+      // Trigger the cinematic loading screen instead of instant redirect
+      setShowLoading(true);
+      setTimeout(() => {
+        navigate('/');
+      }, 3000); // Navigate exactly when the fade-out animation finishes
     } catch (err) {
       setError(err.message || 'Registration failed');
     }
   };
+
+  if (showLoading) {
+    return <LoadingScreen />;
+  }
 
   return (
     <div className="auth-page">
@@ -94,7 +105,7 @@ const Register = () => {
       </div>
 
       <form className="auth-card" onSubmit={handleRegister}>
-        <div className="auth-logo">Fast<span>Win</span></div>
+        <div className="auth-logo">BET<span>X</span></div>
         <div className="auth-subtitle">Create your account and start earning</div>
 
         {error && <div className="auth-error" style={{ color: '#ff4d4f', background: 'rgba(255, 77, 79, 0.1)', padding: '10px', borderRadius: '4px', marginBottom: '15px', fontSize: '0.85rem' }}>{error}</div>}

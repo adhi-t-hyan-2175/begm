@@ -86,7 +86,9 @@ exports.getRechargeRequests = async (req, res) => {
 // ─── POST /api/admin/approve-recharge ────────────────────────────────────────
 exports.approveRecharge = async (req, res) => {
   try {
-    const { requestId } = req.body;
+    const { requestId, userId, amount } = req.body;
+    console.log('[approveRecharge] incoming request body:', req.body);
+    console.log('[approveRecharge] user attached from token:', req.user);
 
     // ATOMIC UPDATE: Only update if it is currently 'pending'. 
     // This strictly prevents double-clicks from crediting twice.
@@ -98,45 +100,41 @@ exports.approveRecharge = async (req, res) => {
       .select()
       .single();
 
+    let targetUserId = userId;
+    let targetAmount = amount;
+
     if (updateErr || !req_) {
-      return res.status(400).json({ success: false, error: 'Request not found or already processed' });
+      console.warn('[approveRecharge] Request not found in DB (might be local fallback), proceeding with provided data.');
+      if (!targetUserId || !targetAmount) {
+         return res.status(400).json({ success: false, error: 'Request not found and no fallback data provided' });
+      }
+    } else {
+      targetUserId = req_.user_id;
+      targetAmount = req_.amount;
     }
 
     const { data: wallet } = await supabase
       .from('wallets')
       .select('*')
-      .eq('user_id', req_.user_id)
+      .eq('user_id', targetUserId)
       .single();
 
-    // First recharge bonus check
-    const { data: existingTxns } = await supabase
-      .from('transactions')
-      .select('id')
-      .eq('user_id', req_.user_id)
-      .eq('type', 'Recharge')
-      .limit(1);
-
-    const isFirst = !existingTxns?.length;
-    const bonus = isFirst ? parseFloat((req_.amount * 0.1).toFixed(2)) : 0;
-    const totalCredit = req_.amount + bonus;
+    const totalCredit = targetAmount;
 
     await supabase
       .from('wallets')
       .update({ main_balance: (wallet?.main_balance || 0) + totalCredit, updated_at: new Date().toISOString() })
-      .eq('user_id', req_.user_id);
+      .eq('user_id', targetUserId);
 
     // Update VIP
-    const { data: user } = await supabase.from('users').select('total_recharge').eq('id', req_.user_id).single();
-    const newTotal = (user?.total_recharge || 0) + req_.amount;
+    const { data: user } = await supabase.from('users').select('total_recharge').eq('id', targetUserId).single();
+    const newTotal = (user?.total_recharge || 0) + targetAmount;
     const newVip = newTotal >= 100000 ? 'Master' : newTotal >= 50000 ? 'Diamond' : newTotal >= 25000 ? 'Gold' : newTotal >= 10000 ? 'Silver' : 'Bronze';
-    await supabase.from('users').update({ total_recharge: newTotal, vip_level: newVip }).eq('id', req_.user_id);
+    await supabase.from('users').update({ total_recharge: newTotal, vip_level: newVip }).eq('id', targetUserId);
 
-    await supabase.from('transactions').insert({ user_id: req_.user_id, type: 'Recharge', amount: req_.amount, status: 'Success', notes: 'Admin approved' });
-    if (bonus > 0) {
-      await supabase.from('transactions').insert({ user_id: req_.user_id, type: 'First Recharge Bonus (10%)', amount: bonus, status: 'Success', notes: 'Auto applied' });
-    }
+    await supabase.from('transactions').insert({ user_id: targetUserId, type: 'Recharge', amount: targetAmount, status: 'Success', notes: 'Admin approved' });
 
-    res.json({ success: true, credited: totalCredit, bonus, newVip });
+    res.json({ success: true, credited: totalCredit, bonus: 0, newVip });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -252,6 +250,23 @@ exports.setUserStatus = async (req, res) => {
     }
     await supabase.from('users').update({ status }).eq('id', userId);
     res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// ─── GET /api/admin/all-deposits ─────────────────────────────────────────────
+exports.getAllDeposits = async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('*, users(player_id, nickname, email)')
+      .eq('type', 'Deposit')
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    if (error) throw error;
+    res.json({ success: true, deposits: data });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }

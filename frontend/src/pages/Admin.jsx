@@ -343,6 +343,59 @@ const users = [
 ];
 
 
+const RazorpayTransactions = () => {
+  const [deposits, setDeposits] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDeposits = async () => {
+      try {
+        const token = localStorage.getItem('adminToken');
+        const res = await fetch(`${API_BASE}/api/admin/all-deposits`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success) {
+          // Filter only razorpay transactions
+          const razorpayTxns = data.deposits.filter(t => t.notes && t.notes.includes('Razorpay'));
+          setDeposits(razorpayTxns);
+        }
+      } catch (err) {
+        console.error('Failed to fetch deposits:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDeposits();
+  }, []);
+
+  if (loading) return <p className="admin-empty">Loading transactions...</p>;
+  if (deposits.length === 0) return <p className="admin-empty">No Razorpay transactions found.</p>;
+
+  return (
+    <div className="admin-list-stack">
+      {deposits.map(txn => (
+        <div key={txn.id} className="admin-request-row" style={{ alignItems: 'center' }}>
+          <div>
+            <strong>Payment ID: {txn.razorpay_payment_id || 'Unknown'}</strong>
+            <p>Amount: <span style={{ color: '#10b981', fontWeight: 'bold' }}>₹{txn.amount}</span></p>
+            <p style={{ fontSize: '0.85rem', color: '#64748b' }}>
+              User: {txn.users?.nickname} ({txn.users?.email}) • Player ID: {txn.users?.player_id}
+            </p>
+            <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+              Time: {new Date(txn.created_at).toLocaleString()}
+            </p>
+          </div>
+          <div className="admin-actions">
+            <span className="admin-pill" style={{ background: '#10b981', color: 'white' }}>Success</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+
 const Admin = () => {
   const {
     balance,
@@ -365,7 +418,7 @@ const Admin = () => {
     recordGameProfit
   } = useWallet();
 
-  const { allUsers, setAllUsers } = useAuth();
+  const { allUsers, setAllUsers, refreshAllUsers } = useAuth();
 
   const [authState, setAuthState] = useState({ checking: true, authenticated: false, username: '' });
   const [loginForm, setLoginForm] = useState({ username: 'Treesadhi', password: 'TREESADHI2175' });
@@ -374,6 +427,12 @@ const Admin = () => {
   const [gameHistories, setGameHistories] = useState({});
   const globalTimer = useGameTimer(60, 15);
   const betDisplayFloors = useRef({});
+
+  useEffect(() => {
+    if (authState.authenticated) {
+      refreshAllUsers();
+    }
+  }, [authState.authenticated, refreshAllUsers]);
 
   const timerStates = useMemo(() => {
     const newStates = {};
@@ -501,7 +560,7 @@ const Admin = () => {
   };
 
   const handleApproveRecharge = (reqId, userId, amount) => {
-    approveRecharge(reqId);
+    approveRecharge(reqId, userId, amount);
     setAllUsers(prev => prev.map(u => {
       if (u.id.toString() !== userId.toString()) return u;
       const newTotal = (u.totalRecharge || 0) + amount;
@@ -810,6 +869,12 @@ const Admin = () => {
               })}
             </div>
           )}
+
+          <div className="admin-section-title-row" style={{ marginTop: 40, borderTop: '1px solid #e2e8f0', paddingTop: 20 }}>
+            <h3>Razorpay Transactions</h3>
+            <span className="admin-pill" style={{ background: '#e0f2fe', color: '#0369a1' }}>Auto-credited</span>
+          </div>
+          <RazorpayTransactions />
         </div>
       )}
 
@@ -869,18 +934,18 @@ const Admin = () => {
               {allUsers.map(u => (
                 <tr key={u.id} style={{ borderBottom: '1px solid #1a1a2e' }}>
                   <td style={{ padding: '12px 8px', color: '#0ff', fontWeight: 'bold' }}>{u.id}</td>
-                  <td style={{ padding: '12px 8px' }}>{u.phone}</td>
-                  <td style={{ padding: '12px 8px', color: '#0f0' }}>₹{(u.wallet || 0).toLocaleString()}</td>
-                  <td style={{ padding: '12px 8px', color: '#ffd700' }}>₹{(u.totalRecharge || 0).toLocaleString()}</td>
+                  <td style={{ padding: '12px 8px' }}>{u.phone || u.email || 'N/A'}</td>
+                  <td style={{ padding: '12px 8px', color: '#0f0' }}>₹{(u.wallet || u.main_balance || 0).toLocaleString()}</td>
+                  <td style={{ padding: '12px 8px', color: '#ffd700' }}>₹{(u.totalRecharge || u.total_recharge || 0).toLocaleString()}</td>
                   <td style={{ padding: '12px 8px' }}>
                     <span style={{ 
                       padding: '4px 8px', 
                       borderRadius: 4, 
                       fontSize: '0.8rem', 
-                      background: u.status === 'Frozen' ? '#8b0000' : '#1a3a2e',
-                      color: u.status === 'Frozen' ? '#ffcccc' : '#0f0'
+                      background: (u.status || 'Active') === 'Frozen' ? '#8b0000' : '#1a3a2e',
+                      color: (u.status || 'Active') === 'Frozen' ? '#ffcccc' : '#0f0'
                     }}>
-                      {u.status}
+                      {u.status || 'Active'}
                     </span>
                   </td>
                 </tr>

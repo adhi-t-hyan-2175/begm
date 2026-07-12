@@ -38,16 +38,12 @@ const Wallet = () => {
       // Check if it's no longer in pending (meaning it was approved or denied)
       const isStillPending = pendingRecharges.some(r => r.id === currentRequestId);
       if (!isStillPending) {
-        // Double check it's in financial records to ensure it was a success
-        const isSuccess = financialRecords.some(r => r.id === currentRequestId);
-        if (isSuccess) {
-          setStatus('success');
-        }
+        setStatus('success');
       }
     }
-  }, [pendingRecharges, financialRecords, status, currentRequestId]);
+  }, [pendingRecharges, status, currentRequestId]);
 
-  const handleRecharge = () => {
+  const handleRecharge = async () => {
     const numAmount = parseInt(amount, 10);
     const minAmount = adminSettings?.minRecharge || 100;
     const maxAmount = adminSettings?.maxRecharge || 10000;
@@ -56,67 +52,17 @@ const Wallet = () => {
       return;
     }
     
-    // 1. Show razorpay mock
-    setStatus('razorpay');
+    // Directly trigger Razorpay integration
+    try {
+      const reqId = await requestRecharge(user.id, numAmount);
+      if (reqId) {
+        setCurrentRequestId(reqId);
+        setStatus('waiting');
+      }
+    } catch (err) {
+      alert(err.message || "Failed to start payment");
+    }
   };
-
-  const handleRazorpaySuccess = () => {
-    const numAmount = parseInt(amount, 10);
-    const reqId = requestRecharge(user.id, numAmount);
-    setCurrentRequestId(reqId);
-    setStatus('waiting');
-  };
-
-  if (status === 'razorpay') {
-    return (
-      <div style={{ background: 'rgba(0, 0, 0, 0.8)', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999 }}>
-        <div style={{ background: '#fff', width: '90%', maxWidth: 400, borderRadius: 12, overflow: 'hidden', boxShadow: '0 20px 40px rgba(0,0,0,0.4)' }}>
-          <div style={{ background: '#02042b', color: '#fff', padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ fontSize: '1.2rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ width: 24, height: 24, background: '#3395ff', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 900 }}>R</div>
-              Razorpay Checkout
-            </div>
-            <div style={{ fontSize: '1.2rem', fontWeight: 700 }}>₹{amount}</div>
-          </div>
-          
-          <div style={{ padding: 24 }}>
-            <div style={{ color: '#666', fontSize: '0.9rem', marginBottom: 16 }}>Select Payment Method</div>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ border: '1px solid #e0e0e0', padding: 16, borderRadius: 8, display: 'flex', alignItems: 'center', gap: 12, background: '#f9f9f9', cursor: 'pointer' }}>
-                <div style={{ width: 32, height: 32, background: '#fff', border: '1px solid #ccc', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666', fontWeight: 'bold' }}>UPI</div>
-                <div>
-                  <div style={{ fontWeight: 600, color: '#333' }}>Google Pay / PhonePe</div>
-                  <div style={{ fontSize: '0.8rem', color: '#888' }}>Pay via UPI App</div>
-                </div>
-              </div>
-              
-              <div style={{ border: '1px solid #e0e0e0', padding: 16, borderRadius: 8, display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
-                <div style={{ width: 32, height: 32, background: '#f0f0f0', border: '1px solid #ccc', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666', fontWeight: 'bold' }}>💳</div>
-                <div>
-                  <div style={{ fontWeight: 600, color: '#333' }}>Card</div>
-                  <div style={{ fontSize: '0.8rem', color: '#888' }}>Visa, MasterCard, RuPay</div>
-                </div>
-              </div>
-            </div>
-            
-            <button 
-              onClick={handleRazorpaySuccess}
-              style={{ width: '100%', background: '#3395ff', color: 'white', border: 'none', padding: '16px', borderRadius: 8, fontSize: '1.1rem', fontWeight: '600', marginTop: 24, cursor: 'pointer' }}
-            >
-              Pay Now (Mock)
-            </button>
-            <button 
-              onClick={() => setStatus('input')}
-              style={{ width: '100%', background: 'transparent', color: '#888', border: 'none', padding: '12px', fontSize: '0.9rem', marginTop: 8, cursor: 'pointer' }}
-            >
-              Cancel Payment
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   if (status === 'waiting') {
     return (

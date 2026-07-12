@@ -13,6 +13,7 @@ const {
   getUserTransactions,
   setUserStatus,
   getStats,
+  getAllDeposits,
 } = require('../controllers/admin');
 
 // Unprotected Admin Login Routes
@@ -29,6 +30,7 @@ router.post('/set-user-status', setUserStatus);
 // Recharges
 router.get('/recharge-requests', getRechargeRequests);
 router.post('/approve-recharge', approveRecharge);
+router.get('/all-deposits', getAllDeposits);
 
 // Withdrawals
 router.get('/withdrawal-requests', getWithdrawalRequests);
@@ -42,4 +44,3 @@ router.get('/transactions/:userId', getUserTransactions);
 router.get('/stats', getStats);
 
 module.exports = router;
-

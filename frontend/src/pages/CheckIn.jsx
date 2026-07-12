@@ -6,7 +6,8 @@ import RewardModal from '../components/RewardModal';
 
 const CheckIn = () => {
   const navigate = useNavigate();
-  const { checkInState, performCheckIn } = useWallet();
+  const { checkInState, performCheckIn, financialRecords } = useWallet();
+  const hasRecharged = financialRecords?.some(r => String(r.type).toLowerCase().includes('recharge') && String(r.status).toLowerCase() === 'success');
   const [modalOpen, setModalOpen] = useState(false);
   const [rewardAmount, setRewardAmount] = useState(0);
 
@@ -34,6 +35,11 @@ const CheckIn = () => {
   const canCheckIn = timeSinceLastCheckIn >= ONE_DAY_MS;
 
   const handleCheckIn = () => {
+    if (!hasRecharged) {
+      alert("Please complete at least one recharge to unlock Check In rewards!");
+      return;
+    }
+
     if (!canCheckIn) {
       alert("You have already checked in today! Please wait 24 hours.");
       return;
