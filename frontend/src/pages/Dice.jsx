@@ -10,7 +10,7 @@ import BetCardModal from '../components/BetCardModal';
 import ResultCard from '../components/ResultCard';
 
 const GAME = 'Dice';
-const MULTIPLIERS = { Small: 1.9, Large: 1.9, Tie: 5, small: 1.9, large: 1.9, tie: 5, '7': 5 };
+const MULTIPLIERS = { Small: 1.9, Large: 1.9, Tie: 4.9, small: 1.9, large: 1.9, tie: 4.9, '7': 4.9 };
 
 const AVATARS = ['🧑','👩','👦','👧','🧔','👱','🧕','🧑‍🦱'];
 const randAvatar = (seed) => AVATARS[Math.abs(String(seed).split('').reduce((a,c)=>a+c.charCodeAt(0),0)) % AVATARS.length];

@@ -755,8 +755,9 @@ export const WalletProvider = ({ children }) => {
     const betsToSettle = myOrders.filter(order => order.game === gameName && order.period === period && order.status === 'Pending');
     if (betsToSettle.length === 0) return;
 
-    // 2. Process all settlements in parallel via backend API
-    const promises = betsToSettle.map(async (order) => {
+    // 2. Process all settlements sequentially to prevent backend wallet race conditions
+    const resolvedBets = [];
+    for (const order of betsToSettle) {
       const sel = String(order.selection).toLowerCase().trim();
       const res = String(resultLabel).toLowerCase().trim();
       const won = sel === res;
@@ -781,16 +782,14 @@ export const WalletProvider = ({ children }) => {
         }
       }
 
-      return {
+      resolvedBets.push({
         ...order,
         status: won ? 'Won' : 'Lost',
         result: resultLabel,
         winAmount: won ? winAmount : 0,
         settledAt: Date.now()
-      };
-    });
-
-    const resolvedBets = await Promise.all(promises);
+      });
+    }
 
     // 3. Update local orders state
     setMyOrders(prev => prev.map(order => {
