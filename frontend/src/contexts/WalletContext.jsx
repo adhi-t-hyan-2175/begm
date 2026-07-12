@@ -196,6 +196,25 @@ export const WalletProvider = ({ children }) => {
     dailyLogin: { status: 'pending', progress: 0 }
   });
 
+  useEffect(() => {
+    if (currentUser) {
+      const completed = currentUser.completed_tasks || [];
+      const today = new Date().toISOString().split('T')[0];
+      const dailyClaimed = currentUser.last_daily_claim === today;
+
+      setTasks(prev => {
+        const next = { ...prev };
+        completed.forEach(taskId => {
+          if (next[taskId]) next[taskId] = { status: 'claimed', progress: 100 };
+        });
+        if (dailyClaimed && next.dailyLogin) {
+          next.dailyLogin = { status: 'claimed', progress: 100 };
+        }
+        return next;
+      });
+    }
+  }, [currentUser]);
+
   const [financialRecords, setFinancialRecords] = useState(() => {
     const saved = localStorage.getItem('financial_records');
     return saved ? JSON.parse(saved) : [];

@@ -135,6 +135,8 @@ exports.upsertProfile = async (req, res) => {
         total_recharge: profile.total_recharge,
         main_balance: wallet?.main_balance || 0,
         bonus_balance: wallet?.bonus_balance || 0,
+        completed_tasks: profile.completed_tasks || [],
+        last_daily_claim: profile.last_daily_claim || null,
       },
     });
   } catch (err) {
@@ -185,6 +187,8 @@ exports.me = async (req, res) => {
         total_recharge: user.total_recharge,
         main_balance: wallet?.main_balance || 0,
         bonus_balance: wallet?.bonus_balance || 0,
+        completed_tasks: user.completed_tasks || [],
+        last_daily_claim: user.last_daily_claim || null,
       },
     });
   } catch (err) {
