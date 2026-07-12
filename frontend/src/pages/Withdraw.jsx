@@ -88,7 +88,7 @@ const Withdraw = () => {
       {/* Wallet Balance */}
       <div style={{ padding: '18px 18px 10px' }}>
         <div style={{ background: 'linear-gradient(135deg, #0f172a, #2563eb)', borderRadius: '22px', padding: '20px', color: 'white', boxShadow: '0 16px 30px rgba(15,23,42,0.16)' }}>
-          <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', marginBottom: 4 }}>My Wallet</div>
+          <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', marginBottom: 4 }}>Main Balance (Withdrawable)</div>
           <div style={{ fontSize: '2.1rem', fontWeight: '800' }}>₹{balance.toFixed(2)}</div>
         </div>
       </div>

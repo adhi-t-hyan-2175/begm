@@ -13,6 +13,8 @@ const Wallet = () => {
   const [status, setStatus] = useState('input'); // 'input', 'payment', 'waiting', 'success'
   const [currentRequestId, setCurrentRequestId] = useState(null);
   const [utrNumber, setUtrNumber] = useState('');
+  const [senderName, setSenderName] = useState('');
+  const [senderUpi, setSenderUpi] = useState('');
 
   const quickAmounts = [100, 150, 1400, 4500, 10000, 40000];
 
@@ -58,13 +60,21 @@ const Wallet = () => {
   };
 
   const handleSubmitUtr = async () => {
+    if (!senderUpi || !senderUpi.includes('@')) {
+      alert('Please enter a valid UPI ID.');
+      return;
+    }
+    if (!senderName || senderName.trim().length < 2) {
+      alert('Please enter your full name.');
+      return;
+    }
     if (!utrNumber || utrNumber.length < 12) {
       alert('Please enter a valid 12-digit UTR or Reference Number.');
       return;
     }
     try {
       const numAmount = parseInt(amount, 10);
-      const reqId = await requestRecharge(user.id, numAmount, utrNumber);
+      const reqId = await requestRecharge(user.id, numAmount, utrNumber, senderName, senderUpi);
       if (reqId) {
         setCurrentRequestId(reqId);
         setStatus('waiting');
@@ -80,14 +90,54 @@ const Wallet = () => {
         <h2 style={{ marginTop: 20, color: '#333', textAlign: 'center' }}>Make Payment</h2>
         <div style={{ background: 'white', padding: 24, borderRadius: 12, marginTop: 20, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
           <p style={{ color: '#666', fontSize: '0.95rem', marginBottom: 20 }}>
-            Please pay <strong>₹{amount}</strong> to the UPI ID below using any UPI app (GPay, PhonePe, Paytm), then enter the 12-digit UTR/Reference number.
+            Please pay <strong>₹{amount}</strong> to the UPI ID below using any UPI app (GPay, PhonePe, Paytm).
           </p>
           
           <div style={{ background: '#f8f9fa', padding: 16, borderRadius: 8, marginBottom: 24, border: '1px solid #e9ecef', textAlign: 'center' }}>
+            <div style={{ fontSize: '0.85rem', color: '#6c757d', marginBottom: 8 }}>BETX Receiver Name</div>
+            <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#000', marginBottom: 12 }}>
+              BETX Official
+            </div>
             <div style={{ fontSize: '0.85rem', color: '#6c757d', marginBottom: 8 }}>Admin UPI ID</div>
-            <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#000' }}>
+            <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#000', marginBottom: 16 }}>
               {adminSettings?.adminUpiId || 'admin@upi'}
             </div>
+            
+            <button 
+              onClick={() => {
+                navigator.clipboard.writeText(adminSettings?.adminUpiId || 'admin@upi');
+                alert("UPI ID Copied!");
+              }}
+              style={{ background: '#e9ecef', border: 'none', padding: '8px 16px', borderRadius: 4, cursor: 'pointer', fontWeight: 'bold' }}
+            >
+              Copy UPI ID
+            </button>
+          </div>
+
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: 'block', fontSize: '0.9rem', color: '#495057', marginBottom: 8, fontWeight: '600' }}>
+              Your UPI ID (Sender)
+            </label>
+            <input 
+              type="text" 
+              value={senderUpi}
+              onChange={(e) => setSenderUpi(e.target.value)}
+              placeholder="yourname@bank"
+              style={{ width: '100%', padding: '12px 16px', borderRadius: 8, border: '1px solid #ced4da', fontSize: '1rem', outline: 'none' }}
+            />
+          </div>
+
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: 'block', fontSize: '0.9rem', color: '#495057', marginBottom: 8, fontWeight: '600' }}>
+              Your Name (Sender)
+            </label>
+            <input 
+              type="text" 
+              value={senderName}
+              onChange={(e) => setSenderName(e.target.value)}
+              placeholder="John Doe"
+              style={{ width: '100%', padding: '12px 16px', borderRadius: 8, border: '1px solid #ced4da', fontSize: '1rem', outline: 'none' }}
+            />
           </div>
 
           <div style={{ marginBottom: 20 }}>
@@ -108,7 +158,7 @@ const Wallet = () => {
             onClick={handleSubmitUtr}
             style={{ width: '100%', background: '#007bff', color: 'white', padding: 14, borderRadius: 8, border: 'none', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer', marginBottom: 12 }}
           >
-            Submit Request
+            I Have Paid
           </button>
           
           <button 

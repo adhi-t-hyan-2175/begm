@@ -559,6 +559,48 @@ const Admin = () => {
     setAuthState({ checking: false, authenticated: false, username: '' });
   };
 
+  const handleToggleStatus = async (userId, currentStatus) => {
+    const newStatus = currentStatus === 'Frozen' ? 'Active' : 'Frozen';
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/set-user-status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sessionStorage.getItem('admin_token')}` },
+        body: JSON.stringify({ userId, status: newStatus })
+      });
+      if (res.ok) {
+        setAllUsers(prev => prev.map(u => u.id === userId ? { ...u, status: newStatus } : u));
+      } else {
+        alert('Failed to update status');
+      }
+    } catch (err) {
+      alert('Network error updating status');
+    }
+  };
+
+  const handleEditUser = async (user) => {
+    const newBalance = prompt(`Enter new Main Balance for User ${user.id}:`, user.wallet || user.main_balance || 0);
+    if (newBalance === null) return;
+    
+    const newNickname = prompt(`Enter new Nickname for User ${user.id}:`, user.nickname || '');
+    if (newNickname === null) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/edit-user`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sessionStorage.getItem('admin_token')}` },
+        body: JSON.stringify({ userId: user.id, mainBalance: newBalance, nickname: newNickname })
+      });
+      if (res.ok) {
+        setAllUsers(prev => prev.map(u => u.id === user.id ? { ...u, wallet: Number(newBalance), main_balance: Number(newBalance), nickname: newNickname } : u));
+        alert('User updated successfully!');
+      } else {
+        alert('Failed to edit user');
+      }
+    } catch (err) {
+      alert('Network error editing user');
+    }
+  };
+
   const handleApproveRecharge = (reqId, userId, amount) => {
     approveRecharge(reqId, userId, amount);
     setAllUsers(prev => prev.map(u => {
@@ -846,19 +888,24 @@ const Admin = () => {
             <div className="admin-list-stack">
               {pendingRecharges.map((request) => {
                 const playerData = allUsers.find(u => u.id.toString() === request.userId?.toString());
-                const isFirstRecharge = !financialRecords.some(r => r.userId === request.userId && r.type === 'Recharge' && r.status === 'Success');
+                const isFirstRecharge = playerData && !playerData.first_recharge_bonus_claimed;
                 return (
                 <div key={request.id} className="admin-request-row">
                   <div>
                     <strong>Player ID #{playerData ? (playerData.player_id || request.userId) : request.userId}</strong>
-                    {playerData && <span style={{ marginLeft: 8, fontSize: '0.8rem', color: '#94a3b8' }}>({playerData.nickname} • {playerData.vipLevel || 'Bronze'})</span>}
-                    {isFirstRecharge && <span style={{ marginLeft: 8, fontSize: '0.75rem', background: '#10b981', color: 'white', borderRadius: 999, padding: '2px 7px' }}>🌟 First Recharge (+10%)</span>}
-                    <p>Amount: ₹{request.amount} • {new Date(request.timestamp).toLocaleString()}</p>
-                    {request.utrNumber && (
-                      <p style={{ margin: '4px 0 0 0', color: '#10b981', fontWeight: 'bold' }}>
-                        UTR / Ref: {request.utrNumber}
-                      </p>
-                    )}
+                    {playerData && <span style={{ marginLeft: 8, fontSize: '0.8rem', color: '#94a3b8' }}>({playerData.nickname} • {playerData.email || 'No email'})</span>}
+                    {isFirstRecharge && request.amount >= 1000 && <span style={{ marginLeft: 8, fontSize: '0.75rem', background: '#10b981', color: 'white', borderRadius: 999, padding: '2px 7px' }}>🌟 First Recharge (₹500 Bonus)</span>}
+                    <p style={{ margin: '4px 0', fontSize: '0.9rem' }}>Amount: ₹{request.amount} • {new Date(request.timestamp).toLocaleString()}</p>
+                    
+                    <div style={{ background: '#f1f5f9', padding: '6px 10px', borderRadius: 6, fontSize: '0.85rem', marginTop: 4 }}>
+                      <div><strong>Sender Name:</strong> {request.senderName || 'N/A'}</div>
+                      <div><strong>Sender UPI:</strong> {request.senderUpi || 'N/A'}</div>
+                      {request.utrNumber && (
+                        <div style={{ color: '#059669', fontWeight: 'bold' }}>
+                          <strong>UTR / Ref:</strong> {request.utrNumber}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div className="admin-actions">
                     <button className="admin-btn" style={{ background: '#4b5563', color: 'white' }} onClick={() => {
@@ -874,12 +921,6 @@ const Admin = () => {
               })}
             </div>
           )}
-
-          <div className="admin-section-title-row" style={{ marginTop: 40, borderTop: '1px solid #e2e8f0', paddingTop: 20 }}>
-            <h3>Razorpay Transactions</h3>
-            <span className="admin-pill" style={{ background: '#e0f2fe', color: '#0369a1' }}>Auto-credited</span>
-          </div>
-          <RazorpayTransactions />
         </div>
       )}
 
@@ -899,7 +940,7 @@ const Admin = () => {
                 <div key={request.id} className="admin-request-row">
                   <div>
                     <strong>Player ID #{playerData ? (playerData.player_id || request.userId) : request.userId}</strong>
-                    <p>UPI: {request.upiId} â€¢ Amount â‚¹{request.amount}</p>
+                    <p>UPI: {request.upiId} • Amount ₹{request.amount}</p>
                     <p>Status: {request.status || 'pending'}</p>
                   </div>
                   <div className="admin-actions">
@@ -933,6 +974,7 @@ const Admin = () => {
                 <th style={{ padding: '12px 8px' }}>Wallet Balance</th>
                 <th style={{ padding: '12px 8px' }}>Total Recharge</th>
                 <th style={{ padding: '12px 8px' }}>Status</th>
+                <th style={{ padding: '12px 8px' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -940,8 +982,8 @@ const Admin = () => {
                 <tr key={u.id} style={{ borderBottom: '1px solid #1a1a2e' }}>
                   <td style={{ padding: '12px 8px', color: '#0ff', fontWeight: 'bold' }}>{u.id}</td>
                   <td style={{ padding: '12px 8px' }}>{u.phone || u.email || 'N/A'}</td>
-                  <td style={{ padding: '12px 8px', color: '#0f0' }}>â‚¹{(u.wallet || u.main_balance || 0).toLocaleString()}</td>
-                  <td style={{ padding: '12px 8px', color: '#ffd700' }}>â‚¹{(u.totalRecharge || u.total_recharge || 0).toLocaleString()}</td>
+                  <td style={{ padding: '12px 8px', color: '#0f0' }}>₹{(u.wallet || u.main_balance || 0).toLocaleString()}</td>
+                  <td style={{ padding: '12px 8px', color: '#ffd700' }}>₹{(u.totalRecharge || u.total_recharge || 0).toLocaleString()}</td>
                   <td style={{ padding: '12px 8px' }}>
                     <span style={{ 
                       padding: '4px 8px', 
@@ -952,6 +994,12 @@ const Admin = () => {
                     }}>
                       {u.status || 'Active'}
                     </span>
+                  </td>
+                  <td style={{ padding: '12px 8px' }}>
+                    <button onClick={() => handleEditUser(u)} style={{ marginRight: 8, padding: '4px 8px', background: '#2563eb', color: 'white', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: '0.8rem' }}>Edit</button>
+                    <button onClick={() => handleToggleStatus(u.id, u.status || 'Active')} style={{ padding: '4px 8px', background: (u.status || 'Active') === 'Frozen' ? '#10b981' : '#ef4444', color: 'white', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: '0.8rem' }}>
+                      {(u.status || 'Active') === 'Frozen' ? 'Unfreeze' : 'Freeze'}
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -969,7 +1017,7 @@ const Admin = () => {
             </div>
             <ul className="admin-list admin-settings-list">
               <li>
-                <span>Min Recharge (â‚¹)</span>
+                <span>Min Recharge (₹)</span>
                 <input 
                   type="number" 
                   value={adminSettings.minRecharge} 
@@ -978,7 +1026,7 @@ const Admin = () => {
                 />
               </li>
               <li>
-                <span>Min Withdrawal (â‚¹)</span>
+                <span>Min Withdrawal (₹)</span>
                 <input 
                   type="number" 
                   value={adminSettings.minWithdrawal} 
@@ -992,6 +1040,15 @@ const Admin = () => {
                   type="number" 
                   value={adminSettings.maxWithdrawal} 
                   onChange={e => setAdminSettings({...adminSettings, maxWithdrawal: Number(e.target.value)})}
+                  style={{ background: '#0a0a1a', border: '1px solid #2a2a4e', color: '#fff', padding: '6px 12px', borderRadius: 4, width: '100px', textAlign: 'right' }}
+                />
+              </li>
+              <li>
+                <span>Referral Bonus (₹)</span>
+                <input 
+                  type="number" 
+                  value={adminSettings.referralBonusAmount || 100} 
+                  onChange={e => setAdminSettings({...adminSettings, referralBonusAmount: Number(e.target.value)})}
                   style={{ background: '#0a0a1a', border: '1px solid #2a2a4e', color: '#fff', padding: '6px 12px', borderRadius: 4, width: '100px', textAlign: 'right' }}
                 />
               </li>

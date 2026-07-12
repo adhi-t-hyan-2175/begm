@@ -11,6 +11,24 @@ ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;
 
 CREATE SEQUENCE IF NOT EXISTS player_id_seq START 7778;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS player_id BIGINT DEFAULT nextval('player_id_seq') UNIQUE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by BIGINT REFERENCES users(player_id);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS first_recharge_bonus_claimed BOOLEAN DEFAULT FALSE;
+
+-- 1.5 Add bonus_balance to wallets
+ALTER TABLE wallets ADD COLUMN IF NOT EXISTS bonus_balance NUMERIC(12, 2) DEFAULT 0;
+
+-- 1.6 Admin Settings Table
+CREATE TABLE IF NOT EXISTS admin_settings (
+  id INT PRIMARY KEY DEFAULT 1,
+  referral_bonus_amount NUMERIC(12, 2) DEFAULT 100,
+  min_recharge NUMERIC(12, 2) DEFAULT 100,
+  max_recharge NUMERIC(12, 2) DEFAULT 50000,
+  min_withdrawal NUMERIC(12, 2) DEFAULT 300,
+  max_withdrawal NUMERIC(12, 2) DEFAULT 50000,
+  admin_upi_id TEXT DEFAULT 'admin@upi'
+);
+
+INSERT INTO admin_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
 
 -- 2. Add idempotency field to transactions (prevents Razorpay replay attacks)
 ALTER TABLE transactions ADD COLUMN IF NOT EXISTS razorpay_payment_id TEXT UNIQUE;
@@ -43,9 +61,15 @@ CREATE TABLE IF NOT EXISTS recharge_requests (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
   amount NUMERIC(12, 2) NOT NULL,
+  utr_number TEXT,
+  sender_name TEXT,
+  sender_upi TEXT,
   status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE recharge_requests ADD COLUMN IF NOT EXISTS sender_name TEXT;
+ALTER TABLE recharge_requests ADD COLUMN IF NOT EXISTS sender_upi TEXT;
 
 -- 6. Ensure withdrawal_requests table
 CREATE TABLE IF NOT EXISTS withdrawal_requests (

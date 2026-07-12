@@ -58,6 +58,12 @@ const MainApp = () => {
 
   // Keep the splash screen alive for 3 seconds to let the animation play out
   React.useEffect(() => {
+    // Capture referral code if present
+    const searchParams = new URLSearchParams(location.search);
+    const ref = searchParams.get('ref');
+    if (ref) {
+      localStorage.setItem('ref_code', ref);
+    }
     const timer = setTimeout(() => setShowSplash(false), 3000);
     return () => clearTimeout(timer);
   }, []);

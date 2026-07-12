@@ -58,7 +58,7 @@ const Home = () => {
             <div className="balance-amount">
               ₹{balance.toFixed(2)} <span className="refresh-symbol">⟳</span>
             </div>
-            <div className="home-user-id">ID: {user?.id}</div>
+            <div className="home-user-id">ID: {user?.player_id || user?.id}</div>
           </div>
           <button className="unlock-button">Recharge to unlock daily claim</button>
         </div>

@@ -21,6 +21,7 @@ async function upsertProfile(session) {
   if (!authUser) return null;
 
   try {
+    const refCode = localStorage.getItem('ref_code');
     // Call backend to upsert profile (creates row if not exists, returns it)
     const res = await fetch(`${API_URL}/api/auth/upsert-profile`, {
       method: 'POST',
@@ -28,6 +29,7 @@ async function upsertProfile(session) {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${session.access_token}`,
       },
+      body: JSON.stringify({ referredBy: refCode }),
     });
     const data = await res.json();
     if (data.success) return data.user;
@@ -57,6 +59,7 @@ async function upsertProfile(session) {
   }
 
   // Insert new profile
+  const refCode = localStorage.getItem('ref_code');
   const { data: newUser, error } = await supabase
     .from('users')
     .insert({
@@ -67,6 +70,7 @@ async function upsertProfile(session) {
       status: 'Active',
       role: 'user',
       total_recharge: 0,
+      referred_by: refCode ? parseInt(refCode, 10) : null,
     })
     .select()
     .single();

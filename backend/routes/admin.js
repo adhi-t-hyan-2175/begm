@@ -27,6 +27,7 @@ router.use(verifyAdmin);
 // Users
 router.get('/users', getAllUsers);
 router.post('/set-user-status', setUserStatus);
+router.post('/edit-user', require('../controllers/admin').editUser);
 
 // Recharges
 router.get('/recharge-requests', getRechargeRequests);

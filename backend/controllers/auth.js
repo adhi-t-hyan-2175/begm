@@ -28,6 +28,8 @@ exports.upsertProfile = async (req, res) => {
       return res.status(401).json({ success: false, error: 'Invalid token' });
     }
 
+    const { referredBy } = req.body || {};
+
     const email = authUser.email;
     const googleId = authUser.id;
     const nickname = authUser.user_metadata?.full_name ||
@@ -60,6 +62,7 @@ exports.upsertProfile = async (req, res) => {
           status: 'Active',
           role: computedRole,
           total_recharge: 0,
+          referred_by: referredBy ? parseInt(referredBy, 10) : null,
         })
         .select()
         .single();

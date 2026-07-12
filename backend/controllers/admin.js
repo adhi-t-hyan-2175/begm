@@ -113,28 +113,85 @@ exports.approveRecharge = async (req, res) => {
       targetAmount = req_.amount;
     }
 
+    // Fetch user details for bonus logic
+    const { data: user } = await supabase.from('users').select('*').eq('id', targetUserId).single();
+
     const { data: wallet } = await supabase
       .from('wallets')
       .select('*')
       .eq('user_id', targetUserId)
       .single();
 
-    const totalCredit = targetAmount;
+    let bonusAmount = 0;
+    let mainBalanceAdd = targetAmount;
+    let updateFirstRecharge = false;
+
+    // First Recharge Bonus
+    if (user && !user.first_recharge_bonus_claimed) {
+      if (targetAmount >= 1000) {
+        bonusAmount = 500;
+        updateFirstRecharge = true;
+      } else {
+        updateFirstRecharge = true; // Still marked as claimed so they don't get it later
+      }
+    }
 
     await supabase
       .from('wallets')
-      .update({ main_balance: (wallet?.main_balance || 0) + totalCredit, updated_at: new Date().toISOString() })
+      .update({ 
+        main_balance: (wallet?.main_balance || 0) + mainBalanceAdd,
+        bonus_balance: (wallet?.bonus_balance || 0) + bonusAmount,
+        updated_at: new Date().toISOString() 
+      })
       .eq('user_id', targetUserId);
 
-    // Update VIP
-    const { data: user } = await supabase.from('users').select('total_recharge').eq('id', targetUserId).single();
+    // Update VIP and mark first_recharge_bonus_claimed if needed
     const newTotal = (user?.total_recharge || 0) + targetAmount;
     const newVip = newTotal >= 100000 ? 'Master' : newTotal >= 50000 ? 'Diamond' : newTotal >= 25000 ? 'Gold' : newTotal >= 10000 ? 'Silver' : 'Bronze';
-    await supabase.from('users').update({ total_recharge: newTotal, vip_level: newVip }).eq('id', targetUserId);
+    
+    let userUpdates = { total_recharge: newTotal, vip_level: newVip };
+    if (updateFirstRecharge) {
+      userUpdates.first_recharge_bonus_claimed = true;
+    }
+    await supabase.from('users').update(userUpdates).eq('id', targetUserId);
 
     await supabase.from('transactions').insert({ user_id: targetUserId, type: 'Recharge', amount: targetAmount, status: 'Success', notes: 'Admin approved' });
 
-    res.json({ success: true, credited: totalCredit, bonus: 0, newVip });
+    if (bonusAmount > 0) {
+      await supabase.from('transactions').insert({ user_id: targetUserId, type: 'Bonus', amount: bonusAmount, status: 'Success', notes: 'First Recharge Bonus' });
+      await supabase.from('notifications').insert({ user_id: targetUserId, message: `Congratulations! You received a First Recharge Bonus of ₹${bonusAmount}.` });
+    }
+
+    // Referral Bonus Logic
+    if (user && user.referred_by && updateFirstRecharge && targetAmount >= 500) {
+      // It's their first recharge AND it's >= 500 AND they have an inviter
+      const { data: adminSettings } = await supabase.from('admin_settings').select('referral_bonus_amount').eq('id', 1).single();
+      const refBonus = adminSettings?.referral_bonus_amount || 100;
+
+      // Find the inviter by player_id
+      const { data: inviter } = await supabase.from('users').select('id, nickname').eq('player_id', user.referred_by).single();
+      if (inviter) {
+        // Credit the inviter's main balance (since prompt says "Reward goes into Main Balance")
+        await supabase.rpc('increment_wallet_balance', { p_user_id: inviter.id, p_amount: refBonus });
+        
+        // Log transaction
+        await supabase.from('transactions').insert({ 
+          user_id: inviter.id, 
+          type: 'Bonus', 
+          amount: refBonus, 
+          status: 'Success', 
+          notes: `Referral Bonus for inviting ${user.nickname}` 
+        });
+
+        // Send notification
+        await supabase.from('notifications').insert({ 
+          user_id: inviter.id, 
+          message: `Your referral ${user.nickname} made their first recharge! You've received a ₹${refBonus} referral bonus.` 
+        });
+      }
+    }
+
+    res.json({ success: true, credited: targetAmount, bonus: bonusAmount, newVip });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -266,6 +323,26 @@ exports.setUserStatus = async (req, res) => {
       return res.status(400).json({ success: false, error: 'Invalid status. Use Active or Frozen.' });
     }
     await supabase.from('users').update({ status }).eq('id', userId);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+exports.editUser = async (req, res) => {
+  const { userId, nickname, vipLevel, mainBalance } = req.body;
+  try {
+    if (nickname || vipLevel) {
+      const updates = {};
+      if (nickname) updates.nickname = nickname;
+      if (vipLevel) updates.vip_level = vipLevel;
+      await supabase.from('users').update(updates).eq('id', userId);
+    }
+    
+    if (mainBalance !== undefined) {
+      await supabase.from('wallets').update({ main_balance: Number(mainBalance) }).eq('user_id', userId);
+    }
+    
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });

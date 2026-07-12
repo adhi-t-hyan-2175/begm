@@ -3,7 +3,6 @@ import { useAuth } from './AuthContext';
 import { supabase, isSupabaseReady, getBy, insertRow, updateWhere, getAll } from '../services/supabase';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY || '';
 
 const WalletContext = createContext();
 
@@ -311,21 +310,8 @@ export const WalletProvider = ({ children }) => {
     addBonusBalance(amount); // Task rewards go to bonus balance
   };
 
-  const loadRazorpayScript = () => {
-    return new Promise((resolve) => {
-      if (window.Razorpay) {
-        resolve(true);
-        return;
-      }
-      const script = document.createElement('script');
-      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-      script.onload = () => resolve(true);
-      script.onerror = () => resolve(false);
-      document.body.appendChild(script);
-    });
-  };
 
-  const requestRecharge = async (userId, amount, utrNumber) => {
+  const requestRecharge = async (userId, amount, utrNumber, senderName, senderUpi) => {
     if (!utrNumber) {
       alert("UTR / Reference number is required.");
       return null;
@@ -337,6 +323,8 @@ export const WalletProvider = ({ children }) => {
       userId: String(userId),
       amount,
       utrNumber,
+      senderName,
+      senderUpi,
       status: 'pending',
       timestamp: new Date().toISOString()
     };
@@ -347,6 +335,8 @@ export const WalletProvider = ({ children }) => {
           user_id: userId,
           amount,
           utr_number: utrNumber,
+          sender_name: senderName,
+          sender_upi: senderUpi,
           status: 'pending',
         });
         newRequest.id = String(saved.id); 
