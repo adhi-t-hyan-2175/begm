@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useWallet } from '../contexts/WalletContext';
 import { useAuth } from '../contexts/AuthContext';
 import { calculateTimerState, useGameTimer, getSettledResult, generateFakeOrders } from '../hooks/useGameTimer';
@@ -12,7 +12,7 @@ const deterministicAmount = (seed) => {
     hash = ((hash << 5) - hash) + seed.charCodeAt(i);
     hash = hash & hash;
   }
-  return Math.abs(hash) % 5000 + 500; // ₹500 to ₹5500
+  return Math.abs(hash) % 5000 + 500; // â‚¹500 to â‚¹5500
 };
 
 const colorSelections = ['Red', 'Green', 'Violet'];
@@ -202,7 +202,7 @@ const AdminGameCard = ({ game, timerState, liveBets, selectedWinner, onSetWinner
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 12 }}>
         <div style={{ background: '#0a0a1a', padding: 8, borderRadius: 4, textAlign: 'center' }}>
           <div style={{ fontSize: '0.8rem', color: '#666' }}>Total Bets</div>
-          <div style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#0f0' }}>₹{liveBets.total.toFixed(0)}</div>
+          <div style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#0f0' }}>â‚¹{liveBets.total.toFixed(0)}</div>
         </div>
         <div style={{ background: '#0a0a1a', padding: 8, borderRadius: 4, textAlign: 'center' }}>
           <div style={{ fontSize: '0.8rem', color: '#666' }}>Players</div>
@@ -217,7 +217,7 @@ const AdminGameCard = ({ game, timerState, liveBets, selectedWinner, onSetWinner
       {liveBets.total > 0 && (
         <>
           <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: '0.9rem', color: '#aaa', marginBottom: 8 }}>💰 Bet Breakdown by Selection:</div>
+            <div style={{ fontSize: '0.9rem', color: '#aaa', marginBottom: 8 }}>ðŸ’° Bet Breakdown by Selection:</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))', gap: 8, marginBottom: 16 }}>
               {displayOptions.map(option => {
                 const amt = liveBets.bySelection[option] || 0;
@@ -247,10 +247,10 @@ const AdminGameCard = ({ game, timerState, liveBets, selectedWinner, onSetWinner
                       <span style={{ display: 'inline-block', width: 16, height: 16, borderRadius: 999, background: getOptionColor(option) }} />
                       <span style={{ fontSize: '1rem', fontWeight: '700', color: '#fff' }}>{option}</span>
                     </div>
-                    <div style={{ fontSize: '0.85rem', color: '#aaa', marginBottom: 6 }}>₹{amt.toFixed(0)}</div>
+                    <div style={{ fontSize: '0.85rem', color: '#aaa', marginBottom: 6 }}>â‚¹{amt.toFixed(0)}</div>
                     {amt > 0 && <div style={{ fontSize: '0.75rem', color: '#7c8fa3' }}>{betPercentages[option] || 0}%</div>}
-                    {isWinner && <div style={{ marginTop: 6, fontSize: '0.82rem', color: '#0f0', fontWeight: 'bold' }}>✓ WINNER</div>}
-                    {projectedWinner === option && <div style={{ marginTop: 6, fontSize: '0.82rem', color: '#0ff', fontWeight: 'bold' }}>✓ AUTO WINNER</div>}
+                    {isWinner && <div style={{ marginTop: 6, fontSize: '0.82rem', color: '#0f0', fontWeight: 'bold' }}>âœ“ WINNER</div>}
+                    {projectedWinner === option && <div style={{ marginTop: 6, fontSize: '0.82rem', color: '#0ff', fontWeight: 'bold' }}>âœ“ AUTO WINNER</div>}
                   </div>
                 );
               })}
@@ -268,17 +268,17 @@ const AdminGameCard = ({ game, timerState, liveBets, selectedWinner, onSetWinner
                       <span style={{ fontSize: '0.8rem', color: '#7f9cb0' }}>{ratio.toFixed(2)}x</span>
                     </div>
                     <div style={{ color: '#cbd5e1', fontSize: '0.82rem' }}>Stake</div>
-                    <div style={{ fontSize: '1rem', fontWeight: '700', color: '#fff' }}>₹{stake.toFixed(0)}</div>
+                    <div style={{ fontSize: '1rem', fontWeight: '700', color: '#fff' }}>â‚¹{stake.toFixed(0)}</div>
                     <div style={{ color: '#94a3b8', fontSize: '0.82rem', marginTop: 8 }}>Return if win</div>
-                    <div style={{ fontSize: '0.95rem', color: '#7dd3fc', fontWeight: 700 }}>₹{target.toLocaleString()}</div>
+                    <div style={{ fontSize: '0.95rem', color: '#7dd3fc', fontWeight: 700 }}>â‚¹{target.toLocaleString()}</div>
                     <div style={{ color: '#94a3b8', fontSize: '0.82rem', marginTop: 8 }}>Pool remaining</div>
-                    <div style={{ fontSize: '0.95rem', color: remaining >= 0 ? '#86efac' : '#fca5a5', fontWeight: 700 }}>₹{remaining.toLocaleString()}</div>
+                    <div style={{ fontSize: '0.95rem', color: remaining >= 0 ? '#86efac' : '#fca5a5', fontWeight: 700 }}>â‚¹{remaining.toLocaleString()}</div>
                   </div>
                 );
               })}
             </div>
             <div style={{ marginTop: 10, color: '#94a3b8', fontSize: '0.82rem' }}>
-              Total bets: ₹{liveBets.total.toLocaleString()}. This summary shows stake, the return if this selection wins, and how much of the pool remains after the payout.
+              Total bets: â‚¹{liveBets.total.toLocaleString()}. This summary shows stake, the return if this selection wins, and how much of the pool remains after the payout.
             </div>
           </div>
 
@@ -293,7 +293,7 @@ const AdminGameCard = ({ game, timerState, liveBets, selectedWinner, onSetWinner
               marginBottom: 12
             }}>
               <div style={{ flex: 1, color: '#0f0' }}>
-                <strong>{selectedWinner ? `✓ Manual Winner Selected: ${selectedWinner}` : `✓ Auto-Selected Winner: ${projectedWinner}`}</strong>
+                <strong>{selectedWinner ? `âœ“ Manual Winner Selected: ${selectedWinner}` : `âœ“ Auto-Selected Winner: ${projectedWinner}`}</strong>
               </div>
               {selectedWinner && (
                 <button
@@ -337,9 +337,9 @@ const recentPeriods = [
 ];
 
 const users = [
-  { id: 'U-101', name: 'Aarav', phone: '+91 98765 43210', wallet: '₹12480', status: 'Active' },
-  { id: 'U-102', name: 'Meera', phone: '+91 87654 32109', wallet: '₹8560', status: 'Frozen' },
-  { id: 'U-103', name: 'Rohit', phone: '+91 99887 76655', wallet: '₹15420', status: 'Active' },
+  { id: 'U-101', name: 'Aarav', phone: '+91 98765 43210', wallet: 'â‚¹12480', status: 'Active' },
+  { id: 'U-102', name: 'Meera', phone: '+91 87654 32109', wallet: 'â‚¹8560', status: 'Frozen' },
+  { id: 'U-103', name: 'Rohit', phone: '+91 99887 76655', wallet: 'â‚¹15420', status: 'Active' },
 ];
 
 
@@ -378,9 +378,9 @@ const RazorpayTransactions = () => {
         <div key={txn.id} className="admin-request-row" style={{ alignItems: 'center' }}>
           <div>
             <strong>Payment ID: {txn.razorpay_payment_id || 'Unknown'}</strong>
-            <p>Amount: <span style={{ color: '#10b981', fontWeight: 'bold' }}>₹{txn.amount}</span></p>
+            <p>Amount: <span style={{ color: '#10b981', fontWeight: 'bold' }}>â‚¹{txn.amount}</span></p>
             <p style={{ fontSize: '0.85rem', color: '#64748b' }}>
-              User: {txn.users?.nickname} ({txn.users?.email}) • Player ID: {txn.users?.player_id}
+              User: {txn.users?.nickname} ({txn.users?.email}) â€¢ Player ID: {txn.users?.player_id}
             </p>
             <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
               Time: {new Date(txn.created_at).toLocaleString()}
@@ -579,7 +579,7 @@ const Admin = () => {
   };
 
   if (authState.checking) {
-    return <div className="admin-shell admin-loading">Verifying secure admin session…</div>;
+    return <div className="admin-shell admin-loading">Verifying secure admin sessionâ€¦</div>;
   }
 
   if (!authState.authenticated) {
@@ -624,12 +624,12 @@ const Admin = () => {
       <div className="admin-tabs">
         {['dashboard', 'games', 'recharges', 'withdrawals', 'users', 'settings'].map((tab) => (
           <button key={tab} className={`admin-tab ${activeTab === tab ? 'active' : ''}`} onClick={() => setActiveTab(tab)}>
-            {tab === 'dashboard' && '📊 Dashboard'}
-            {tab === 'games' && '🎮 Live Games'}
-            {tab === 'recharges' && '➕ Recharges'}
-            {tab === 'withdrawals' && '➖ Withdrawals'}
-            {tab === 'users' && '👥 Users'}
-            {tab === 'settings' && '⚙️ Settings'}
+            {tab === 'dashboard' && 'ðŸ“Š Dashboard'}
+            {tab === 'games' && 'ðŸŽ® Live Games'}
+            {tab === 'recharges' && 'âž• Recharges'}
+            {tab === 'withdrawals' && 'âž– Withdrawals'}
+            {tab === 'users' && 'ðŸ‘¥ Users'}
+            {tab === 'settings' && 'âš™ï¸ Settings'}
           </button>
         ))}
       </div>
@@ -647,11 +647,11 @@ const Admin = () => {
             </div>
             <div className="admin-card">
               <p className="admin-card-label">Bet Volume</p>
-              <h3>₹{stats.betVolume.toLocaleString()}</h3>
+              <h3>â‚¹{stats.betVolume.toLocaleString()}</h3>
             </div>
             <div className="admin-card">
               <p className="admin-card-label">Today's Revenue</p>
-              <h3>₹{stats.revenueToday.toLocaleString()}</h3>
+              <h3>â‚¹{stats.revenueToday.toLocaleString()}</h3>
             </div>
             <div className="admin-card">
               <p className="admin-card-label">Pending Recharges</p>
@@ -718,7 +718,7 @@ const Admin = () => {
                             </div>
                             <div style={{ textAlign: 'right' }}>
                               <strong style={{ color: r.profit >= 0 ? '#0f0' : '#f00' }}>
-                                {r.profit >= 0 ? '+' : ''}₹{r.profit.toFixed(0)}
+                                {r.profit >= 0 ? '+' : ''}â‚¹{r.profit.toFixed(0)}
                               </strong>
                             </div>
                           </div>
@@ -736,14 +736,14 @@ const Admin = () => {
       {activeTab === 'games' && (
         <>
           <div style={{ marginBottom: 24 }}>
-            <h3 style={{ color: '#fff', marginBottom: 16 }}>📡 Live Games Monitor</h3>
+            <h3 style={{ color: '#fff', marginBottom: 16 }}>ðŸ“¡ Live Games Monitor</h3>
             <div style={{ background: '#0a1a2e', padding: 12, borderRadius: 6, marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ color: '#aaa', fontSize: '0.9rem' }}>Global Period (synced with all game pages)</span>
               <strong style={{ color: '#0ff', fontSize: '1.2rem', fontFamily: 'monospace' }}>{globalTimer.period}</strong>
             </div>
             <div style={{ background: '#0a2a1a', padding: 12, borderRadius: 6, marginBottom: 16 }}>
               <p style={{ margin: 0, color: '#0f0', fontSize: '0.9rem' }}>
-                💡 <strong>System Online:</strong> AI Profit Engine is actively managing all pools and maximizing house edge. Manual override available by clicking a selection.
+                ðŸ’¡ <strong>System Online:</strong> AI Profit Engine is actively managing all pools and maximizing house edge. Manual override available by clicking a selection.
               </p>
             </div>
             {gameConfigs.map(game => {
@@ -851,9 +851,9 @@ const Admin = () => {
                 <div key={request.id} className="admin-request-row">
                   <div>
                     <strong>Player ID #{playerData ? (playerData.player_id || request.userId) : request.userId}</strong>
-                    {playerData && <span style={{ marginLeft: 8, fontSize: '0.8rem', color: '#94a3b8' }}>({playerData.nickname} • {playerData.vipLevel || 'Bronze'})</span>}
-                    {isFirstRecharge && <span style={{ marginLeft: 8, fontSize: '0.75rem', background: '#10b981', color: 'white', borderRadius: 999, padding: '2px 7px' }}>🌟 First Recharge (+10%)</span>}
-                    <p>Amount: ₹{request.amount} • {new Date(request.timestamp).toLocaleString()}</p>
+                    {playerData && <span style={{ marginLeft: 8, fontSize: '0.8rem', color: '#94a3b8' }}>({playerData.nickname} â€¢ {playerData.vipLevel || 'Bronze'})</span>}
+                    {isFirstRecharge && <span style={{ marginLeft: 8, fontSize: '0.75rem', background: '#10b981', color: 'white', borderRadius: 999, padding: '2px 7px' }}>ðŸŒŸ First Recharge (+10%)</span>}
+                    <p>Amount: â‚¹{request.amount} â€¢ {new Date(request.timestamp).toLocaleString()}</p>
                   </div>
                   <div className="admin-actions">
                     <button className="admin-btn" style={{ background: '#4b5563', color: 'white' }} onClick={() => {
@@ -894,7 +894,7 @@ const Admin = () => {
                 <div key={request.id} className="admin-request-row">
                   <div>
                     <strong>Player ID #{playerData ? (playerData.player_id || request.userId) : request.userId}</strong>
-                    <p>UPI: {request.upiId} • Amount ₹{request.amount}</p>
+                    <p>UPI: {request.upiId} â€¢ Amount â‚¹{request.amount}</p>
                     <p>Status: {request.status || 'pending'}</p>
                   </div>
                   <div className="admin-actions">
@@ -935,8 +935,8 @@ const Admin = () => {
                 <tr key={u.id} style={{ borderBottom: '1px solid #1a1a2e' }}>
                   <td style={{ padding: '12px 8px', color: '#0ff', fontWeight: 'bold' }}>{u.id}</td>
                   <td style={{ padding: '12px 8px' }}>{u.phone || u.email || 'N/A'}</td>
-                  <td style={{ padding: '12px 8px', color: '#0f0' }}>₹{(u.wallet || u.main_balance || 0).toLocaleString()}</td>
-                  <td style={{ padding: '12px 8px', color: '#ffd700' }}>₹{(u.totalRecharge || u.total_recharge || 0).toLocaleString()}</td>
+                  <td style={{ padding: '12px 8px', color: '#0f0' }}>â‚¹{(u.wallet || u.main_balance || 0).toLocaleString()}</td>
+                  <td style={{ padding: '12px 8px', color: '#ffd700' }}>â‚¹{(u.totalRecharge || u.total_recharge || 0).toLocaleString()}</td>
                   <td style={{ padding: '12px 8px' }}>
                     <span style={{ 
                       padding: '4px 8px', 
@@ -964,7 +964,7 @@ const Admin = () => {
             </div>
             <ul className="admin-list admin-settings-list">
               <li>
-                <span>Min Recharge (₹)</span>
+                <span>Min Recharge (â‚¹)</span>
                 <input 
                   type="number" 
                   value={adminSettings.minRecharge} 
@@ -973,7 +973,7 @@ const Admin = () => {
                 />
               </li>
               <li>
-                <span>Min Withdrawal (₹)</span>
+                <span>Min Withdrawal (â‚¹)</span>
                 <input 
                   type="number" 
                   value={adminSettings.minWithdrawal} 
@@ -982,7 +982,7 @@ const Admin = () => {
                 />
               </li>
               <li>
-                <span>Max Withdrawal (₹)</span>
+                <span>Max Withdrawal (â‚¹)</span>
                 <input 
                   type="number" 
                   value={adminSettings.maxWithdrawal} 
@@ -1022,5 +1022,5 @@ const Admin = () => {
 };
 
 export default Admin;
-/ /   T r i g g e r   V e r c e l   B u i l d  
+/ /   T r i g g e r   V e r c e l   B u i l d 
  
