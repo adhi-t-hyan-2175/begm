@@ -225,15 +225,15 @@ const AdminGameCard = ({ game, timerState, liveBets, selectedWinner, onSetWinner
                 return (
                   <div
                     key={option}
-                    onClick={() => amt > 0 && onSetWinner(option)}
+                    onClick={() => onSetWinner(option)}
                     style={{
                       background: isWinner ? '#1a3a2e' : '#0a1a2e',
                       padding: 12,
                       borderRadius: 6,
                       textAlign: 'center',
-                      cursor: amt > 0 ? 'pointer' : 'default',
-                      border: isWinner ? '3px solid #0f0' : amt > 0 ? '1px solid #2a4a3e' : '1px solid #1a2a3e',
-                      opacity: amt > 0 ? 1 : 0.65,
+                      cursor: 'pointer',
+                      border: isWinner ? '3px solid #0f0' : '1px solid #2a4a3e',
+                      opacity: 1,
                       transition: 'all 0.2s'
                     }}
                   >
