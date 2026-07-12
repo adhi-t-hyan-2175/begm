@@ -139,7 +139,12 @@ const checkIn = async (req, res) => {
     const bonusAmount = 1; // ₹1 daily bonus
 
     const { data: wallet } = await supabase.from('wallets').select('*').eq('user_id', userId).maybeSingle();
-    if (!wallet) return res.status(404).json({ success: false, message: 'Wallet not found' });
+    const { data: profile } = await supabase.from('users').select('total_recharge').eq('id', userId).maybeSingle();
+    if (!wallet || !profile) return res.status(404).json({ success: false, message: 'Wallet not found' });
+
+    if (parseFloat(profile.total_recharge || 0) <= 0) {
+      return res.status(403).json({ success: false, message: 'You must complete your first recharge to unlock Daily Check-In.' });
+    }
 
     const newBonus = parseFloat(wallet.bonus_balance || 0) + bonusAmount;
     await supabase.from('wallets').update({ bonus_balance: newBonus, updated_at: new Date().toISOString() }).eq('user_id', userId);
@@ -271,4 +276,87 @@ const handleWebhook = async (req, res) => {
   res.json({ status: 'ok' });
 };
 
-module.exports = { getWallet, deposit, withdraw, checkIn, getTransactions };
+module.exports = { getWallet, deposit, withdraw, checkIn, getTransactions, claimTask };
+
+async function claimTask(req, res) {
+  try {
+    const { taskId } = req.body;
+    const userId = req.user.id;
+    
+    // Fetch user and wallet
+    const { data: user } = await supabase.from('users').select('*, completed_tasks').eq('id', userId).maybeSingle();
+    const { data: wallet } = await supabase.from('wallets').select('*').eq('user_id', userId).maybeSingle();
+    
+    if (!user || !wallet) return res.status(404).json({ success: false, message: 'User not found' });
+    
+    const completedTasks = user.completed_tasks || [];
+    const totalRecharge = parseFloat(user.total_recharge || 0);
+    
+    // Define task rewards
+    const tasks = {
+      'registerEmail': { reward: 10, title: 'Register with Email' },
+      'firstRecharge': { reward: 50, title: 'First Recharge' },
+      'fiftyBets': { reward: 50, title: '50 Bets Milestone' },
+      'inviteFriend': { reward: 25, title: 'Invite Friend' },
+      'dailyLogin': { reward: 5, title: 'Daily Login' }
+    };
+    
+    if (!tasks[taskId]) return res.status(400).json({ success: false, message: 'Invalid task ID' });
+    const rewardAmount = tasks[taskId].reward;
+    const taskTitle = tasks[taskId].title;
+    
+    // Validate conditions
+    if (taskId === 'dailyLogin') {
+      if (totalRecharge <= 0) {
+        return res.status(403).json({ success: false, message: 'You must complete your first recharge to unlock Daily Tasks.' });
+      }
+      
+      const today = new Date().toISOString().split('T')[0];
+      if (user.last_daily_claim === today) {
+        return res.status(400).json({ success: false, message: 'Already claimed today' });
+      }
+      
+      await supabase.from('users').update({ last_daily_claim: today }).eq('id', userId);
+    } else {
+      // One-time tasks
+      if (completedTasks.includes(taskId)) {
+        return res.status(400).json({ success: false, message: 'Task already claimed' });
+      }
+      
+      if (taskId === 'firstRecharge') {
+        if (totalRecharge <= 0) return res.status(403).json({ success: false, message: 'Requirement not met: No recharge found.' });
+      }
+      
+      if (taskId === 'fiftyBets') {
+        const { count } = await supabase.from('bets').select('*', { count: 'exact', head: true }).eq('user_id', userId);
+        if (count < 50) return res.status(403).json({ success: false, message: `Requirement not met: Only ${count}/50 bets placed.` });
+      }
+      
+      if (taskId === 'inviteFriend') {
+        const { count } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('referred_by', user.player_id);
+        if (count < 1) return res.status(403).json({ success: false, message: 'Requirement not met: No referred friends found.' });
+      }
+      
+      completedTasks.push(taskId);
+      await supabase.from('users').update({ completed_tasks: completedTasks }).eq('id', userId);
+    }
+    
+    // Credit reward to bonus balance
+    const newBonus = parseFloat(wallet.bonus_balance || 0) + rewardAmount;
+    await supabase.from('wallets').update({ bonus_balance: newBonus, updated_at: new Date().toISOString() }).eq('user_id', userId);
+    
+    // Add transaction record
+    await supabase.from('transactions').insert({
+      user_id: userId,
+      amount: rewardAmount,
+      type: 'Bonus',
+      status: 'Success',
+      notes: `Task Reward: ${taskTitle}`,
+    });
+    
+    res.json({ success: true, message: 'Reward claimed successfully', rewardAmount, newBonus });
+  } catch (err) {
+    console.error('[claimTask]', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+};

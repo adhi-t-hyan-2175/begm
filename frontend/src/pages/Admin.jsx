@@ -1065,7 +1065,10 @@ const Admin = () => {
                       })
                     });
                     if (res.ok) alert('Settings saved successfully!');
-                    else alert('Failed to save settings');
+                    else {
+                      const errData = await res.json().catch(() => ({}));
+                      alert('Failed to save settings: ' + (errData.error || res.statusText || 'Unknown Error'));
+                    }
                   } catch (err) {
                     alert('Network error while saving settings');
                   }

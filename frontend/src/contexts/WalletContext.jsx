@@ -188,13 +188,12 @@ export const WalletProvider = ({ children }) => {
     return saved ? JSON.parse(saved) : { streak: 0, lastCheckInTime: null };
   });
 
-  const [tasks, setTasks] = useState(() => {
-    const saved = localStorage.getItem('tasks_state');
-    return saved ? JSON.parse(saved) : {
-      learnRecharge: { status: 'pending', progress: 0 },
-      firstRecharge: { status: 'pending', progress: 0 },
-      firstInvitation: { status: 'pending', progress: 0 }
-    };
+  const [tasks, setTasks] = useState({
+    registerEmail: { status: 'pending', progress: 0 },
+    firstRecharge: { status: 'pending', progress: 0 },
+    fiftyBets: { status: 'pending', progress: 0 },
+    inviteFriend: { status: 'pending', progress: 0 },
+    dailyLogin: { status: 'pending', progress: 0 }
   });
 
   const [financialRecords, setFinancialRecords] = useState(() => {
@@ -348,22 +347,77 @@ export const WalletProvider = ({ children }) => {
     });
   };
 
-  const performCheckIn = (rewardAmount) => {
-    const now = Date.now();
-    setCheckInState(prev => ({
-      streak: prev.streak >= 6 ? 0 : prev.streak + 1,
-      lastCheckInTime: now
-    }));
-    addBonusBalance(rewardAmount); // Check-in rewards go to bonus balance
+  const performCheckIn = async (rewardAmount) => {
+    const token = localStorage.getItem('token');
+    if (!token) return alert('Please login first.');
+    try {
+      const res = await fetch(`${API_URL}/api/wallet/checkin`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ amount: rewardAmount })
+      });
+      const data = await res.json();
+      if (data.success) {
+        const now = Date.now();
+        setCheckInState(prev => ({
+          streak: prev.streak >= 6 ? 0 : prev.streak + 1,
+          lastCheckInTime: now
+        }));
+        setBonusBalance(data.bonus_balance || (bonusBalance + rewardAmount));
+        hydrateWallet();
+        return true;
+      } else {
+        alert(data.message || 'Check-in failed');
+        return false;
+      }
+    } catch (err) {
+      console.error('Check-in error', err);
+      alert('Network error. Please try again.');
+      return false;
+    }
   };
 
   const updateTask = (taskId, status, progress = 100) => {
     setTasks(prev => ({ ...prev, [taskId]: { status, progress } }));
   };
 
-  const claimTaskReward = (taskId, amount) => {
-    updateTask(taskId, 'claimed', 100);
-    addBonusBalance(amount); // Task rewards go to bonus balance
+  const claimTaskReward = async (taskId) => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert("Please login first.");
+      return false;
+    }
+
+    try {
+      const res = await fetch(`${API_URL}/api/wallet/claim-task`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ taskId })
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        updateTask(taskId, 'claimed', 100);
+        setBonusBalance(data.newBonus);
+        
+        // Refresh financial records to show the new transaction
+        hydrateWallet();
+        return true;
+      } else {
+        alert(data.message || 'Failed to claim task.');
+        return false;
+      }
+    } catch (err) {
+      console.error('[Task] Failed to claim reward:', err);
+      alert('Network error. Please try again later.');
+      return false;
+    }
   };
 
 

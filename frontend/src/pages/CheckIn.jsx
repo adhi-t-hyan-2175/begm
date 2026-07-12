@@ -34,7 +34,7 @@ const CheckIn = () => {
   const timeSinceLastCheckIn = now - lastCheckIn;
   const canCheckIn = timeSinceLastCheckIn >= ONE_DAY_MS;
 
-  const handleCheckIn = () => {
+  const handleCheckIn = async () => {
     if (!hasRecharged) {
       alert("Please complete at least one recharge to unlock Check In rewards!");
       return;
@@ -56,9 +56,11 @@ const CheckIn = () => {
       amount = Math.floor(Math.random() * 5) + 3;
     }
 
-    performCheckIn(amount);
-    setRewardAmount(amount);
-    setModalOpen(true);
+    const success = await performCheckIn(amount);
+    if (success) {
+      setRewardAmount(amount);
+      setModalOpen(true);
+    }
   };
 
   return (

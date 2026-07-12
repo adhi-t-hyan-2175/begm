@@ -10,49 +10,55 @@ const Task = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [rewardAmount, setRewardAmount] = useState(0);
 
-  const handleStartTask = (taskId, amount) => {
-    const task = tasks[taskId] || { status: 'pending', progress: 0 };
-    if (task.status === 'pending') {
-      updateTask(taskId, 'in_progress', 50);
-    } else if (task.status === 'in_progress') {
-      updateTask(taskId, 'completed', 100);
-    } else if (task.status === 'completed') {
-      claimTaskReward(taskId, amount);
-      setRewardAmount(amount);
+  const handleStartTask = async (taskId) => {
+    const success = await claimTaskReward(taskId);
+    if (success) {
+      const rewardMap = {
+        'registerEmail': 10,
+        'firstRecharge': 50,
+        'fiftyBets': 50,
+        'inviteFriend': 25,
+        'dailyLogin': 5
+      };
+      setRewardAmount(rewardMap[taskId]);
       setModalOpen(true);
     }
   };
 
   const getButtonText = (status) => {
-    if (status === 'pending') return 'Start task';
-    if (status === 'in_progress') return 'Continue task';
-    if (status === 'completed') return 'Claim Reward';
     if (status === 'claimed') return 'Completed';
+    return 'Verify & Claim';
   };
 
   const getButtonStyle = (status) => {
-    if (status === 'pending') return { background: '#e0f0ff', color: '#007bff', border: '1px solid #007bff' };
-    if (status === 'in_progress') return { background: '#fff3cd', color: '#856404', border: '1px solid #ffeeba' };
-    if (status === 'completed') return { background: '#28a745', color: 'white', border: 'none' };
     if (status === 'claimed') return { background: '#f5f5f5', color: '#999', border: 'none' };
+    return { background: '#28a745', color: 'white', border: 'none' };
   };
 
   const taskList = [
     {
-      id: 'dailyLogin',
-      title: 'Daily Login',
-      desc: 'Log in to the app daily',
-      reward: 5,
+      id: 'registerEmail',
+      title: 'Register with Email',
+      desc: 'Create an account using your email',
+      reward: 10,
       icon: <Gift size={24} />,
-      iconBg: '#007bff'
+      iconBg: '#fbad3c'
     },
     {
-      id: 'completeProfile',
-      title: 'Complete Profile',
-      desc: 'Fill in your nickname and phone number',
-      reward: 10,
-      icon: <Users size={24} />,
-      iconBg: '#fbad3c'
+      id: 'firstRecharge',
+      title: 'First Recharge',
+      desc: 'Complete your first recharge of any amount',
+      reward: 50,
+      icon: <CreditCard size={24} />,
+      iconBg: '#ec4899'
+    },
+    {
+      id: 'fiftyBets',
+      title: '50 Bets Milestone',
+      desc: 'Place 50 bets across any games',
+      reward: 50,
+      icon: <Gift size={24} />,
+      iconBg: '#007bff'
     },
     {
       id: 'inviteFriend',
@@ -63,12 +69,12 @@ const Task = () => {
       iconBg: '#6f42c1'
     },
     {
-      id: 'firstTopUp',
-      title: 'First Top-Up',
-      desc: 'Complete your first Free Fire Diamond Top-Up',
-      reward: 50,
-      icon: <CreditCard size={24} />,
-      iconBg: '#ec4899'
+      id: 'dailyLogin',
+      title: 'Daily Login',
+      desc: 'Log in to the app daily',
+      reward: 5,
+      icon: <Gift size={24} />,
+      iconBg: '#007bff'
     }
   ];
 
@@ -99,11 +105,10 @@ const Task = () => {
               </div>
 
               <div style={{ marginTop: '14px' }}>
-                <div style={{ width: '100%', height: '8px', background: '#eef2f8', borderRadius: '999px', overflow: 'hidden' }}><div style={{ width: `${progress}%`, height: '100%', background: 'linear-gradient(90deg, #2563eb, #4f46e5)', transition: 'width 0.5s ease-in-out' }}></div></div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '0.76rem', color: '#94a3b8' }}><span>0%</span><span>{progress}%</span><span>100%</span></div>
+                <div style={{ width: '100%', height: '8px', background: '#eef2f8', borderRadius: '999px', overflow: 'hidden' }}><div style={{ width: currentStatus === 'claimed' ? '100%' : '0%', height: '100%', background: 'linear-gradient(90deg, #2563eb, #4f46e5)', transition: 'width 0.5s ease-in-out' }}></div></div>
               </div>
 
-              <button onClick={() => handleStartTask(task.id, task.reward)} disabled={currentStatus === 'claimed'} style={{ width: '100%', padding: '12px', borderRadius: '999px', fontSize: '0.95rem', fontWeight: '700', marginTop: '14px', cursor: currentStatus === 'claimed' ? 'default' : 'pointer', transition: 'all 0.3s ease', ...getButtonStyle(currentStatus) }}>{getButtonText(currentStatus)}</button>
+              <button onClick={() => handleStartTask(task.id)} disabled={currentStatus === 'claimed'} style={{ width: '100%', padding: '12px', borderRadius: '999px', fontSize: '0.95rem', fontWeight: '700', marginTop: '14px', cursor: currentStatus === 'claimed' ? 'default' : 'pointer', transition: 'all 0.3s ease', ...getButtonStyle(currentStatus) }}>{getButtonText(currentStatus)}</button>
             </div>
           );
         })}
