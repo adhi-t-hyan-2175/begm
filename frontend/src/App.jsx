@@ -42,13 +42,13 @@ const ProtectedRoute = ({ children }) => {
 const App = () => {
   return (
     <AuthProvider>
-      <SocketProvider>
-        <WalletProvider>
+      <WalletProvider>
+        <SocketProvider>
           <Router>
             <MainApp />
           </Router>
-        </WalletProvider>
-      </SocketProvider>
+        </SocketProvider>
+      </WalletProvider>
     </AuthProvider>
   );
 };
