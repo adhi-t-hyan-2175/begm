@@ -1,4 +1,5 @@
 const supabase = require('../config/supabase');
+const jwt = require('jsonwebtoken');
 
 // ─── Auth Middleware — verifies Supabase Google OAuth JWT ─────────────────────
 const auth = async (req, res, next) => {
@@ -49,30 +50,12 @@ const verifyAdmin = async (req, res, next) => {
 
     const token = authHeader.split(' ')[1];
 
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-
-    if (error || !user) {
-      return res.status(401).json({ success: false, error: 'Unauthorized: Invalid or expired token' });
-    }
-
-    // Fetch role from app profile
-    const { data: profile } = await supabase
-      .from('users')
-      .select('id, email, role, status')
-      .eq('email', user.email)
-      .maybeSingle();
-
-    if (!profile || profile.role !== 'admin') {
-      return res.status(403).json({ success: false, error: 'Forbidden: Admin access required' });
-    }
-
-    req.user = {
-      id: profile.id,
-      email: profile.email,
-      role: profile.role,
-    };
-
-    next();
+    jwt.verify(token, process.env.JWT_SECRET || 'super_secret_admin_key', (err, decoded) => {
+      if (err) return res.status(401).json({ success: false, error: 'Unauthorized: Invalid token' });
+      if (!decoded.admin) return res.status(403).json({ success: false, error: 'Forbidden: Admin access required' });
+      req.user = decoded;
+      next();
+    });
   } catch (error) {
     console.error('[Admin Middleware]', error.message);
     res.status(401).json({ success: false, error: 'Unauthorized: Invalid token' });
