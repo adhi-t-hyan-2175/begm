@@ -13,7 +13,7 @@ const Invite = () => {
   const [bonusEarned, setBonusEarned] = useState(1500); // Mock data
   
   const inviteCode = String(user.id);
-  const referralLink = `http://localhost:3000/register?ref=${inviteCode}`;
+  const referralLink = `${window.location.origin}/register?ref=${inviteCode}`;
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(referralLink);
