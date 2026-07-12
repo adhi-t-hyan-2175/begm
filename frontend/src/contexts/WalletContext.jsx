@@ -60,6 +60,7 @@ export const WalletProvider = ({ children }) => {
             status: b.status === 'won' ? 'Won' : b.status === 'lost' ? 'Lost' : 'Pending',
             result: b.result,
             profit: b.profit,
+            winAmount: b.payout,
             walletBefore: b.wallet_before,
             walletAfter: b.wallet_after,
             odds: b.odds,

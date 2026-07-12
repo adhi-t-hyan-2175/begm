@@ -105,7 +105,7 @@ const OrderRecord = () => {
                       fontSize: '1.1rem',
                       color: ord.status === 'Won' ? '#16a34a' : '#dc2626'
                     }}>
-                      {ord.status === 'Won' ? `+ ₹${ord.winAmount?.toFixed(2)}` : `- ₹${ord.amount}`}
+                      {ord.status === 'Won' ? `+ ₹${(ord.winAmount || ord.amount * 1.9).toFixed(2)}` : `- ₹${ord.amount}`}
                     </div>
                   </div>
                 )}
