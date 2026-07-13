@@ -21,6 +21,7 @@ const {
   getGameAnalytics,
   getFinancialAnalytics,
   setGameResult,
+  getLiveBets,
 } = require('../controllers/admin');
 const { getBackups, createBackup, deleteBackup } = require('../controllers/backup');
 
@@ -60,6 +61,7 @@ router.get('/audit-logs', getAuditLogs);
 router.get('/game-analytics', getGameAnalytics);
 router.get('/financial-analytics', getFinancialAnalytics);
 router.post('/set-game-result', setGameResult);
+router.get('/live-bets', getLiveBets);
 
 // Backups
 router.get('/backups', getBackups);

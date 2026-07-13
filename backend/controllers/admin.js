@@ -499,3 +499,19 @@ exports.setGameResult = async (req, res) => {
     res.status(500).json({ success: false, error: err.message });
   }
 };
+
+// ─── GET /api/admin/live-bets ────────────────────────────────────────────────
+exports.getLiveBets = async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('bets')
+      .select('game_type, period, amount, selection, status, created_at, users(nickname, email)')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    res.json({ success: true, bets: data || [] });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};

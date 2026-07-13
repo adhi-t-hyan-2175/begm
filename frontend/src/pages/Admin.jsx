@@ -394,6 +394,19 @@ const Admin = () => {
   const [allUsers, setAllUsers] = useState([]);
   const [pendingRecharges, setPendingRecharges] = useState([]);
   const [pendingWithdrawals, setPendingWithdrawals] = useState([]);
+  const [globalLiveBets, setGlobalLiveBets] = useState([]);
+
+  const getGlobalLiveBetStats = (gameKey, period) => {
+    const relevantBets = globalLiveBets.filter(b => b.game_type === gameKey && String(b.period) === String(period));
+    const bySelection = {};
+    let total = 0;
+    relevantBets.forEach(b => {
+      const amt = parseFloat(b.amount) || 0;
+      bySelection[b.selection] = (bySelection[b.selection] || 0) + amt;
+      total += amt;
+    });
+    return { total, bySelection, orders: relevantBets };
+  };
 
   // Fetch admin data on mount and poll
   useEffect(() => {
@@ -418,12 +431,17 @@ const Admin = () => {
         const withdrawalData = await withdrawalRes.json();
         if (withdrawalData.success) setPendingWithdrawals(withdrawalData.requests);
 
+        // Fetch Live Bets
+        const betsRes = await fetch(`${API_BASE}/api/admin/live-bets`, { headers: { Authorization: `Bearer ${token}` } });
+        const betsData = await betsRes.json();
+        if (betsData.success) setGlobalLiveBets(betsData.bets);
+
       } catch (err) {
         console.error('Failed to fetch admin data:', err);
       }
     };
     fetchAdminData();
-    const interval = setInterval(fetchAdminData, 10000); // refresh every 10s
+    const interval = setInterval(fetchAdminData, 3000); // refresh every 3s
     return () => clearInterval(interval);
   }, [authState.authenticated]);
 
@@ -823,7 +841,7 @@ const Admin = () => {
                 });
               }
 
-              let liveBets = getLiveBetStatsWithFloor(game.key, timerState.period);
+              let liveBets = getGlobalLiveBetStats(game.key, timerState.period);
 
 
 
