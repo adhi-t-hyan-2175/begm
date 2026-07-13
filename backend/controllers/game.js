@@ -182,4 +182,22 @@ const fetchOrCreateGameResult = async (req, res) => {
   }
 };
 
-module.exports = { placeBet, setGameResultOverride, fetchOrCreateGameResult };
+// ─── GET /api/game/history ───────────────────────────────────────────────────
+const getBetHistory = async (req, res) => {
+  const userId = req.user.id;
+  try {
+    const { data: bets, error } = await supabase
+      .from('bets')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.json({ success: true, bets });
+  } catch (err) {
+    console.error('[getBetHistory]', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+module.exports = { placeBet, setGameResultOverride, fetchOrCreateGameResult, getBetHistory };
