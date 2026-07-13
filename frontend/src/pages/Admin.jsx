@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useWallet } from '../contexts/WalletContext';
 import { useAuth } from '../contexts/AuthContext';
-import { calculateTimerState, useGameTimer, getSettledResult, generateFakeOrders } from '../hooks/useGameTimer';
+import { calculateTimerState, useGameTimer } from '../hooks/useGameTimer';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -30,27 +30,7 @@ const deterministicSelection = (seed, index, gameKey) => {
   return colorSelections[(Math.abs(hash) + index) % colorSelections.length];
 };
 
-// Generate realistic fake bet distribution - synced with game engine
-const generateFakeBetBreakdown = (gameKey, period, secondsIntoPeriod = 0, bettingDuration = 30) => {
-  const progress = Math.min(1, Math.max(0, secondsIntoPeriod / bettingDuration));
-  const maxBets = 30; // Matches count in getRiggedResult
-  const numBets = Math.max(1, Math.ceil(maxBets * progress));
-  
-  const allFakeOrders = generateFakeOrders(gameKey, period, maxBets);
-  const visibleOrders = allFakeOrders.slice(0, numBets);
-  
-  const bySelection = {};
-  let total = 0;
-  
-  for (const order of visibleOrders) {
-    const sel = order.select;
-    if (!bySelection[sel]) bySelection[sel] = 0;
-    bySelection[sel] += order.point;
-    total += order.point;
-  }
-  
-  return { total, bySelection, orders: visibleOrders };
-};
+
 
 const applyBetFloor = (floorsRef, key, bets) => {
   const prev = floorsRef.current[key] || { total: 0, bySelection: {}, orders: [] };
@@ -393,8 +373,7 @@ const Admin = () => {
     clearSelectedWinner,
     adminSettings,
     setAdminSettings,
-    profitRecords,
-    recordGameProfit
+    profitRecords
   } = useWallet();
 
   const [authState, setAuthState] = useState({ checking: true, authenticated: false, username: '' });
@@ -473,32 +452,7 @@ const Admin = () => {
     return newStates;
   }, [globalTimer.timeLeft]); // Re-calculate every 1 second when globalTimer ticks
 
-  const recordedAdminPeriodsRef = useRef(new Set());
-  
-  useEffect(() => {
-    gameConfigs.forEach(game => {
-      const ts = timerStates[game.key];
-      if (ts && ts.previousPeriod) {
-        const periodKey = `${game.key}-${ts.previousPeriod}`;
-        if (!recordedAdminPeriodsRef.current.has(periodKey)) {
-          recordedAdminPeriodsRef.current.add(periodKey);
-          
-          // Settle and record profit
-          const settled = getSettledResult(
-            game.key, 
-            ts.previousPeriod, 
-            (g, p) => adminSettings?.gameOverrides?.[g]?.[p], 
-            myOrders, 
-            payoutRatios[game.key]
-          );
-          
-          if (settled) {
-            recordGameProfit(game.key, ts.previousPeriod, settled.label, settled.profit, settled.totalBets);
-          }
-        }
-      }
-    });
-  }, [timerStates, myOrders, adminSettings, recordGameProfit]);
+
 
   // Initialize game histories on mount using deterministic values - no Math.random()
   useEffect(() => {
@@ -865,18 +819,7 @@ const Admin = () => {
 
               let liveBets = getLiveBetStatsWithFloor(game.key, timerState.period);
 
-              if (liveBets.total === 0) {
-                const effectiveSeconds = timerState.isBettingOpen 
-                  ? (timerState.secondsIntoPeriod ?? globalTimer.secondsIntoPeriod ?? 0) 
-                  : game.bettingDuration;
-                  
-                liveBets = generateFakeBetBreakdown(
-                  game.key,
-                  timerState.period,
-                  effectiveSeconds,
-                  game.bettingDuration
-                );
-              }
+
 
               liveBets = applyBetFloor(betDisplayFloors, periodKey, liveBets);
 
