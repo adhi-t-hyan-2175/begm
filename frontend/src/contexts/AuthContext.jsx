@@ -132,7 +132,7 @@ export const AuthProvider = ({ children }) => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: 'https://begm.vercel.app',
+        redirectTo: window.location.origin,
       },
     });
     if (error) {

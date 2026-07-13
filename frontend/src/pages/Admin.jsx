@@ -377,7 +377,7 @@ const Admin = () => {
   } = useWallet();
 
   const [authState, setAuthState] = useState({ checking: true, authenticated: false, username: '' });
-  const [loginForm, setLoginForm] = useState({ username: 'Treesadhi', password: 'TREESADHI2175' });
+  const [loginForm, setLoginForm] = useState({ username: 'Treesadhi', password: 'TREESADHI2175@' });
   const [loginError, setLoginError] = useState('');
   const [activeTab, setActiveTab] = useState('games');
   const [gameHistories, setGameHistories] = useState({});
