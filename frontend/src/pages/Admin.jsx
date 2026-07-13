@@ -205,7 +205,13 @@ const AdminGameCard = ({ game, timerState, liveBets, selectedWinner, onSetWinner
                 return (
                   <div
                     key={option}
-                    onClick={() => onSetWinner(option)}
+                    onClick={() => {
+                      if (!timerState.isBettingOpen) {
+                        alert("⚠️ Too late! You must select the winner DURING the betting phase (countdown > 00:00). The game engine has already processed this period.");
+                        return;
+                      }
+                      onSetWinner(option);
+                    }}
                     style={{
                       background: isWinner ? '#1a3a2e' : '#0a1a2e',
                       padding: 12,
