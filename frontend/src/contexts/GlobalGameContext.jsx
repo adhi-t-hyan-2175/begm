@@ -1,6 +1,15 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { supabase } from '../services/supabase';
 import { useWallet } from './WalletContext';
+import { useGameTimer } from '../hooks/useGameTimer';
+
+const GAME_CONFIGS = {
+  FastParty: { duration: 60, bettingDuration: 30 },
+  PrimePick: { duration: 120, bettingDuration: 60 },
+  LuckyPick: { duration: 180, bettingDuration: 120 },
+  Dice: { duration: 60, bettingDuration: 30 },
+  Wheelocity: { duration: 60, bettingDuration: 30 }
+};
 
 const GlobalGameContext = createContext({});
 
@@ -59,6 +68,9 @@ export const useGlobalGame = (gameType) => {
   const gameStates = useContext(GlobalGameContext);
   const state = gameStates[gameType];
   
+  const config = GAME_CONFIGS[gameType] || { duration: 60, bettingDuration: 30 };
+  const localTimer = useGameTimer(config.duration, config.bettingDuration);
+  
   const [timeLeft, setTimeLeft] = useState(0);
 
   useEffect(() => {
@@ -78,13 +90,8 @@ export const useGlobalGame = (gameType) => {
 
   if (!state) {
     return {
-      period: '000000',
-      previousPeriod: '000000',
-      timeLeft: 0,
-      isBettingOpen: false,
-      status: 'loading',
-      formatTime: () => ({ m1: '0', m2: '0', s1: '0', s2: '0' }),
-      secondsIntoPeriod: 0
+      ...localTimer,
+      status: localTimer.isBettingOpen ? 'betting' : 'resolving'
     };
   }
 

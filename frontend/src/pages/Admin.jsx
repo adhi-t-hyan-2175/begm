@@ -194,7 +194,7 @@ const AdminGameCard = ({ game, timerState, liveBets, selectedWinner, onSetWinner
         </div>
       </div>
 
-      {liveBets.total > 0 && (
+      {liveBets.total >= 0 && (
         <>
           <div style={{ marginBottom: 12 }}>
             <div style={{ fontSize: '0.9rem', color: '#aaa', marginBottom: 8 }}>💰 Bet Breakdown by Selection:</div>
