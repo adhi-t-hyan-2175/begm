@@ -321,26 +321,7 @@ const AdminGameCard = ({ game, timerState, liveBets, selectedWinner, onSetWinner
 
 const tabs = ['dashboard', 'recharges', 'withdrawals', 'games', 'users', 'settings'];
 
-const gameStatus = [
-  { name: 'Fast Parity', status: 'Live', countdown: '00:18' },
-  { name: 'Parity', status: 'Locking', countdown: '00:06' },
-  { name: 'Sapre', status: 'Live', countdown: '00:24' },
-  { name: 'Dice', status: 'Result', countdown: '00:03' },
-  { name: 'Wheelocity', status: 'Live', countdown: '00:12' },
-  { name: 'Andar Bahar', status: 'Live', countdown: '00:28' },
-];
-
-const recentPeriods = [
-  { period: 11842, amount: 9210, players: 64, result: 'Violet' },
-  { period: 11841, amount: 7812, players: 51, result: 'Red' },
-  { period: 11840, amount: 10126, players: 73, result: 'Green' },
-];
-
-const users = [
-  { id: 'U-101', name: 'Aarav', phone: '+91 98765 43210', wallet: '₹12480', status: 'Active' },
-  { id: 'U-102', name: 'Meera', phone: '+91 87654 32109', wallet: '₹8560', status: 'Frozen' },
-  { id: 'U-103', name: 'Rohit', phone: '+91 99887 76655', wallet: '₹15420', status: 'Active' },
-];
+// Removed mock gameStatus, recentPeriods, and users arrays to ensure only real DB data is shown.
 
 
 const RazorpayTransactions = () => {
@@ -399,13 +380,11 @@ const RazorpayTransactions = () => {
 const Admin = () => {
   const {
     balance,
-    pendingRecharges,
-    approveRecharge,
-    rejectRecharge,
-    pendingWithdrawals,
-    approveWithdrawal,
-    rejectWithdrawal,
-    holdWithdrawal,
+    approveRecharge: walletApproveRecharge,
+    rejectRecharge: walletRejectRecharge,
+    approveWithdrawal: walletApproveWithdrawal,
+    rejectWithdrawal: walletRejectWithdrawal,
+    holdWithdrawal: walletHoldWithdrawal,
     financialRecords,
     myOrders,
     getLiveBetStatsWithFloor,
@@ -418,8 +397,6 @@ const Admin = () => {
     recordGameProfit
   } = useWallet();
 
-  const { allUsers, setAllUsers, refreshAllUsers } = useAuth();
-
   const [authState, setAuthState] = useState({ checking: true, authenticated: false, username: '' });
   const [loginForm, setLoginForm] = useState({ username: 'Treesadhi', password: 'TREESADHI2175' });
   const [loginError, setLoginError] = useState('');
@@ -428,11 +405,64 @@ const Admin = () => {
   const globalTimer = useGameTimer(60, 15);
   const betDisplayFloors = useRef({});
 
+  // Local Admin State for Global Data
+  const [allUsers, setAllUsers] = useState([]);
+  const [pendingRecharges, setPendingRecharges] = useState([]);
+  const [pendingWithdrawals, setPendingWithdrawals] = useState([]);
+
+  // Fetch admin data on mount and poll
   useEffect(() => {
-    if (authState.authenticated) {
-      refreshAllUsers();
-    }
-  }, [authState.authenticated, refreshAllUsers]);
+    if (!authState.authenticated) return;
+    const fetchAdminData = async () => {
+      try {
+        const token = sessionStorage.getItem('admin_token');
+        if (!token) return;
+        
+        // Fetch Users
+        const usersRes = await fetch(`${API_BASE}/api/admin/users`, { headers: { Authorization: `Bearer ${token}` } });
+        const usersData = await usersRes.json();
+        if (usersData.success) setAllUsers(usersData.users);
+
+        // Fetch Recharges
+        const rechargeRes = await fetch(`${API_BASE}/api/admin/recharge-requests`, { headers: { Authorization: `Bearer ${token}` } });
+        const rechargeData = await rechargeRes.json();
+        if (rechargeData.success) setPendingRecharges(rechargeData.requests);
+
+        // Fetch Withdrawals
+        const withdrawalRes = await fetch(`${API_BASE}/api/admin/withdrawal-requests`, { headers: { Authorization: `Bearer ${token}` } });
+        const withdrawalData = await withdrawalRes.json();
+        if (withdrawalData.success) setPendingWithdrawals(withdrawalData.requests);
+
+      } catch (err) {
+        console.error('Failed to fetch admin data:', err);
+      }
+    };
+    fetchAdminData();
+    const interval = setInterval(fetchAdminData, 10000); // refresh every 10s
+    return () => clearInterval(interval);
+  }, [authState.authenticated]);
+
+  const approveRecharge = async (reqId, userId, amount) => {
+    await walletApproveRecharge(reqId, userId, amount);
+    setPendingRecharges(prev => prev.filter(r => r.id !== reqId));
+  };
+  const rejectRecharge = async (reqId) => {
+    await walletRejectRecharge(reqId);
+    setPendingRecharges(prev => prev.filter(r => r.id !== reqId));
+  };
+  const approveWithdrawal = async (reqId) => {
+    await walletApproveWithdrawal(reqId);
+    setPendingWithdrawals(prev => prev.filter(r => r.id !== reqId));
+  };
+  const rejectWithdrawal = async (reqId) => {
+    await walletRejectWithdrawal(reqId);
+    setPendingWithdrawals(prev => prev.filter(r => r.id !== reqId));
+  };
+  const holdWithdrawal = async (reqId) => {
+    walletHoldWithdrawal(reqId);
+    setPendingWithdrawals(prev => prev.map(r => r.id === reqId ? { ...r, status: 'held' } : r));
+  };
+
 
   const timerStates = useMemo(() => {
     const newStates = {};

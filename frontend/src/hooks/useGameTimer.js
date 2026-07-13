@@ -120,79 +120,8 @@ export const getPossibleOutcomes = (gameType) => {
   return [{ label: 'Green', color: ['#28a745'] }];
 };
 
-export const getRiggedResult = (gameType, period, myOrders = [], multipliersMap = {}) => {
-  const fakeBets = generateFakeOrders(gameType, period, 30);
-  const realBets = myOrders.filter(o => o.game === gameType && o.period === period);
-  const allBets = [...fakeBets, ...realBets.map(o => ({ select: o.selection, point: o.amount }))];
-  
-  const totalPool = allBets.reduce((sum, b) => sum + b.point, 0);
-  const outcomes = getPossibleOutcomes(gameType);
-  
-  let maxProfit = -Infinity;
-  let bestOutcome = null;
-  
-  for (const outcome of outcomes) {
-    let payout = 0;
-    for (const bet of allBets) {
-      const betSel = String(bet.select).toLowerCase().trim();
-      const outLbl = String(outcome.label).toLowerCase().trim();
-      if (betSel === outLbl) {
-        const multi = multipliersMap[bet.select] || multipliersMap[betSel] || 2;
-        payout += bet.point * multi;
-      }
-    }
-    const profit = totalPool - payout;
-    // Tie breaker goes to deterministic random outcome if profits are same (e.g. 0)
-    if (profit > maxProfit) {
-      maxProfit = profit;
-      bestOutcome = outcome;
-    }
-  }
-  
-  let finalResult;
-  if (!bestOutcome) {
-    finalResult = generateResult(gameType, period);
-  } else {
-    // Maintain random numbers generated for history
-    const base = generateResult(gameType, period);
-    finalResult = { ...base, ...bestOutcome };
-  }
-  
-  return { result: finalResult, profit: maxProfit, totalBets: allBets.length };
-};
-
-export const resolvePlayerDisplayResult = (gameType, period, adminOverride, isBettingOpen, timeLeft, myOrders = [], multipliersMap = {}) => {
-  const periodEnded = !isBettingOpen;
-  if (!periodEnded) {
-    return { revealed: false, result: null };
-  }
-  if (adminOverride) {
-    return { revealed: true, result: normalizeResultOverride(adminOverride, gameType, period) };
-  }
-  return { revealed: true, result: getRiggedResult(gameType, period, myOrders, multipliersMap).result };
-};
-
-export const getHistoricalResult = (gameType, period, getSelectedWinner, myOrders = [], multipliersMap = {}) => {
-  const adminOverride = getSelectedWinner?.(gameType, period);
-  if (adminOverride) {
-    const norm = normalizeResultOverride(adminOverride, gameType, period);
-    // calculate profit for admin override
-    const rigged = getRiggedResult(gameType, period, myOrders, multipliersMap);
-    let payout = 0;
-    const allBets = [...generateFakeOrders(gameType, period, 30), ...myOrders.filter(o => o.game === gameType && o.period === period).map(o => ({ select: o.selection, point: o.amount }))];
-    const totalPool = allBets.reduce((sum, b) => sum + b.point, 0);
-    for (const bet of allBets) {
-      if (String(bet.select).toLowerCase().trim() === String(norm.label).toLowerCase().trim()) {
-        const multi = multipliersMap[bet.select] || multipliersMap[String(bet.select).toLowerCase().trim()] || 2;
-        payout += bet.point * multi;
-      }
-    }
-    return { ...norm, profit: totalPool - payout, totalBets: allBets.length };
-  }
-  
-  const rigged = getRiggedResult(gameType, period, myOrders, multipliersMap);
-  return { ...rigged.result, profit: rigged.profit, totalBets: rigged.totalBets };
-};
+// Removed: getRiggedResult, resolvePlayerDisplayResult, getHistoricalResult.
+// The frontend should strictly wait for the backend to settle periods.
 
 const OVERRIDE_COLORS = {
   red: '#dc3545',

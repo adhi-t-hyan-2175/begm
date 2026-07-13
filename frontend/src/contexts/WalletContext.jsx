@@ -650,22 +650,22 @@ export const WalletProvider = ({ children }) => {
   const clearSelectedWinner = (gameName, period) => setGameResultForPeriod(gameName, period, null);
 
   // Global fetch method for game resolution
-  const fetchOfficialGameResult = async (gameName, period, allBets = [], multipliersMap = {}, outcomes = []) => {
+  const fetchOfficialGameResult = async (gameName, period) => {
     try {
       const token = localStorage.getItem('token');
       const res = await fetch(`${API_URL}/api/game/result/sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ game: gameName, period, allBets, multipliersMap, outcomes })
+        body: JSON.stringify({ game: gameName, period })
       });
       const data = await res.json();
-      if (data.success) {
+      if (data.success && data.result) {
          return data.result;
       }
     } catch (err) {
       console.error('Failed to fetch official result', err);
     }
-    return null; // Will fallback to deterministic
+    return null; // Will wait/fallback
   };
 
   const approveWithdrawal = async (requestId) => {
