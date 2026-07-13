@@ -172,8 +172,8 @@ export const resolvePlayerDisplayResult = (gameType, period, adminOverride, isBe
   return { revealed: true, result: getRiggedResult(gameType, period, myOrders, multipliersMap).result };
 };
 
-export const getSettledResult = (gameType, period, getGameResultForPeriod, myOrders = [], multipliersMap = {}) => {
-  const adminOverride = getGameResultForPeriod?.(gameType, period);
+export const getHistoricalResult = (gameType, period, getSelectedWinner, myOrders = [], multipliersMap = {}) => {
+  const adminOverride = getSelectedWinner?.(gameType, period);
   if (adminOverride) {
     const norm = normalizeResultOverride(adminOverride, gameType, period);
     // calculate profit for admin override
@@ -304,61 +304,7 @@ const deterministicOrder = (seed) => {
 };
 
 export const generateFakeOrders = (gameType, currentPeriod, count = 20) => {
-  const selections = {
-    Wheelocity: (seed) => ['2 Hits', '3 Hits', '5 Hits'][Math.floor(deterministicOrder(seed + '-sel') * 3)],
-    AndarBahar: (seed) => ['Andar', 'Bahar', 'Tie'][Math.floor(deterministicOrder(seed + '-sel') * 3)],
-    FastParty:  (seed) => ['Green', 'Red', 'Violet'][Math.floor(deterministicOrder(seed + '-sel') * 3)],
-    Dice: (seed) => {
-      const v = deterministicOrder(seed + '-sel');
-      if (v < 0.45) return 'Small';
-      if (v < 0.9) return 'Large';
-      return 'Tie';
-    },
-    PrimePick: (seed) => ['Green', 'Red', 'Violet'][Math.floor(deterministicOrder(seed + '-sel') * 3)],
-    LuckyPick: (seed) => ['Green', 'Red', 'Violet'][Math.floor(deterministicOrder(seed + '-sel') * 3)]
-  };
-
-  // Realistic bet amounts — varied, ending in 0/5/1/9 etc, not always round
-  const REALISTIC_AMOUNTS = [10, 15, 20, 25, 30, 35, 40, 50, 60, 70, 75, 80, 100, 120, 150, 200, 250, 300, 350, 400, 500, 600, 700, 750, 800, 1000, 1200, 1500, 2000];
-
-  const orders = [];
-  const baseUserId = 10234;
-  const maxUserOffset = 69000;
-  const usedIds = new Set();
-
-  for (let i = 0; i < count; i++) {
-    // ALL orders use currentPeriod — they are the live bets for this round
-    const seed = `${gameType}-${currentPeriod}-${i}`;
-    const selectionFn = selections[gameType] || ((seed) => ['Odd', 'Even'][Math.floor(deterministicOrder(seed + '-sel') * 2)]);
-    const selection = selectionFn(seed);
-
-    // Pick a realistic amount deterministically
-    const amtIdx = Math.floor(deterministicOrder(seed + '-amt') * REALISTIC_AMOUNTS.length);
-    const point = REALISTIC_AMOUNTS[amtIdx];
-
-    let userId = baseUserId + Math.floor(deterministicOrder(seed + '-user') * maxUserOffset);
-    while (usedIds.has(userId)) {
-      userId = baseUserId + Math.floor(deterministicOrder(seed + '-user' + userId) * maxUserOffset);
-    }
-    usedIds.add(userId);
-
-    // Stagger timestamps within the betting window (spread over last 12 seconds)
-    const msAgo = Math.floor(deterministicOrder(seed + '-ts') * 12000);
-
-    orders.push({
-      id: `${currentPeriod}-${userId}-${i}`,
-      period: currentPeriod,
-      user: userId.toString(),
-      select: selection,
-      point,
-      game: gameType,
-      timestamp: Date.now() - msAgo
-    });
-  }
-
-  // Sort by timestamp descending (newest first) for display
-  orders.sort((a, b) => b.timestamp - a.timestamp);
-  return orders;
+  return []; // Fake bets completely removed based on user request
 };
 
 

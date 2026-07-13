@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
-  useGameTimer, generateHistory, generateFakeOrders,
-  getOrderBadgeColor, resolvePlayerDisplayResult, getSettledResult
+  generateHistory, generateFakeOrders,
+  getOrderBadgeColor
 } from '../hooks/useGameTimer';
+import { useGlobalGame } from '../contexts/GlobalGameContext';
 import { useWallet } from '../contexts/WalletContext';
 import BetCardModal from '../components/BetCardModal';
 import ResultCard from '../components/ResultCard';
@@ -43,7 +44,7 @@ const getDiceResultLabel = (result) => {
 
 const Dice = () => {
   const navigate = useNavigate();
-  const { timeLeft, isBettingOpen, period, previousPeriod, formatTime, secondsIntoPeriod } = useGameTimer(60, 30);
+  const { timeLeft, isBettingOpen, period, previousPeriod, formatTime, secondsIntoPeriod, status } = useGlobalGame(GAME);
   const timeStr = formatTime();
 
   const [showHistoryModal, setShowHistoryModal] = useState(false);
@@ -57,15 +58,11 @@ const Dice = () => {
   const baseOrdersRef = useRef([]);
 
   const {
-    placeBet, myOrders, getGameResultForPeriod, settleGameBets, recordGameProfit
+    placeBet, myOrders
   } = useWallet();
 
   const history = generateHistory(GAME, period, 50);
   const displayHistory = history.slice(0, 14);
-  const adminOverride = getGameResultForPeriod(GAME, period);
-  const { revealed, result: displayResult } = resolvePlayerDisplayResult(
-    GAME, period, adminOverride, isBettingOpen, timeLeft, myOrders, MULTIPLIERS
-  );
 
   useEffect(() => {
     baseOrdersRef.current = generateFakeOrders(GAME, period, 30);
@@ -86,34 +83,25 @@ const Dice = () => {
   }, [secondsIntoPeriod, isBettingOpen]);
 
   useEffect(() => {
-    if (settledRef.current === previousPeriod) return;
-    settledRef.current = previousPeriod;
+    if (settledRef.current === previousPeriod || status === 'betting') return;
 
-    const settled = getSettledResult(GAME, previousPeriod, getGameResultForPeriod, myOrders, MULTIPLIERS);
-    const resultLabel = settled.label || settled.number?.toString() || '';
-    if (!resultLabel) return;
-    
-    settleGameBets(GAME, previousPeriod, resultLabel, MULTIPLIERS);
-
-    // Record profit
-    if (settled.profit !== undefined) {
-      recordGameProfit(GAME, previousPeriod, resultLabel, settled.profit);
-    }
-    const myPrevBets = myOrders.filter(o => o.game === GAME && o.period === previousPeriod && o.status === 'Pending');
+    const myPrevBets = myOrders.filter(o => o.game_type === GAME && o.period === previousPeriod);
     if (myPrevBets.length > 0) {
       const bet = myPrevBets[0];
-      const sel = String(bet.selection).toLowerCase();
-      const res = String(resultLabel).toLowerCase();
-      const won = sel === res || (sel === '7' && res === 'tie') || (sel === 'tie' && res === '7');
-      const multiplier = MULTIPLIERS[bet.selection] || MULTIPLIERS[sel] || 2;
-      setTimeout(() => setResultCard({
-        won, period: previousPeriod, game: GAME,
-        selection: bet.selection, selectionColor: getLabelColor(bet.selection),
-        resultLabel, resultColor: getLabelColor(resultLabel),
-        betAmount: bet.amount, winAmount: won ? parseFloat((bet.amount * multiplier).toFixed(2)) : 0,
-      }), 800);
+      if (bet.status !== 'pending') {
+        settledRef.current = previousPeriod;
+        const won = bet.status === 'won';
+        const resultLabel = bet.result;
+
+        setTimeout(() => setResultCard({
+          won, period: previousPeriod, game: GAME,
+          selection: bet.selection, selectionColor: getLabelColor(bet.selection),
+          resultLabel, resultColor: getLabelColor(resultLabel),
+          betAmount: bet.amount, winAmount: parseFloat(bet.payout || 0),
+        }), 800);
+      }
     }
-  }, [revealed, displayResult, previousPeriod]);
+  }, [previousPeriod, status, myOrders]);
 
   const openBetCard = (sel) => { if (!isBettingOpen) return; setPendingSelection(sel); setBetModalOpen(true); };
   const handleConfirmBet = (selection, amount) => { setBetModalOpen(false); if (!placeBet(GAME, period, selection, amount)) alert('Insufficient balance'); };
@@ -160,8 +148,7 @@ const Dice = () => {
         </div>
         <div className="rui-ball-row" style={{ padding: '0 4px 4px', width: '100%' }}>
           {displayHistory.slice().reverse().map((rec, i) => {
-            const settled = getSettledResult(GAME, rec.period, getGameResultForPeriod, myOrders, MULTIPLIERS);
-            const num = settled.number ?? rec.number;
+            const num = rec.number;
             const color = getDiceColor(num);
             return (<div key={i} className="rui-ball-item"><div className="rui-ball" style={{ background: color }}>{num ?? '?'}</div><div className="rui-ball-period">{rec.period.slice(-3)}</div></div>);
           })}

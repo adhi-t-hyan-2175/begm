@@ -103,3 +103,17 @@ BEGIN
     EXECUTE FUNCTION update_updated_at_column();
   END IF;
 END $$;
+
+
+-- 19. Game Results for Global Sync
+CREATE TABLE IF NOT EXISTS game_results (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  game TEXT NOT NULL,
+  period TEXT NOT NULL,
+  result JSONB NOT NULL,
+  is_override BOOLEAN DEFAULT FALSE,
+  profit NUMERIC(12,2) DEFAULT 0,
+  total_bets INT DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(game, period)
+);

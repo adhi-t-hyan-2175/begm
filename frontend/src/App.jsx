@@ -25,6 +25,7 @@ const Leaderboard = React.lazy(() => import('./pages/Leaderboard'));
 import { WalletProvider } from './contexts/WalletContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SocketProvider, useSocket } from './contexts/SocketContext';
+import { GlobalGameProvider } from './contexts/GlobalGameContext';
 
 const PUBLIC_PATHS = ['/login'];
 
@@ -44,9 +45,11 @@ const App = () => {
     <AuthProvider>
       <WalletProvider>
         <SocketProvider>
-          <Router>
-            <MainApp />
-          </Router>
+          <GlobalGameProvider>
+            <Router>
+              <MainApp />
+            </Router>
+          </GlobalGameProvider>
         </SocketProvider>
       </WalletProvider>
     </AuthProvider>

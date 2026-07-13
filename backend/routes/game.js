@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { placeBet, resolveBet, resolveBetsBatch, getBetHistory } = require('../controllers/game');
+const { placeBet, getBetHistory, setGameResultOverride, fetchOrCreateGameResult } = require('../controllers/game');
 const { auth, verifyAdmin } = require('../middleware/auth');
 
 router.post('/place-bet', auth, placeBet);
-router.post('/resolve-bet', auth, resolveBet); // Called by frontend WalletContext for all users
-router.post('/resolve-bets-batch', auth, resolveBetsBatch);
+router.post('/admin/override', auth, verifyAdmin, setGameResultOverride);
+router.post('/result/sync', auth, fetchOrCreateGameResult);
 router.get('/history', auth, getBetHistory);
 
 module.exports = router;

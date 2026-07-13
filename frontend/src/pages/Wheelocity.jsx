@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
-  useGameTimer, generateHistory, generateFakeOrders,
-  getOrderBadgeColor, deterministicRandom, resolvePlayerDisplayResult, getSettledResult
+  generateHistory, generateFakeOrders,
+  getOrderBadgeColor, deterministicRandom
 } from '../hooks/useGameTimer';
+import { useGlobalGame } from '../contexts/GlobalGameContext';
 import { useWallet } from '../contexts/WalletContext';
 import BetCardModal from '../components/BetCardModal';
 import ResultCard from '../components/ResultCard';
@@ -38,7 +39,7 @@ const getSelColor = (sel) => {
 
 const Wheelocity = () => {
   const navigate = useNavigate();
-  const { timeLeft, isBettingOpen, period, previousPeriod, formatTime, secondsIntoPeriod } = useGameTimer(60, 30);
+  const { timeLeft, isBettingOpen, period, previousPeriod, formatTime, secondsIntoPeriod, status } = useGlobalGame(GAME);
   const timeStr = formatTime();
 
   const [showHistoryModal, setShowHistoryModal] = useState(false);
@@ -53,15 +54,11 @@ const Wheelocity = () => {
   const baseOrdersRef = useRef([]);
 
   const {
-    placeBet, myOrders, getGameResultForPeriod, settleGameBets, recordGameProfit
+    placeBet, myOrders
   } = useWallet();
 
   const history = generateHistory(GAME, period, 50);
   const displayHistory = history.slice(0, 14);
-  const adminOverride = getGameResultForPeriod(GAME, period);
-  const { revealed, result: displayResult } = resolvePlayerDisplayResult(
-    GAME, period, adminOverride, isBettingOpen, timeLeft, myOrders, MULTIPLIERS
-  );
 
   useEffect(() => {
     baseOrdersRef.current = generateFakeOrders(GAME, period, 30);
@@ -90,40 +87,34 @@ const Wheelocity = () => {
   }, [isBettingOpen, period]);
 
   useEffect(() => {
-    if (settledRef.current === previousPeriod) return;
-    settledRef.current = previousPeriod;
-
-    const settled = getSettledResult(GAME, previousPeriod, getGameResultForPeriod, myOrders, MULTIPLIERS);
-    const resultLabel = settled.label || settled.number?.toString() || '';
-    if (!resultLabel) return;
+    if (settledRef.current === previousPeriod || status === 'betting') return;
     
-    settleGameBets(GAME, previousPeriod, resultLabel, MULTIPLIERS);
-
-    // Record profit
-    if (settled.profit !== undefined) {
-      recordGameProfit(GAME, previousPeriod, resultLabel, settled.profit);
-    }
-    const myPrevBets = myOrders.filter(o => o.game === GAME && o.period === previousPeriod && o.status === 'Pending');
+    // Check if user had a bet on the previous period
+    const myPrevBets = myOrders.filter(o => o.game_type === GAME && o.period === previousPeriod);
     if (myPrevBets.length > 0) {
       const bet = myPrevBets[0];
-      const sel = String(bet.selection).toLowerCase();
-      const res = String(resultLabel).toLowerCase();
-      
-      let won = false;
-      if (sel === res) won = true;
-      if ((sel === '2x' && res === '2 hits') || (sel === '2 hits' && res === '2x')) won = true;
-      if ((sel === '3x' && res === '3 hits') || (sel === '3 hits' && res === '3x')) won = true;
-      if ((sel === '5x' && res === '5 hits') || (sel === '5 hits' && res === '5x')) won = true;
-
-      const multiplier = MULTIPLIERS[bet.selection] || MULTIPLIERS[sel] || 2;
-      setTimeout(() => setResultCard({
-        won, period: previousPeriod, game: GAME,
-        selection: bet.selection, selectionColor: getSelColor(bet.selection),
-        resultLabel, resultColor: getSelColor(resultLabel),
-        betAmount: bet.amount, winAmount: won ? parseFloat((bet.amount * multiplier).toFixed(2)) : 0,
-      }), 800);
+      // Only show card if the bet is resolved by backend
+      if (bet.status !== 'pending') {
+        settledRef.current = previousPeriod;
+        const won = bet.status === 'won';
+        const resultLabel = bet.result;
+        
+        setTimeout(() => {
+          setResultCard({
+            won,
+            period: previousPeriod,
+            game: GAME,
+            selection: bet.selection,
+            selectionColor: getSelColor(bet.selection),
+            resultLabel,
+            resultColor: getSelColor(resultLabel),
+            betAmount: bet.amount,
+            winAmount: parseFloat(bet.payout || 0),
+          });
+        }, 800);
+      }
     }
-  }, [revealed, displayResult, previousPeriod]);
+  }, [previousPeriod, status, myOrders]);
 
   const openBetCard = (sel) => { if (!isBettingOpen) return; setPendingSelection(sel); setBetModalOpen(true); };
   const handleConfirmBet = (selection, amount) => { setBetModalOpen(false); if (!placeBet(GAME, period, selection, amount)) alert('Insufficient balance'); };
@@ -165,7 +156,7 @@ const Wheelocity = () => {
           <div style={{ position: 'absolute', top: 4, left: '50%', transform: 'translateX(-50%)', zIndex: 10, width: 0, height: 0, borderLeft: '10px solid transparent', borderRight: '10px solid transparent', borderBottom: '18px solid #ffbe76' }} />
           <div style={{ width: 220, height: 220, borderRadius: '50%', background: 'conic-gradient(from 180deg, #4da6e8 0deg 120deg, #e87fb0 120deg 240deg, #48b85c 240deg 360deg)', boxShadow: '0 12px 32px rgba(0,0,0,0.18)', transform: `rotate(${wheelRotation}deg)`, transition: 'transform 3.2s cubic-bezier(0.22,1,0.36,1)' }}>
             <div style={{ position: 'absolute', inset: 40, borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'inset 0 0 0 6px rgba(255,255,255,0.6)', fontSize: '0.8rem', fontWeight: 700, color: '#555' }}>
-              {revealed && displayResult ? displayResult.label?.split(' ')[0] : 'Spin'}
+              {status === 'resolving' ? 'Spin' : 'Spin'}
             </div>
           </div>
         </div>
@@ -178,9 +169,8 @@ const Wheelocity = () => {
         </div>
         <div className="rui-ball-row" style={{ padding: '0 4px 4px', width: '100%', justifyContent: 'flex-start' }}>
           {displayHistory.slice().reverse().map((rec, i) => {
-            const settled = getSettledResult(GAME, rec.period, getGameResultForPeriod, myOrders, MULTIPLIERS);
-            const label = settled.label || rec.label;
-            const color = getWheelColor(settled.label ? settled : rec);
+            const label = rec.label;
+            const color = getWheelColor(rec);
             return (
               <div key={i} className="rui-ball-item">
                 <div className="rui-ball" style={{ background: color }}>{label?.charAt(0) || '?'}</div>

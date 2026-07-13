@@ -79,6 +79,18 @@ export const WalletProvider = ({ children }) => {
     hydrateOrders();
   }, [hydrateWallet, hydrateOrders]);
 
+  useEffect(() => {
+    const handlePeriodChange = () => {
+      // Small delay to ensure backend has completed DB updates
+      setTimeout(() => {
+        hydrateWallet();
+        hydrateOrders();
+      }, 500);
+    };
+    window.addEventListener('global_period_changed', handlePeriodChange);
+    return () => window.removeEventListener('global_period_changed', handlePeriodChange);
+  }, [hydrateWallet, hydrateOrders]);
+
   // ── Supabase wallet write helper ─────────────────────────────────────────────
   const syncWalletToSupabase = useCallback(async (mainBal, bonusBal) => {
     if (!currentUser || !isSupabaseReady()) return;
@@ -232,11 +244,7 @@ export const WalletProvider = ({ children }) => {
 
   const [myOrders, setMyOrders] = useState([]);
 
-  const [gameResultOverrides, setGameResultOverrides] = useState(() => {
-    const saved = localStorage.getItem('game_result_overrides');
-    return saved ? JSON.parse(saved) : {};
-  });
-
+  // Game result overrides are now globally managed by backend
   const [liveBets, setLiveBets] = useState(() => {
     const saved = localStorage.getItem('live_bets');
     return saved ? JSON.parse(saved) : {};
@@ -264,7 +272,6 @@ export const WalletProvider = ({ children }) => {
       if (e.key === 'financial_records') setFinancialRecords(JSON.parse(e.newValue || '[]'));
       if (e.key === 'pending_recharges') setPendingRecharges(JSON.parse(e.newValue || '[]'));
       if (e.key === 'pending_withdrawals') setPendingWithdrawals(JSON.parse(e.newValue || '[]'));
-      if (e.key === 'game_result_overrides') setGameResultOverrides(JSON.parse(e.newValue || '{}'));
       if (e.key === 'live_bets') setLiveBets(JSON.parse(e.newValue || '{}'));
       if (e.key === 'wallet_balance') setBalance(parseFloat(e.newValue || '0'));
       if (e.key === 'admin_settings') setAdminSettings(JSON.parse(e.newValue || '{}'));
@@ -327,10 +334,6 @@ export const WalletProvider = ({ children }) => {
   useEffect(() => {
     localStorage.setItem('my_orders', JSON.stringify(myOrders));
   }, [myOrders]);
-
-  useEffect(() => {
-    localStorage.setItem('game_result_overrides', JSON.stringify(gameResultOverrides));
-  }, [gameResultOverrides]);
 
   useEffect(() => {
     localStorage.setItem('live_bets', JSON.stringify(liveBets));
@@ -613,32 +616,57 @@ export const WalletProvider = ({ children }) => {
     };
   };
 
-  const getGameResultForPeriod = (gameName, period) => {
-    if (!gameResultOverrides[gameName]) return null;
-    return gameResultOverrides[gameName][period] || null;
+  // Admin only logic
+  const getSelectedWinner = (gameName, period) => {
+    // This is purely for the admin panel to display what's selected BEFORE the timer ends.
+    // For global sync, the admin panel should ideally fetch the override state.
+    // As a shortcut for this migration, we'll store a small local volatile map just for UI feedback
+    return window.__adminOverrides?.[gameName]?.[period] || null;
   };
 
-  const setGameResultForPeriod = (gameName, period, result) => {
-    setGameResultOverrides(prev => {
-      const next = { ...(prev || {}) };
-      const gameMap = { ...(next[gameName] || {}) };
-      if (!result) {
-        delete gameMap[period];
-      } else {
-        gameMap[period] = result;
-      }
-      if (Object.keys(gameMap).length > 0) {
-        next[gameName] = gameMap;
-      } else {
-        delete next[gameName];
-      }
-      return next;
-    });
+  const setGameResultForPeriod = async (gameName, period, result) => {
+    // Local feedback for admin UI
+    window.__adminOverrides = window.__adminOverrides || {};
+    window.__adminOverrides[gameName] = window.__adminOverrides[gameName] || {};
+    if (!result) {
+      delete window.__adminOverrides[gameName][period];
+    } else {
+      window.__adminOverrides[gameName][period] = result;
+    }
+
+    try {
+      const token = sessionStorage.getItem('admin_token') || localStorage.getItem('token');
+      await fetch(`${API_URL}/api/game/admin/override`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ game: gameName, period, result })
+      });
+    } catch (err) {
+      console.error('Failed to set global override', err);
+    }
   };
 
-  const getSelectedWinner = (gameName, period) => getGameResultForPeriod(gameName, period);
   const setSelectedWinner = (gameName, period, selection) => setGameResultForPeriod(gameName, period, selection);
   const clearSelectedWinner = (gameName, period) => setGameResultForPeriod(gameName, period, null);
+
+  // Global fetch method for game resolution
+  const fetchOfficialGameResult = async (gameName, period, allBets = [], multipliersMap = {}, outcomes = []) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/api/game/result/sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ game: gameName, period, allBets, multipliersMap, outcomes })
+      });
+      const data = await res.json();
+      if (data.success) {
+         return data.result;
+      }
+    } catch (err) {
+      console.error('Failed to fetch official result', err);
+    }
+    return null; // Will fallback to deterministic
+  };
 
   const approveWithdrawal = async (requestId) => {
     try {
@@ -875,8 +903,7 @@ export const WalletProvider = ({ children }) => {
       liveBets,
       getLiveBetStats,
       getLiveBetStatsWithFloor,
-      getGameResultForPeriod,
-      setGameResultForPeriod,
+      fetchOfficialGameResult,
       getSelectedWinner,
       setSelectedWinner,
       clearSelectedWinner,

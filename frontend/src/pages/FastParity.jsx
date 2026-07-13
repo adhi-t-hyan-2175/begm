@@ -2,10 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
-  useGameTimer, generateHistory, generateFakeOrders,
-  getOrderBadgeColor, resolvePlayerDisplayResult, getSettledResult,
-  deterministicRandom
+  generateHistory, generateFakeOrders,
+  getOrderBadgeColor, deterministicRandom
 } from '../hooks/useGameTimer';
+import { useGlobalGame } from '../contexts/GlobalGameContext';
 import { useWallet } from '../contexts/WalletContext';
 import BetCardModal from '../components/BetCardModal';
 import ResultCard from '../components/ResultCard';
@@ -35,7 +35,7 @@ const getSelColor = (sel) => {
 
 const FastParity = () => {
   const navigate = useNavigate();
-  const { timeLeft, isBettingOpen, period, previousPeriod, formatTime, secondsIntoPeriod } = useGameTimer(60, 30);
+  const { timeLeft, isBettingOpen, period, previousPeriod, formatTime, secondsIntoPeriod, status } = useGlobalGame(GAME);
   const timeStr = formatTime();
 
   const [showHistoryModal, setShowHistoryModal] = useState(false);
@@ -47,15 +47,11 @@ const FastParity = () => {
   const settledRef = useRef('');
 
   const {
-    placeBet, myOrders, getGameResultForPeriod, settleGameBets, recordGameProfit
+    placeBet, myOrders, getGameResultForPeriod
   } = useWallet();
 
   const history = generateHistory(GAME, period, 50);
   const displayHistory = history.slice(0, 14);
-  const adminOverride = getGameResultForPeriod(GAME, period);
-  const { revealed, result: displayResult } = resolvePlayerDisplayResult(
-    GAME, period, adminOverride, isBettingOpen, timeLeft, myOrders, MULTIPLIERS
-  );
 
   // ─── Live fake orders: reset on new period, trickle in during betting ──────
   const baseOrdersRef = useRef([]);
@@ -77,49 +73,36 @@ const FastParity = () => {
     setLiveOrders(baseOrdersRef.current.slice(0, toShow));
   }, [secondsIntoPeriod, isBettingOpen]);
 
-  // ─── Win/Loss settlement: fires once per period transition ───────────────
+  // ─── Win/Loss settlement notification: fires once per period transition ───────────────
   useEffect(() => {
-    if (settledRef.current === previousPeriod) return;
-    settledRef.current = previousPeriod;
-
-    const settled = getSettledResult(GAME, previousPeriod, getGameResultForPeriod, myOrders, MULTIPLIERS);
-    const resultLabel = settled.label || settled.number?.toString() || '';
-    if (!resultLabel) return;
-
-    settleGameBets(GAME, previousPeriod, resultLabel, MULTIPLIERS);
+    if (settledRef.current === previousPeriod || status === 'betting') return;
     
-    // Record profit
-    if (settled.profit !== undefined) {
-      // Need to grab recordGameProfit from context first, let me destructure it. Wait, I didn't destructure it in the hook!
-      // I'll add `recordGameProfit` to the useWallet destructure above.
-      recordGameProfit(GAME, previousPeriod, resultLabel, settled.profit);
-    }
-
     // Check if user had a bet on the previous period
-    const myPrevBets = myOrders.filter(o => o.game === GAME && o.period === previousPeriod && o.status === 'Pending');
+    const myPrevBets = myOrders.filter(o => o.game_type === GAME && o.period === previousPeriod);
     if (myPrevBets.length > 0) {
       const bet = myPrevBets[0];
-      const sel = String(bet.selection).toLowerCase().trim();
-      const res = String(resultLabel).toLowerCase().trim();
-      const won = sel === res;
-      const multiplier = MULTIPLIERS[bet.selection] || 2;
-      const winAmount = won ? parseFloat((bet.amount * multiplier).toFixed(2)) : 0;
-
-      setTimeout(() => {
-        setResultCard({
-          won,
-          period: previousPeriod,
-          game: GAME,
-          selection: bet.selection,
-          selectionColor: getSelColor(bet.selection),
-          resultLabel,
-          resultColor: getSelColor(resultLabel),
-          betAmount: bet.amount,
-          winAmount,
-        });
-      }, 800);
+      // Only show card if the bet is resolved by backend
+      if (bet.status !== 'pending') {
+        settledRef.current = previousPeriod;
+        const won = bet.status === 'won';
+        const resultLabel = bet.result;
+        
+        setTimeout(() => {
+          setResultCard({
+            won,
+            period: previousPeriod,
+            game: GAME,
+            selection: bet.selection,
+            selectionColor: getSelColor(bet.selection),
+            resultLabel,
+            resultColor: getSelColor(resultLabel),
+            betAmount: bet.amount,
+            winAmount: parseFloat(bet.payout || 0),
+          });
+        }, 800);
+      }
     }
-  }, [revealed, displayResult, previousPeriod]);
+  }, [previousPeriod, status, myOrders]);
 
   const openBetCard = (sel) => {
     if (!isBettingOpen) return;
@@ -189,12 +172,10 @@ const FastParity = () => {
         </div>
         <div className="rui-ball-row" style={{ padding: '0 4px 4px', width: '100%' }}>
           {displayHistory.slice().reverse().map((rec, i) => {
-            const settled = getSettledResult(GAME, rec.period, getGameResultForPeriod, myOrders, MULTIPLIERS);
-            const label = settled.label || rec.label;
-            const color = getBallColor(settled.label ? settled : rec);
+            const color = rec.color ? rec.color[0] : getBallColor(rec);
             return (
               <div key={i} className="rui-ball-item">
-                <div className="rui-ball" style={{ background: color }}>{label?.charAt(0) || '?'}</div>
+                <div className="rui-ball" style={{ background: color }}>{rec.label?.charAt(0) || '?'}</div>
                 <div className="rui-ball-period">{rec.period.slice(-3)}</div>
               </div>
             );
