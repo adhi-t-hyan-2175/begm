@@ -163,7 +163,11 @@ const resolvePeriod = async (gameConfig, period) => {
     const totalPool = allBets.reduce((sum, b) => sum + b.point, 0);
 
     if (adminOverride) {
-      finalResult = typeof adminOverride === 'string' ? JSON.parse(adminOverride) : adminOverride;
+      const overrideObj = typeof adminOverride === 'string' ? JSON.parse(adminOverride) : adminOverride;
+      const outcomes = getPossibleOutcomes(game);
+      const match = outcomes.find(o => String(o.label).toLowerCase().trim() === String(overrideObj.label).toLowerCase().trim());
+      const base = generateBaseResult(game, period);
+      finalResult = match ? { ...base, ...match } : { ...base, ...overrideObj };
       // Calculate profit for admin override
       let payout = 0;
       for (const bet of allBets) {
