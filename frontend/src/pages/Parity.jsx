@@ -34,7 +34,7 @@ const getSelColor = (sel) => {
 
 const Parity = () => {
   const navigate = useNavigate();
-  const { timeLeft, isBettingOpen, period, previousPeriod, formatTime, secondsIntoPeriod, status } = useGlobalGame(GAME);
+  const { timeLeft, isBettingOpen, period, previousPeriod, formatTime, secondsIntoPeriod, status, realHistory } = useGlobalGame(GAME);
   const timeStr = formatTime();
 
   const [showHistoryModal, setShowHistoryModal] = useState(false);
@@ -49,7 +49,12 @@ const Parity = () => {
     placeBet, myOrders
   } = useWallet();
 
-  const history = generateHistory(GAME, period, 50);
+  const history = (realHistory || []).map(r => ({
+    period: r.period,
+    label: r.result?.label,
+    number: r.result?.number,
+    color: r.result?.color
+  }));
   const displayHistory = history.slice(0, 14);
 
   const baseOrdersRef = useRef([]);

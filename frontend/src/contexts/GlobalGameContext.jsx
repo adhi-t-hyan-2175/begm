@@ -15,6 +15,9 @@ const GlobalGameContext = createContext({});
 
 export const GlobalGameProvider = ({ children }) => {
   const [gameStates, setGameStates] = useState({});
+  const [gameHistories, setGameHistories] = useState({
+    FastParty: [], PrimePick: [], LuckyPick: [], Dice: [], Wheelocity: [], AndarBahar: []
+  });
 
   useEffect(() => {
     // Initial fetch of game states
@@ -29,6 +32,23 @@ export const GlobalGameProvider = ({ children }) => {
       }
     };
     fetchStates();
+
+    const fetchHistories = async () => {
+      const { data, error } = await supabase
+        .from('game_results')
+        .select('*')
+        .order('period', { ascending: false })
+        .limit(300);
+      
+      if (data && !error) {
+        const hists = { FastParty: [], PrimePick: [], LuckyPick: [], Dice: [], Wheelocity: [], AndarBahar: [] };
+        data.forEach(row => {
+          if (hists[row.game]) hists[row.game].push(row);
+        });
+        setGameHistories(hists);
+      }
+    };
+    fetchHistories();
 
     const subscription = supabase
       .channel('public:global_game_state')
@@ -48,16 +68,31 @@ export const GlobalGameProvider = ({ children }) => {
             };
           });
         }
+      });
+
+    const historySub = supabase
+      .channel('public:game_results')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'game_results' }, payload => {
+        const row = payload.new;
+        if (row && row.game) {
+          setGameHistories(prev => ({
+            ...prev,
+            [row.game]: [row, ...(prev[row.game] || [])]
+          }));
+        }
       })
       .subscribe();
 
+    subscription.subscribe();
+
     return () => {
       supabase.removeChannel(subscription);
+      supabase.removeChannel(historySub);
     };
   }, []);
 
   return (
-    <GlobalGameContext.Provider value={gameStates}>
+    <GlobalGameContext.Provider value={{ gameStates, gameHistories }}>
       {children}
     </GlobalGameContext.Provider>
   );
@@ -65,8 +100,9 @@ export const GlobalGameProvider = ({ children }) => {
 
 // Hook to be used inside components
 export const useGlobalGame = (gameType) => {
-  const gameStates = useContext(GlobalGameContext);
+  const { gameStates, gameHistories } = useContext(GlobalGameContext);
   const state = gameStates[gameType];
+  const realHistory = gameHistories[gameType] || [];
   
   const config = GAME_CONFIGS[gameType] || { duration: 60, bettingDuration: 30 };
   const localTimer = useGameTimer(config.duration, config.bettingDuration);
@@ -120,6 +156,7 @@ export const useGlobalGame = (gameType) => {
     isBettingOpen: state.status === 'betting',
     status: state.status,
     formatTime,
-    secondsIntoPeriod: Math.max(0, Math.floor((Date.now() - new Date(state.start_time).getTime()) / 1000))
+    secondsIntoPeriod: Math.max(0, Math.floor((Date.now() - new Date(state.start_time).getTime()) / 1000)),
+    realHistory
   };
 };
