@@ -158,8 +158,8 @@ const resolvePeriod = async (gameConfig, period) => {
     let finalResult = null;
     let maxProfit = -Infinity;
     
-    const fakeBets = generateFakeOrders(game, period, 30);
-    const allBets = [...fakeBets, ...(realBets || []).map(o => ({ select: o.selection, point: parseFloat(o.amount) }))];
+    // Only use REAL bets for AI logic so house actively profits against real players
+    const allBets = (realBets || []).map(o => ({ select: o.selection, point: parseFloat(o.amount) }));
     const totalPool = allBets.reduce((sum, b) => sum + b.point, 0);
 
     if (adminOverride) {
