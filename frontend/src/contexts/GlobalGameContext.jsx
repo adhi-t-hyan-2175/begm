@@ -11,7 +11,7 @@ const GAME_CONFIGS = {
   Wheelocity: { duration: 60, bettingDuration: 30 }
 };
 
-const GlobalGameContext = createContext({});
+export const GlobalGameContext = createContext({});
 
 export const GlobalGameProvider = ({ children }) => {
   const [gameStates, setGameStates] = useState({});
