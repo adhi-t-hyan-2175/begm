@@ -276,7 +276,60 @@ const handleWebhook = async (req, res) => {
   res.json({ status: 'ok' });
 };
 
-module.exports = { getWallet, deposit, withdraw, checkIn, getTransactions, claimTask };
+// ─── POST /api/wallet/request-recharge ─ submit recharge request ─────────────
+const requestRecharge = async (req, res) => {
+  const userId = req.user.id;
+  const { amount, utrNumber, senderName, senderUpi } = req.body;
+
+  if (!amount || amount <= 0) {
+    return res.status(400).json({ success: false, message: 'Invalid amount' });
+  }
+  if (!utrNumber) {
+    return res.status(400).json({ success: false, message: 'UTR / Reference number is required' });
+  }
+
+  try {
+    // Prevent duplicate UTR
+    const { data: existingUtr } = await supabase
+      .from('recharge_requests')
+      .select('id')
+      .eq('utr_number', utrNumber)
+      .maybeSingle();
+      
+    if (existingUtr) {
+      return res.status(400).json({ success: false, message: 'This UTR number has already been submitted.' });
+    }
+
+    // Capture device IP
+    const ipAddress = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    const deviceInfo = req.headers['user-agent'] || 'Unknown';
+
+    // Check if first recharge
+    const { data: user } = await supabase.from('users').select('total_recharge').eq('id', userId).maybeSingle();
+    const isFirstRecharge = parseFloat(user?.total_recharge || 0) === 0;
+
+    const { data: saved, error } = await supabase.from('recharge_requests').insert({
+      user_id: userId,
+      amount,
+      utr_number: utrNumber,
+      sender_name: senderName,
+      sender_upi: senderUpi,
+      status: 'pending',
+      ip_address: String(ipAddress),
+      device_info: String(deviceInfo),
+      is_first_recharge: isFirstRecharge
+    }).select().single();
+
+    if (error) throw error;
+
+    res.json({ success: true, message: 'Recharge request submitted successfully', request: saved });
+  } catch (err) {
+    console.error('[requestRecharge]', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+module.exports = { getWallet, deposit, withdraw, checkIn, getTransactions, claimTask, requestRecharge };
 
 async function claimTask(req, res) {
   try {

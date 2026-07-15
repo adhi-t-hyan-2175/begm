@@ -216,15 +216,16 @@ exports.approveRecharge = async (req, res) => {
 // ─── POST /api/admin/reject-recharge ────────────────────────────────────────
 exports.rejectRecharge = async (req, res) => {
   try {
-    const { requestId } = req.body;
+    const { requestId, reason } = req.body;
     if (!requestId) return res.status(400).json({ success: false, error: 'requestId required' });
 
     await supabase
       .from('recharge_requests')
-      .update({ status: 'rejected' })
-      .eq('id', requestId);
+      .update({ status: 'rejected', reject_reason: reason || 'Rejected by Admin' })
+      .eq('id', requestId)
+      .eq('status', 'pending');
 
-    await logAdminAction(req.user?.username, 'Rejected Recharge', null, null, requestId);
+    await logAdminAction(req.user?.username, 'Rejected Recharge', null, null, `ReqID: ${requestId} Reason: ${reason}`);
 
     res.json({ success: true });
   } catch (err) {

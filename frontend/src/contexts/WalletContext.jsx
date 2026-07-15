@@ -187,7 +187,57 @@ export const WalletProvider = ({ children }) => {
         console.warn('[Wallet] Supabase data hydration failed:', err.message);
       }
     })();
-  }, [currentUser?.id]);
+
+    // Supabase Realtime for wallet and transactions
+    let realtimeSubscription = null;
+    if (isSupabaseReady()) {
+      realtimeSubscription = supabase.channel(`public:user:${currentUser.id}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'wallets', filter: `user_id=eq.${currentUser.id}` }, payload => {
+          hydrateWallet();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${currentUser.id}` }, payload => {
+          // Re-fetch transactions
+          fetch(`${API_URL}/api/wallet/transactions`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+          }).then(res => res.json()).then(txData => {
+            if (txData.success && txData.transactions) {
+              const mapped = txData.transactions.map(t => ({
+                id: String(t.id),
+                userId: String(t.user_id),
+                type: t.type,
+                amount: t.amount > 0 ? `+ ₹${t.amount}` : `- ₹${Math.abs(t.amount)}`,
+                status: t.status,
+                time: new Date(t.created_at).toLocaleString('en-US', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }),
+                color: t.status === 'Success' ? '#28a745' : '#dc3545',
+                timestamp: new Date(t.created_at).getTime(),
+              }));
+              setFinancialRecords(mapped);
+            }
+          });
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'recharge_requests', filter: `user_id=eq.${currentUser.id}` }, payload => {
+          // Refresh pending recharges
+          getAll('recharge_requests', { column: 'user_id', value: currentUser.id }, 'created_at').then(recharges => {
+            const mapped = recharges
+              .filter(r => r.status === 'pending')
+              .map(r => ({
+                id: String(r.id),
+                userId: String(r.user_id),
+                amount: r.amount,
+                utrNumber: r.utr_number,
+                status: r.status,
+                timestamp: r.created_at,
+              }));
+            setPendingRecharges(mapped);
+          });
+        })
+        .subscribe();
+    }
+
+    return () => {
+      if (realtimeSubscription) realtimeSubscription.unsubscribe();
+    };
+  }, [currentUser?.id, hydrateWallet]);
 
 
   const [bonusBalance, setBonusBalance] = useState(() => {
@@ -449,36 +499,37 @@ export const WalletProvider = ({ children }) => {
       return null;
     }
 
-    const localId = Date.now().toString();
-    const newRequest = {
-      id: localId,
-      userId: String(userId),
-      amount,
-      utrNumber,
-      senderName,
-      senderUpi,
-      status: 'pending',
-      timestamp: new Date().toISOString()
-    };
-
-    if (isSupabaseReady()) {
-      try {
-        const saved = await insertRow('recharge_requests', {
-          user_id: userId,
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/api/wallet/request-recharge`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ amount, utrNumber, senderName, senderUpi })
+      });
+      const data = await res.json();
+      if (data.success && data.request) {
+        const newRequest = {
+          id: String(data.request.id),
+          userId: String(userId),
           amount,
-          utr_number: utrNumber,
-          sender_name: senderName,
-          sender_upi: senderUpi,
+          utrNumber,
+          senderName,
+          senderUpi,
           status: 'pending',
-        });
-        newRequest.id = String(saved.id); 
-      } catch (err) {
-        console.warn('[requestRecharge] Supabase failed, using local ID:', err.message);
+          timestamp: data.request.created_at || new Date().toISOString()
+        };
+        // Local optimisic UI update (backend will also trigger realtime update)
+        setPendingRecharges(prev => [...prev, newRequest]);
+        return newRequest.id;
+      } else {
+        alert(data.message || data.error || 'Failed to submit recharge request');
+        return null;
       }
+    } catch (err) {
+      console.error('[requestRecharge] Network error:', err.message);
+      alert('Network error. Please try again.');
+      return null;
     }
-
-    setPendingRecharges(prev => [...prev, newRequest]);
-    return newRequest.id;
   };
 
 

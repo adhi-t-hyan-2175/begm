@@ -496,12 +496,15 @@ const Admin = () => {
   };
 
   const rejectRecharge = async (reqId) => {
+    const reason = window.prompt("Enter reason for rejection:", "Invalid UTR / Payment not received");
+    if (reason === null) return; // Admin cancelled
+
     try {
       const token = sessionStorage.getItem('admin_token');
       const res = await fetch(`${API_BASE}/api/admin/reject-recharge`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ requestId: reqId })
+        body: JSON.stringify({ requestId: reqId, reason })
       });
       const data = await res.json();
       if (data.success) {

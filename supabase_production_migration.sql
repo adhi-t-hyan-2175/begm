@@ -12,6 +12,10 @@ ALTER TABLE bets ADD COLUMN IF NOT EXISTS profit NUMERIC(12, 2);
 -- 2. Prevent Duplicate Recharges (assuming UTR should be unique)
 -- Create UTR column if it doesn't exist
 ALTER TABLE recharge_requests ADD COLUMN IF NOT EXISTS utr_number TEXT;
+ALTER TABLE recharge_requests ADD COLUMN IF NOT EXISTS reject_reason TEXT;
+ALTER TABLE recharge_requests ADD COLUMN IF NOT EXISTS ip_address TEXT;
+ALTER TABLE recharge_requests ADD COLUMN IF NOT EXISTS device_info TEXT;
+ALTER TABLE recharge_requests ADD COLUMN IF NOT EXISTS is_first_recharge BOOLEAN DEFAULT FALSE;
 
 -- Note: If multiple recharges can have the same UTR (unlikely), remove this constraint.
 DO $$ 
