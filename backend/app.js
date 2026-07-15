@@ -65,7 +65,7 @@ app.use((req, res) => {
 });
 
 // ─── Global error handler ─────────────────────────────────────────────────────
-const { supabase } = require('./config/supabase');
+const supabase = require('./config/supabase');
 app.use(async (err, req, res, next) => {
   console.error('[Unhandled Error]', err.stack || err.message);
   try {
