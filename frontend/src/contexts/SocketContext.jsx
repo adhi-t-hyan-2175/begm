@@ -28,7 +28,6 @@ export const SocketProvider = ({ children }) => {
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'platform_settings' },
         (payload) => {
-          console.log('🔄 [Realtime] Platform settings updated', payload.new);
           setAdminSettings(payload.new);
           // Auto-trigger maintenance mode reload if turned on
           if (payload.new.maintenance_mode === 'On') {
@@ -47,7 +46,6 @@ export const SocketProvider = ({ children }) => {
           'postgres_changes',
           { event: '*', schema: 'public', table: 'wallets', filter: `user_id=eq.${user.id}` },
           (payload) => {
-            console.log('🔄 [Realtime] Wallet updated', payload);
             if (hydrateWallet) hydrateWallet(); // Re-fetch or manually update
           }
         )
@@ -56,7 +54,6 @@ export const SocketProvider = ({ children }) => {
           'postgres_changes',
           { event: 'UPDATE', schema: 'public', table: 'recharge_requests', filter: `user_id=eq.${user.id}` },
           (payload) => {
-            console.log('🔄 [Realtime] Recharge updated', payload.new);
             if (payload.new.status === 'approved') {
               // Optionally trigger a notification toast here
             }
@@ -67,7 +64,6 @@ export const SocketProvider = ({ children }) => {
           'postgres_changes',
           { event: 'UPDATE', schema: 'public', table: 'withdrawal_requests', filter: `user_id=eq.${user.id}` },
           (payload) => {
-            console.log('🔄 [Realtime] Withdrawal updated', payload.new);
           }
         )
         .subscribe();

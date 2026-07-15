@@ -34,16 +34,17 @@ app.use(express.json({ limit: '10kb' })); // Prevent oversized payloads
 app.use(maintenanceMiddleware);
 
 // ─── Rate limiting ──────────────────────────────────────────────────────────────
-const { globalApiLimiter, authLimiter, financialRequestLimiter, bettingLimiter } = require('./middleware/rateLimiter');
+const { globalApiLimiter, adminLoginLimiter, authLimiter, financialRequestLimiter, bettingLimiter } = require('./middleware/rateLimiter');
 
 // Apply global rate limit
 app.use('/api', globalApiLimiter);
 
 // Apply strict limits
-app.use('/api/auth/send-otp', authLimiter);
-app.use('/api/wallet/request-recharge', financialRequestLimiter);
-app.use('/api/wallet/request-withdraw', financialRequestLimiter);
-app.use('/api/game/place-bet', bettingLimiter);
+app.use('/api/admin/login', adminLoginLimiter);        // 5 attempts / 15 min
+app.use('/api/auth/send-otp', authLimiter);            // 5 / min
+app.use('/api/wallet/request-recharge', financialRequestLimiter); // 3 / min
+app.use('/api/wallet/request-withdraw', financialRequestLimiter); // 3 / min
+app.use('/api/game/place-bet', bettingLimiter);        // 30 / min
 
 // ─── Health check ─────────────────────────────────────────────────────────────
 app.get('/', (req, res) => {

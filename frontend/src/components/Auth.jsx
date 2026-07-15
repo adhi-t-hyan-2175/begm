@@ -9,7 +9,6 @@ const Auth = () => {
   const handleLogin = async () => {
     try {
       const res = await axios.post('/api/auth/login', { phone });
-      console.log(res.data);
       setIsLoggedIn(true);
     } catch (err) {
       console.error(err);
@@ -19,7 +18,6 @@ const Auth = () => {
   const handleVerifyOTP = async () => {
     try {
       const res = await axios.post('/api/auth/verify-otp', { phone, otp });
-      console.log(res.data);
     } catch (err) {
       console.error(err);
     }

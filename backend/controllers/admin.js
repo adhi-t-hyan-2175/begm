@@ -167,8 +167,6 @@ exports.getRechargeRequests = async (req, res) => {
 exports.approveRecharge = async (req, res) => {
   try {
     const { requestId, userId, amount } = req.body;
-    console.log('[approveRecharge] incoming request body:', req.body);
-    console.log('[approveRecharge] user attached from token:', req.user);
 
     const adminName = req.user?.username || 'System';
     const now = new Date().toISOString();
