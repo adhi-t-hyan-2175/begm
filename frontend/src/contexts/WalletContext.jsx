@@ -336,19 +336,24 @@ export const WalletProvider = ({ children }) => {
       try {
         const res = await fetch(`${API_URL}/api/admin/settings`);
         const data = await res.json();
-        if (data.success && data.settings) {
+        if (data.success && data.settings && data.settings.platform) {
+          const p = data.settings.platform;
           setAdminSettings(prev => ({
             ...prev,
-            ...data.settings,
-            telegramLink: data.settings.telegram_link,
-            adminUpiId: data.settings.admin_upi_id,
-            adminUpiName: data.settings.admin_upi_name,
-            maintenanceMode: data.settings.maintenance_mode,
-            firstRechargeBonusPercent: data.settings.first_recharge_bonus_percent
+            ...p,
+            telegramLink: p.telegram_link,
+            adminUpiId: p.upi_id,
+            adminUpiName: p.upi_name,
+            maintenanceMode: p.maintenance_mode,
+            firstRechargeBonusPercent: p.first_recharge_bonus_percent,
+            minRecharge: p.min_recharge,
+            maxRecharge: p.max_recharge,
+            minWithdrawal: p.min_withdrawal,
+            maxWithdrawal: p.max_withdrawal
           }));
         }
       } catch (err) {
-         console.warn('[Wallet] Failed to fetch admin settings:', err.message);
+        console.warn('[Wallet] Failed to fetch admin settings:', err.message);
       }
     })();
   }, []);

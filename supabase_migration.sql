@@ -211,3 +211,110 @@ BEGIN
   RETURN v_new_balance;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 14. Phase 5: Global Settings Tables
+
+CREATE TABLE IF NOT EXISTS platform_settings (
+  id INT PRIMARY KEY DEFAULT 1,
+  min_recharge NUMERIC(12, 2) DEFAULT 100,
+  max_recharge NUMERIC(12, 2) DEFAULT 50000,
+  min_withdrawal NUMERIC(12, 2) DEFAULT 300,
+  max_withdrawal NUMERIC(12, 2) DEFAULT 50000,
+  daily_withdrawal_limit INT DEFAULT 3,
+  first_recharge_bonus_percent NUMERIC(5, 2) DEFAULT 0,
+  referral_bonus NUMERIC(12, 2) DEFAULT 100,
+  registration_bonus NUMERIC(12, 2) DEFAULT 50,
+  maintenance_mode TEXT DEFAULT 'Off',
+  upi_id TEXT DEFAULT 'admin@upi',
+  upi_name TEXT DEFAULT 'Admin Name',
+  qr_image_url TEXT DEFAULT '',
+  support_number TEXT DEFAULT '',
+  telegram_link TEXT DEFAULT 'https://t.me/example',
+  whatsapp_link TEXT DEFAULT 'https://wa.me/example',
+  notice_banner TEXT DEFAULT 'Welcome to Antigravity!',
+  announcement TEXT DEFAULT 'Play responsibly.',
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+INSERT INTO platform_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS vip_levels (
+  level INT PRIMARY KEY,
+  name TEXT NOT NULL,
+  recharge_requirement NUMERIC(12, 2) DEFAULT 0,
+  daily_withdrawal_limit INT DEFAULT 3,
+  withdrawal_amount_limit NUMERIC(12, 2) DEFAULT 50000,
+  referral_bonus_multiplier NUMERIC(5, 2) DEFAULT 1.0,
+  daily_bonus NUMERIC(12, 2) DEFAULT 0,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+INSERT INTO vip_levels (level, name, recharge_requirement) VALUES 
+(0, 'VIP 0', 0),
+(1, 'VIP 1', 1000),
+(2, 'VIP 2', 5000),
+(3, 'VIP 3', 20000)
+ON CONFLICT (level) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS task_settings (
+  id INT PRIMARY KEY DEFAULT 1,
+  registration_reward NUMERIC(12, 2) DEFAULT 50,
+  referral_reward NUMERIC(12, 2) DEFAULT 100,
+  daily_reward NUMERIC(12, 2) DEFAULT 10,
+  weekly_reward NUMERIC(12, 2) DEFAULT 50,
+  enable_tasks BOOLEAN DEFAULT TRUE,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+INSERT INTO task_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS game_settings (
+  game_key TEXT PRIMARY KEY,
+  betting_time INT DEFAULT 30,
+  evaluation_time INT DEFAULT 5,
+  min_bet NUMERIC(12, 2) DEFAULT 10,
+  max_bet NUMERIC(12, 2) DEFAULT 10000,
+  max_winning NUMERIC(12, 2) DEFAULT 50000,
+  status TEXT DEFAULT 'Active',
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+INSERT INTO game_settings (game_key, betting_time, evaluation_time, min_bet, max_bet) VALUES 
+('FastParty', 30, 5, 10, 10000),
+('Parity', 180, 5, 10, 10000),
+('Sapre', 180, 5, 10, 10000),
+('Dice', 60, 5, 10, 10000),
+('Wheelocity', 60, 5, 10, 10000)
+ON CONFLICT (game_key) DO NOTHING;
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS admin_note TEXT;
+
+-- 15. Phase 6: Production Security & Audit
+
+-- Alter admin_audit_logs
+ALTER TABLE admin_audit_logs RENAME COLUMN admin_name TO admin_email;
+ALTER TABLE admin_audit_logs RENAME COLUMN player_id TO target_user;
+ALTER TABLE admin_audit_logs ALTER COLUMN target_user TYPE TEXT;
+ALTER TABLE admin_audit_logs ADD COLUMN IF NOT EXISTS ip TEXT;
+ALTER TABLE admin_audit_logs ADD COLUMN IF NOT EXISTS device TEXT;
+
+-- System Logs Table
+CREATE TABLE IF NOT EXISTS system_logs (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  type TEXT NOT NULL,
+  error_message TEXT NOT NULL,
+  stack_trace TEXT,
+  resolved BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Admin Sessions Table
+CREATE TABLE IF NOT EXISTS admin_sessions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  admin_email TEXT NOT NULL,
+  ip TEXT,
+  browser TEXT,
+  last_action TEXT,
+  login_time TIMESTAMPTZ DEFAULT NOW(),
+  last_active_time TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Add device_info to users
+ALTER TABLE users ADD COLUMN IF NOT EXISTS device_info TEXT;
+

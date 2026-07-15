@@ -15,20 +15,20 @@ export const SocketProvider = ({ children }) => {
   useEffect(() => {
     if (!isSupabaseReady()) return;
 
-    // Fetch initial admin settings
+    // Fetch initial platform settings
     const initSettings = async () => {
-      const { data } = await supabase.from('admin_settings').select('*').single();
+      const { data } = await supabase.from('platform_settings').select('*').eq('id', 1).single();
       if (data) setAdminSettings(data);
     };
     initSettings();
 
-    // 1. Subscribe to Admin Settings (Global)
-    const settingsChannel = supabase.channel('public:admin_settings')
+    // 1. Subscribe to Platform Settings (Global)
+    const settingsChannel = supabase.channel('public:platform_settings')
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'admin_settings' },
+        { event: 'UPDATE', schema: 'public', table: 'platform_settings' },
         (payload) => {
-          console.log('🔄 [Realtime] Admin settings updated', payload.new);
+          console.log('🔄 [Realtime] Platform settings updated', payload.new);
           setAdminSettings(payload.new);
           // Auto-trigger maintenance mode reload if turned on
           if (payload.new.maintenance_mode === 'On') {

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
-  generateHistory, generateFakeOrders,
+  generateHistory,
   getOrderBadgeColor, deterministicRandom
 } from '../hooks/useGameTimer';
 import { useGlobalGame } from '../contexts/GlobalGameContext';
@@ -51,37 +51,7 @@ const Wheelocity = () => {
   const [resultCard, setResultCard] = useState(null);
   const [liveOrders, setLiveOrders] = useState([]);
   const settledRef = useRef('');
-  const baseOrdersRef = useRef([]);
-
-  const {
-    placeBet, myOrders
-  } = useWallet();
-
-  const history = (realHistory || []).map(r => ({
-    period: r.period,
-    label: r.result?.label,
-    number: r.result?.number,
-    color: r.result?.color
-  }));
-  const displayHistory = history.slice(0, 14);
-
-  useEffect(() => {
-    baseOrdersRef.current = generateFakeOrders(GAME, period, 30);
-    setLiveOrders([]);
-  }, [period]);
-
-  useEffect(() => {
-    if (!isBettingOpen) {
-      setLiveOrders(baseOrdersRef.current);
-      return;
-    }
-    const progress = secondsIntoPeriod / 30;
-    const toShow = Math.min(
-      Math.floor(progress * baseOrdersRef.current.length) + 1,
-      baseOrdersRef.current.length
-    );
-    setLiveOrders(baseOrdersRef.current.slice(0, toShow));
-  }, [secondsIntoPeriod, isBettingOpen]);
+  // Fake orders removed.
 
   useEffect(() => {
     if (!isBettingOpen) {

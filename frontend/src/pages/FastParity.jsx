@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
-  generateHistory, generateFakeOrders,
+  generateHistory,
   getOrderBadgeColor, deterministicRandom
 } from '../hooks/useGameTimer';
 import { useGlobalGame } from '../contexts/GlobalGameContext';
@@ -58,25 +58,7 @@ const FastParity = () => {
   }));
   const displayHistory = history.slice(0, 14);
 
-  // ─── Live fake orders: reset on new period, trickle in during betting ──────
-  const baseOrdersRef = useRef([]);
-  useEffect(() => {
-    baseOrdersRef.current = generateFakeOrders(GAME, period, 30);
-    setLiveOrders([]);
-  }, [period]);
-
-  useEffect(() => {
-    if (!isBettingOpen) {
-      setLiveOrders(baseOrdersRef.current);
-      return;
-    }
-    const progress = secondsIntoPeriod / 30;
-    const toShow = Math.min(
-      Math.floor(progress * baseOrdersRef.current.length) + 1,
-      baseOrdersRef.current.length
-    );
-    setLiveOrders(baseOrdersRef.current.slice(0, toShow));
-  }, [secondsIntoPeriod, isBettingOpen]);
+  // Fake orders removed per Phase 4.
 
   // ─── Win/Loss settlement notification: fires once per period transition ───────────────
   useEffect(() => {

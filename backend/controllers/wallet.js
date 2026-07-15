@@ -80,6 +80,23 @@ const withdraw = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Insufficient balance' });
     }
 
+    // Dynamic Admin Limits Validation
+    const { data: adminSettings } = await supabase
+      .from('platform_settings')
+      .select('min_withdrawal, max_withdrawal')
+      .eq('id', 1)
+      .single();
+
+    const minW = adminSettings?.min_withdrawal || 300;
+    const maxW = adminSettings?.max_withdrawal || 50000;
+
+    if (amount < minW) {
+      return res.status(400).json({ success: false, message: `Minimum withdrawal is ₹${minW}` });
+    }
+    if (amount > maxW) {
+      return res.status(400).json({ success: false, message: `Maximum withdrawal is ₹${maxW}` });
+    }
+
     // Deduct immediately (atomically) and create a pending withdrawal request
     const walletBefore = parseFloat(wallet.main_balance || 0);
     const { data: newBalance, error: updateErr } = await supabase.rpc('deduct_wallet_balance', { 

@@ -33,24 +33,17 @@ app.use(express.json({ limit: '10kb' })); // Prevent oversized payloads
 // ─── Maintenance Mode ─────────────────────────────────────────────────────────
 app.use(maintenanceMiddleware);
 
-// ─── Global rate limiter ──────────────────────────────────────────────────────
-const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { success: false, error: 'Too many requests, please try again later.' },
-});
-app.use('/api', globalLimiter);
+// ─── Rate limiting ──────────────────────────────────────────────────────────────
+const { globalApiLimiter, authLimiter, financialRequestLimiter, bettingLimiter } = require('./middleware/rateLimiter');
 
-// ─── Strict rate limiter for payment endpoints ────────────────────────────────
-const paymentLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 10,
-  message: { success: false, error: 'Too many payment requests. Please wait a minute.' },
-});
-app.use('/api/wallet/create-order', paymentLimiter);
-app.use('/api/wallet/verify-payment', paymentLimiter);
+// Apply global rate limit
+app.use('/api', globalApiLimiter);
+
+// Apply strict limits
+app.use('/api/auth/send-otp', authLimiter);
+app.use('/api/wallet/request-recharge', financialRequestLimiter);
+app.use('/api/wallet/request-withdraw', financialRequestLimiter);
+app.use('/api/game/place-bet', bettingLimiter);
 
 // ─── Health check ─────────────────────────────────────────────────────────────
 app.get('/', (req, res) => {
@@ -71,8 +64,18 @@ app.use((req, res) => {
 });
 
 // ─── Global error handler ─────────────────────────────────────────────────────
-app.use((err, req, res, next) => {
-  console.error('[Unhandled Error]', err.message);
+const { supabase } = require('./config/supabase');
+app.use(async (err, req, res, next) => {
+  console.error('[Unhandled Error]', err.stack || err.message);
+  try {
+    await supabase.from('system_logs').insert({
+      type: 'API_ERROR',
+      error_message: err.message || 'Unknown error',
+      stack_trace: err.stack || null
+    });
+  } catch (logErr) {
+    console.error('Failed to log error to database:', logErr.message);
+  }
   res.status(500).json({ success: false, error: 'Internal server error' });
 });
 

@@ -1,26 +1,40 @@
-const supabase = require('../config/supabase');
+const { supabase } = require('../services/supabase');
 
-const maintenanceMiddleware = async (req, res, next) => {
-  // Allow admin routes always
-  if (req.path.startsWith('/api/admin') || req.path.startsWith('/admin')) {
-    return next();
-  }
-
+const checkMaintenanceMode = async (req, res, next) => {
   try {
-    const { data: settings } = await supabase.from('admin_settings').select('maintenance_mode').eq('id', 1).single();
-    
+    // Exempt admin routes completely
+    if (req.originalUrl.startsWith('/api/admin')) {
+      return next();
+    }
+
+    // Exempt settings retrieval
+    if (req.originalUrl === '/api/admin/settings') {
+      return next();
+    }
+
+    const { data: settings, error } = await supabase
+      .from('platform_settings')
+      .select('maintenance_mode')
+      .eq('id', 1)
+      .single();
+
+    if (error) {
+      console.error('Maintenance Check Error:', error);
+      return next();
+    }
+
     if (settings && settings.maintenance_mode === 'On') {
       return res.status(503).json({
         success: false,
-        error: 'Website Under Maintenance',
-        message: 'We are currently improving the platform. Please try again later.'
+        message: 'System is currently under maintenance. Please try again later.'
       });
     }
-  } catch (err) {
-    console.error('[Maintenance Middleware Error]:', err.message);
-  }
 
-  next();
+    next();
+  } catch (error) {
+    console.error('Maintenance Middleware Error:', error);
+    next();
+  }
 };
 
-module.exports = maintenanceMiddleware;
+module.exports = checkMaintenanceMode;

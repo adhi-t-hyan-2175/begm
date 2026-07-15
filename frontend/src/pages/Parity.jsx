@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
-  generateHistory, generateFakeOrders,
+  generateHistory,
   getOrderBadgeColor
 } from '../hooks/useGameTimer';
 import { useGlobalGame } from '../contexts/GlobalGameContext';
@@ -57,24 +57,7 @@ const Parity = () => {
   }));
   const displayHistory = history.slice(0, 14);
 
-  const baseOrdersRef = useRef([]);
-  useEffect(() => {
-    baseOrdersRef.current = generateFakeOrders(GAME, period, 30);
-    setLiveOrders([]);
-  }, [period]);
-
-  useEffect(() => {
-    if (!isBettingOpen) {
-      setLiveOrders(baseOrdersRef.current);
-      return;
-    }
-    const progress = secondsIntoPeriod / 60;
-    const toShow = Math.min(
-      Math.floor(progress * baseOrdersRef.current.length) + 1,
-      baseOrdersRef.current.length
-    );
-    setLiveOrders(baseOrdersRef.current.slice(0, toShow));
-  }, [secondsIntoPeriod, isBettingOpen]);
+  // Fake orders removed.
 
   useEffect(() => {
     if (settledRef.current === previousPeriod || status === 'betting') return;

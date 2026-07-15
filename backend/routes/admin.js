@@ -5,6 +5,7 @@ const {
   adminLogin,
   adminMe,
   getAllUsers,
+  getUserProfile,
   getRechargeRequests,
   approveRecharge,
   rejectRecharge,
@@ -13,7 +14,7 @@ const {
   rejectWithdrawal,
   getUserTransactions,
   setUserStatus,
-  getStats,
+  getDashboard,
   getAllDeposits,
   getSettings,
   updateSettings,
@@ -35,6 +36,7 @@ router.use(verifyAdmin);
 
 // Users
 router.get('/users', getAllUsers);
+router.get('/user/:id', getUserProfile);
 router.post('/set-user-status', setUserStatus);
 router.post('/edit-user', require('../controllers/admin').editUser);
 
@@ -53,7 +55,7 @@ router.post('/reject-withdrawal', rejectWithdrawal);
 router.get('/transactions/:userId', getUserTransactions);
 
 // Stats dashboard
-router.get('/stats', getStats);
+router.get('/dashboard', getDashboard);
 router.post('/update-settings', updateSettings);
 
 // Analytics & Audit
@@ -62,6 +64,12 @@ router.get('/game-analytics', getGameAnalytics);
 router.get('/financial-analytics', getFinancialAnalytics);
 router.post('/set-game-result', setGameResult);
 router.get('/live-bets', getLiveBets);
+
+// Phase 6 endpoints
+const adminController = require('../controllers/admin');
+router.get('/fraud-report', adminController.getFraudReport);
+router.get('/activity', adminController.getAdminActivity);
+router.get('/dashboard-stats', adminController.getDashboardStats);
 
 // Backups
 router.get('/backups', getBackups);

@@ -232,9 +232,6 @@ const deterministicOrder = (seed) => {
   return value;
 };
 
-export const generateFakeOrders = (gameType, currentPeriod, count = 20) => {
-  return []; // Fake bets completely removed based on user request
-};
 
 
 // Global Date.now() synchronized timer hook

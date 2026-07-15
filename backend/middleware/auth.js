@@ -52,7 +52,9 @@ const verifyAdmin = async (req, res, next) => {
 
     jwt.verify(token, process.env.JWT_SECRET || 'super_secret_admin_key', (err, decoded) => {
       if (err) return res.status(401).json({ success: false, error: 'Unauthorized: Invalid token' });
-      if (!decoded.admin) return res.status(403).json({ success: false, error: 'Forbidden: Admin access required' });
+      if (!decoded.admin || decoded.email !== 'adithyan3847@gmail.com') {
+        return res.status(403).json({ success: false, error: 'Forbidden: Admin access required. Only adithyan3847@gmail.com is permitted.' });
+      }
       req.user = decoded;
       next();
     });

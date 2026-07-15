@@ -127,9 +127,7 @@ const generateBaseResult = (gameType, period) => {
   return result;
 };
 
-const generateFakeOrders = (gameType, currentPeriod, count = 20) => {
-  return []; // Fake bets completely removed based on user request
-};
+
 
 // ─── Settlement Logic ───
 const resolvePeriod = async (gameConfig, period) => {

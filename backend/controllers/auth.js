@@ -50,6 +50,8 @@ exports.upsertProfile = async (req, res) => {
 
     let profile;
 
+    const deviceInfo = req.headers['user-agent'] || 'Unknown Device';
+
     if (!existing) {
       // Create new profile
       const { data: newUser, error: insertErr } = await supabase
@@ -63,6 +65,7 @@ exports.upsertProfile = async (req, res) => {
           role: computedRole,
           total_recharge: 0,
           referred_by: referredBy ? parseInt(referredBy, 10) : null,
+          device_info: deviceInfo
         })
         .select()
         .single();
@@ -77,11 +80,12 @@ exports.upsertProfile = async (req, res) => {
         bonus_balance: 0,
       });
     } else {
-      // Update existing profile (sync nickname, email, google_id, and check role)
+      // Update existing profile (sync nickname, email, google_id, device_info, and check role)
       const updates = {
         nickname,
         google_id: googleId,
         email,
+        device_info: deviceInfo
       };
       
       // Upgrade to admin if necessary, but don't demote existing admins
