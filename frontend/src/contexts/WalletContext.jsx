@@ -235,7 +235,7 @@ export const WalletProvider = ({ children }) => {
     }
 
     return () => {
-      if (realtimeSubscription) realtimeSubscription.unsubscribe();
+      if (realtimeSubscription) supabase.removeChannel(realtimeSubscription);
     };
   }, [currentUser?.id, hydrateWallet]);
 

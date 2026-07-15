@@ -502,7 +502,9 @@ const Admin = () => {
     }).catch(err => console.warn('Supabase realtime error', err));
 
     return () => {
-      subscriptions.forEach(sub => sub.unsubscribe());
+      import('../services/supabase').then(({ supabase }) => {
+        subscriptions.forEach(sub => supabase.removeChannel(sub));
+      });
     };
   }, [authState.authenticated]);
 

@@ -68,7 +68,8 @@ export const GlobalGameProvider = ({ children }) => {
             };
           });
         }
-      });
+      })
+      .subscribe();
 
     const historySub = supabase
       .channel('public:game_results')
@@ -83,7 +84,6 @@ export const GlobalGameProvider = ({ children }) => {
       })
       .subscribe();
 
-    subscription.subscribe();
 
     return () => {
       supabase.removeChannel(subscription);
