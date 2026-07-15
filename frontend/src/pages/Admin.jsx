@@ -33,20 +33,7 @@ const deterministicSelection = (seed, index, gameKey) => {
 
 
 const applyBetFloor = (floorsRef, key, bets) => {
-  const prev = floorsRef.current[key] || { total: 0, bySelection: {}, orders: [] };
-  const bySelection = {};
-  const allSelections = new Set([
-    ...Object.keys(prev.bySelection),
-    ...Object.keys(bets.bySelection || {})
-  ]);
-  allSelections.forEach((sel) => {
-    bySelection[sel] = Math.max(prev.bySelection[sel] || 0, bets.bySelection?.[sel] || 0);
-  });
-  const total = Math.max(prev.total, bets.total || 0);
-  const orders = (bets.orders?.length || 0) >= (prev.orders?.length || 0) ? bets.orders : prev.orders;
-  const floored = { total, bySelection, orders };
-  floorsRef.current[key] = floored;
-  return floored;
+  return bets; // Removed fake bet padding to show ONLY actual real bets
 };
 
 const gameConfigs = [
@@ -366,11 +353,6 @@ const RazorpayTransactions = () => {
 const Admin = () => {
   const {
     balance,
-    approveRecharge: walletApproveRecharge,
-    rejectRecharge: walletRejectRecharge,
-    approveWithdrawal: walletApproveWithdrawal,
-    rejectWithdrawal: walletRejectWithdrawal,
-    holdWithdrawal: walletHoldWithdrawal,
     financialRecords,
     myOrders,
     getLiveBetStatsWithFloor,
@@ -383,7 +365,7 @@ const Admin = () => {
   } = useWallet();
 
   const [authState, setAuthState] = useState({ checking: true, authenticated: false, username: '' });
-  const [loginForm, setLoginForm] = useState({ username: 'Treesadhi', password: 'TREESADHI2175@' });
+  const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [loginError, setLoginError] = useState('');
   const [activeTab, setActiveTab] = useState('games');
   const [gameHistories, setGameHistories] = useState({});
@@ -424,12 +406,33 @@ const Admin = () => {
         // Fetch Recharges
         const rechargeRes = await fetch(`${API_BASE}/api/admin/recharge-requests`, { headers: { Authorization: `Bearer ${token}` } });
         const rechargeData = await rechargeRes.json();
-        if (rechargeData.success) setPendingRecharges(rechargeData.requests);
+        if (rechargeData.success) {
+          setPendingRecharges(rechargeData.requests.map(r => ({
+            id: r.id,
+            userId: r.user_id,
+            amount: r.amount,
+            utrNumber: r.utr_number,
+            senderName: r.sender_name,
+            senderUpi: r.sender_upi,
+            status: r.status,
+            timestamp: r.created_at
+          })));
+        }
 
         // Fetch Withdrawals
         const withdrawalRes = await fetch(`${API_BASE}/api/admin/withdrawal-requests`, { headers: { Authorization: `Bearer ${token}` } });
         const withdrawalData = await withdrawalRes.json();
-        if (withdrawalData.success) setPendingWithdrawals(withdrawalData.requests);
+        if (withdrawalData.success) {
+          setPendingWithdrawals(withdrawalData.requests.map(w => ({
+            id: w.id,
+            userId: w.user_id,
+            amount: w.amount,
+            upiId: w.upi_id,
+            upiName: w.upi_name,
+            status: w.status,
+            timestamp: w.created_at
+          })));
+        }
 
         // Fetch Live Bets
         const betsRes = await fetch(`${API_BASE}/api/admin/live-bets`, { headers: { Authorization: `Bearer ${token}` } });
@@ -441,28 +444,118 @@ const Admin = () => {
       }
     };
     fetchAdminData();
-    const interval = setInterval(fetchAdminData, 3000); // refresh every 3s
-    return () => clearInterval(interval);
+    const interval = setInterval(fetchAdminData, 1000); // refresh every 1s
+
+    // Realtime subscriptions for admin panel
+    let rechargeSubscription = null;
+    let withdrawalSubscription = null;
+    
+    import('../services/supabase').then(({ supabase, isSupabaseReady }) => {
+      if (isSupabaseReady()) {
+        rechargeSubscription = supabase
+          .channel('public:recharge_requests')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'recharge_requests' }, payload => {
+            fetchAdminData(); // Refresh all data instantly on change
+          })
+          .subscribe();
+
+        withdrawalSubscription = supabase
+          .channel('public:withdrawal_requests')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'withdrawal_requests' }, payload => {
+            fetchAdminData(); // Refresh all data instantly on change
+          })
+          .subscribe();
+      }
+    }).catch(err => console.warn('Supabase realtime error', err));
+
+    return () => {
+      clearInterval(interval);
+      if (rechargeSubscription) rechargeSubscription.unsubscribe();
+      if (withdrawalSubscription) withdrawalSubscription.unsubscribe();
+    };
   }, [authState.authenticated]);
 
   const approveRecharge = async (reqId, userId, amount) => {
-    await walletApproveRecharge(reqId, userId, amount);
-    setPendingRecharges(prev => prev.filter(r => r.id !== reqId));
+    try {
+      const token = sessionStorage.getItem('admin_token');
+      const res = await fetch(`${API_BASE}/api/admin/approve-recharge`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ requestId: reqId, userId, amount })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPendingRecharges(prev => prev.filter(r => r.id !== reqId));
+      } else {
+        alert(data.error || 'Failed to approve recharge');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error approving recharge');
+    }
   };
+
   const rejectRecharge = async (reqId) => {
-    await walletRejectRecharge(reqId);
-    setPendingRecharges(prev => prev.filter(r => r.id !== reqId));
+    try {
+      const token = sessionStorage.getItem('admin_token');
+      const res = await fetch(`${API_BASE}/api/admin/reject-recharge`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ requestId: reqId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPendingRecharges(prev => prev.filter(r => r.id !== reqId));
+      } else {
+        alert(data.error || 'Failed to reject recharge');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error rejecting recharge');
+    }
   };
+
   const approveWithdrawal = async (reqId) => {
-    await walletApproveWithdrawal(reqId);
-    setPendingWithdrawals(prev => prev.filter(r => r.id !== reqId));
+    try {
+      const token = sessionStorage.getItem('admin_token');
+      const res = await fetch(`${API_BASE}/api/admin/approve-withdrawal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ requestId: reqId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPendingWithdrawals(prev => prev.filter(r => r.id !== reqId));
+      } else {
+        alert(data.error || 'Failed to approve withdrawal');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error approving withdrawal');
+    }
   };
+
   const rejectWithdrawal = async (reqId) => {
-    await walletRejectWithdrawal(reqId);
-    setPendingWithdrawals(prev => prev.filter(r => r.id !== reqId));
+    try {
+      const token = sessionStorage.getItem('admin_token');
+      const res = await fetch(`${API_BASE}/api/admin/reject-withdrawal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ requestId: reqId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPendingWithdrawals(prev => prev.filter(r => r.id !== reqId));
+      } else {
+        alert(data.error || 'Failed to reject withdrawal');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error rejecting withdrawal');
+    }
   };
+
   const holdWithdrawal = async (reqId) => {
-    walletHoldWithdrawal(reqId);
     setPendingWithdrawals(prev => prev.map(r => r.id === reqId ? { ...r, status: 'held' } : r));
   };
 
@@ -670,8 +763,8 @@ const Admin = () => {
           </div>
           <form onSubmit={handleLogin} className="admin-form">
             <label>
-              Username
-              <input value={loginForm.username} onChange={(event) => setLoginForm({ ...loginForm, username: event.target.value })} placeholder="superadmin" />
+              Email Address
+              <input type="email" value={loginForm.email} onChange={(event) => setLoginForm({ ...loginForm, email: event.target.value })} placeholder="admin@example.com" />
             </label>
             <label>
               Password
@@ -842,10 +935,7 @@ const Admin = () => {
               }
 
               let liveBets = getGlobalLiveBetStats(game.key, timerState.period);
-
-
-
-              liveBets = applyBetFloor(betDisplayFloors, periodKey, liveBets);
+              // liveBets = applyBetFloor(betDisplayFloors, periodKey, liveBets); // FAKE BET INJECTION REMOVED
 
               const selectedWinner = getSelectedWinner(game.key, timerState.period);
               return (

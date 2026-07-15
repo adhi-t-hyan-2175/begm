@@ -117,3 +117,9 @@ CREATE TABLE IF NOT EXISTS game_results (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(game, period)
 );
+
+-- 20. Enable Realtime for Admin Panel Monitoring
+ALTER PUBLICATION supabase_realtime ADD TABLE bets;
+ALTER PUBLICATION supabase_realtime ADD TABLE recharge_requests;
+ALTER PUBLICATION supabase_realtime ADD TABLE withdrawal_requests;
+

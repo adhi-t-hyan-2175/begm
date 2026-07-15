@@ -13,16 +13,19 @@ const logAdminAction = async (adminName, action, playerId = null, oldValue = nul
 
 // ─── POST /api/admin/login ───────────────────────────────────────────────────
 exports.adminLogin = async (req, res) => {
-  const { username, password } = req.body;
-  if (username === 'Treesadhi' && password === 'TREESADHI2175@') {
+  const { email, password } = req.body;
+  const adminEmail = process.env.ADMIN_EMAIL || 'adithyan3847@gmail.com';
+  const adminPassword = process.env.ADMIN_PASSWORD || 'TREESADHI2175@20';
+
+  if (email === adminEmail && password === adminPassword) {
     const token = jwt.sign(
-      { admin: true, username },
+      { admin: true, username: email },
       process.env.JWT_SECRET || 'super_secret_admin_key',
       { expiresIn: '24h' }
     );
-    return res.json({ success: true, token, admin: { username } });
+    return res.json({ success: true, token, admin: { username: email } });
   }
-  return res.status(401).json({ success: false, message: 'Invalid username or password' });
+  return res.status(401).json({ success: false, message: 'Invalid email or password' });
 };
 
 // ─── GET /api/admin/me ───────────────────────────────────────────────────────
