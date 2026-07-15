@@ -484,28 +484,43 @@ const Admin = () => {
     };
     fetchAdminData();
 
-    // Realtime subscriptions for admin panel
-    let subscriptions = [];
-    
-    import('../services/supabase').then(({ supabase, isSupabaseReady }) => {
-      if (isSupabaseReady()) {
-        const handleDbChange = () => fetchAdminData();
-        
-        subscriptions = [
-          supabase.channel('admin:recharge_requests').on('postgres_changes', { event: '*', schema: 'public', table: 'recharge_requests' }, handleDbChange).subscribe(),
-          supabase.channel('admin:withdrawal_requests').on('postgres_changes', { event: '*', schema: 'public', table: 'withdrawal_requests' }, handleDbChange).subscribe(),
-          supabase.channel('admin:users').on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, handleDbChange).subscribe(),
-          supabase.channel('admin:wallets').on('postgres_changes', { event: '*', schema: 'public', table: 'wallets' }, handleDbChange).subscribe(),
-          supabase.channel('admin:bets').on('postgres_changes', { event: '*', schema: 'public', table: 'bets' }, handleDbChange).subscribe(),
-          supabase.channel('admin:transactions').on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, handleDbChange).subscribe(),
-        ];
+    // Selective polling for time-sensitive admin data (bypasses RLS blocks on realtime)
+    const liveUpdateInterval = setInterval(async () => {
+      try {
+        const token = sessionStorage.getItem('admin_token');
+        if (!token) return;
+
+        // 1. Live Bets
+        fetch(`${API_BASE}/api/admin/live-bets`, { headers: { Authorization: `Bearer ${token}` } })
+          .then(res => res.json())
+          .then(data => { if (data.success) setGlobalLiveBets(data.bets); });
+
+        // 2. Pending Recharges
+        fetch(`${API_BASE}/api/admin/recharge-requests`, { headers: { Authorization: `Bearer ${token}` } })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              setAllRecharges(data.requests.map(r => ({
+                id: r.id, userId: r.user_id, amount: r.amount, utrNumber: r.utr_number,
+                senderName: r.sender_name, senderUpi: r.sender_upi, status: r.status,
+                timestamp: r.created_at, users: r.users || null,
+                approvedBy: r.approved_by || null, rejectReason: r.reject_reason || null
+              })));
+            }
+          });
+
+        // 3. Dashboard Stats (to keep pool data live)
+        fetch(`${API_BASE}/api/admin/dashboard`, { headers: { Authorization: `Bearer ${token}` } })
+          .then(res => res.json())
+          .then(data => { if (data.success) setStats(data.stats); });
+
+      } catch (e) {
+        console.warn('Admin live update poll failed', e);
       }
-    }).catch(err => console.warn('Supabase realtime error', err));
+    }, 5000);
 
     return () => {
-      import('../services/supabase').then(({ supabase }) => {
-        subscriptions.forEach(sub => supabase.removeChannel(sub));
-      });
+      clearInterval(liveUpdateInterval);
     };
   }, [authState.authenticated]);
 
