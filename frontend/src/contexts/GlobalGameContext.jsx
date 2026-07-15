@@ -50,44 +50,33 @@ export const GlobalGameProvider = ({ children }) => {
     };
     fetchHistories();
 
-    const subscription = supabase
-      .channel('public:global_game_state')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'global_game_state' }, payload => {
-        const row = payload.new;
-        if (row && row.game) {
-          setGameStates(prev => {
+    // Polling fallback to test if realtime causes white screen
+    const fetchGlobalState = async () => {
+      const { data, error } = await supabase
+        .from('global_game_state')
+        .select('*');
+      if (data && !error) {
+        setGameStates(prev => {
+          let updated = { ...prev };
+          data.forEach(row => {
             const oldState = prev[row.game];
-            // If transitioned from resolving to betting, or period changed
             if (oldState && oldState.period !== row.period) {
-              // Trigger a global event so components can hydrate
               window.dispatchEvent(new CustomEvent('global_period_changed', { detail: { game: row.game, period: row.period } }));
             }
-            return {
-              ...prev,
-              [row.game]: row
-            };
+            updated[row.game] = row;
           });
-        }
-      })
-      .subscribe();
+          return updated;
+        });
+      }
+    };
 
-    const historySub = supabase
-      .channel('public:game_results')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'game_results' }, payload => {
-        const row = payload.new;
-        if (row && row.game) {
-          setGameHistories(prev => ({
-            ...prev,
-            [row.game]: [row, ...(prev[row.game] || [])]
-          }));
-        }
-      })
-      .subscribe();
-
+    const intervalId = setInterval(() => {
+      fetchGlobalState();
+      fetchHistories();
+    }, 3000);
 
     return () => {
-      supabase.removeChannel(subscription);
-      supabase.removeChannel(historySub);
+      clearInterval(intervalId);
     };
   }, []);
 

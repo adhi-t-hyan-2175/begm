@@ -188,54 +188,52 @@ export const WalletProvider = ({ children }) => {
       }
     })();
 
-    // Supabase Realtime for wallet and transactions
-    let realtimeSubscription = null;
-    if (isSupabaseReady()) {
-      realtimeSubscription = supabase.channel(`public:user:${currentUser.id}`)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'wallets', filter: `user_id=eq.${currentUser.id}` }, payload => {
-          hydrateWallet();
-        })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${currentUser.id}` }, payload => {
-          // Re-fetch transactions
-          fetch(`${API_URL}/api/wallet/transactions`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-          }).then(res => res.json()).then(txData => {
-            if (txData.success && txData.transactions) {
-              const mapped = txData.transactions.map(t => ({
-                id: String(t.id),
-                userId: String(t.user_id),
-                type: t.type,
-                amount: t.amount > 0 ? `+ ₹${t.amount}` : `- ₹${Math.abs(t.amount)}`,
-                status: t.status,
-                time: new Date(t.created_at).toLocaleString('en-US', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }),
-                color: t.status === 'Success' ? '#28a745' : '#dc3545',
-                timestamp: new Date(t.created_at).getTime(),
-              }));
-              setFinancialRecords(mapped);
-            }
-          });
-        })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'recharge_requests', filter: `user_id=eq.${currentUser.id}` }, payload => {
-          // Refresh pending recharges
-          getAll('recharge_requests', { column: 'user_id', value: currentUser.id }, 'created_at').then(recharges => {
-            const mapped = recharges
-              .filter(r => r.status === 'pending')
-              .map(r => ({
-                id: String(r.id),
-                userId: String(r.user_id),
-                amount: r.amount,
-                utrNumber: r.utr_number,
-                status: r.status,
-                timestamp: r.created_at,
-              }));
-            setPendingRecharges(mapped);
-          });
-        })
-        .subscribe();
-    }
+    // Polling fallback to test if realtime causes white screen
+    const fetchTransactionsAndRecharges = () => {
+      // Re-fetch transactions
+      fetch(`${API_URL}/api/wallet/transactions`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      }).then(res => res.json()).then(txData => {
+        if (txData.success && txData.transactions) {
+          const mapped = txData.transactions.map(t => ({
+            id: String(t.id),
+            userId: String(t.user_id),
+            type: t.type,
+            amount: t.amount > 0 ? `+ ₹${t.amount}` : `- ₹${Math.abs(t.amount)}`,
+            status: t.status,
+            time: new Date(t.created_at).toLocaleString('en-US', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }),
+            color: t.status === 'Success' ? '#28a745' : '#dc3545',
+            timestamp: new Date(t.created_at).getTime(),
+          }));
+          setFinancialRecords(mapped);
+        }
+      }).catch(() => {});
+
+      // Refresh pending recharges
+      getAll('recharge_requests', { column: 'user_id', value: currentUser.id }, 'created_at').then(recharges => {
+        const mapped = recharges
+          .filter(r => r.status === 'pending')
+          .map(r => ({
+            id: String(r.id),
+            userId: String(r.user_id),
+            amount: r.amount,
+            utrNumber: r.utr_number,
+            status: r.status,
+            timestamp: r.created_at,
+          }));
+        setPendingRecharges(mapped);
+      }).catch(() => {});
+    };
+
+    const intervalId = setInterval(() => {
+      if (currentUser?.id) {
+        hydrateWallet();
+        fetchTransactionsAndRecharges();
+      }
+    }, 3000);
 
     return () => {
-      if (realtimeSubscription) supabase.removeChannel(realtimeSubscription);
+      clearInterval(intervalId);
     };
   }, [currentUser?.id, hydrateWallet]);
 
