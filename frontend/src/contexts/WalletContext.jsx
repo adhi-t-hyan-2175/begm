@@ -191,7 +191,7 @@ export const WalletProvider = ({ children }) => {
     // Supabase Realtime for wallet and transactions
     let realtimeSubscription = null;
     if (isSupabaseReady()) {
-      realtimeSubscription = supabase.channel(`public:user:${currentUser.id}`)
+      realtimeSubscription = supabase.channel(`wallet-context:user:${currentUser.id}`)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'wallets', filter: `user_id=eq.${currentUser.id}` }, payload => {
           hydrateWallet();
         })

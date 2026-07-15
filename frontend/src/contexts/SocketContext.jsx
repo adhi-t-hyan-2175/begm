@@ -23,7 +23,7 @@ export const SocketProvider = ({ children }) => {
     initSettings();
 
     // 1. Subscribe to Platform Settings (Global)
-    const settingsChannel = supabase.channel('public:platform_settings')
+    const settingsChannel = supabase.channel('socket-context:platform_settings')
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'platform_settings' },
@@ -40,7 +40,7 @@ export const SocketProvider = ({ children }) => {
     // 2. Subscribe to User Specific Events (Wallet, Notifications, Requests)
     let userChannel;
     if (user?.id) {
-      userChannel = supabase.channel(`public:user:${user.id}`)
+      userChannel = supabase.channel(`socket-context:user:${user.id}`)
         // Listen to wallet updates
         .on(
           'postgres_changes',

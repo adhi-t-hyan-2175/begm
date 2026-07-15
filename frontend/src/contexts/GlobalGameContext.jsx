@@ -51,7 +51,7 @@ export const GlobalGameProvider = ({ children }) => {
     fetchHistories();
 
     const subscription = supabase
-      .channel('public:global_game_state')
+      .channel('global-game:state')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'global_game_state' }, payload => {
         const row = payload.new;
         if (row && row.game) {
@@ -72,7 +72,7 @@ export const GlobalGameProvider = ({ children }) => {
       .subscribe();
 
     const historySub = supabase
-      .channel('public:game_results')
+      .channel('global-game:results')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'game_results' }, payload => {
         const row = payload.new;
         if (row && row.game) {
