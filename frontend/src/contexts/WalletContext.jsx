@@ -301,7 +301,7 @@ export const WalletProvider = ({ children }) => {
   });
 
   const [adminSettings, setAdminSettings] = useState(() => {
-    const saved = localStorage.getItem('admin_settings');
+    const saved = localStorage.getItem('platform_settings');
     return saved ? JSON.parse(saved) : {
       minRecharge: 100,
       maxRecharge: 10000,
@@ -324,7 +324,7 @@ export const WalletProvider = ({ children }) => {
       if (e.key === 'pending_withdrawals') setPendingWithdrawals(JSON.parse(e.newValue || '[]'));
       if (e.key === 'live_bets') setLiveBets(JSON.parse(e.newValue || '{}'));
       if (e.key === 'wallet_balance') setBalance(parseFloat(e.newValue || '0'));
-      if (e.key === 'admin_settings') setAdminSettings(JSON.parse(e.newValue || '{}'));
+      if (e.key === 'platform_settings') setAdminSettings(JSON.parse(e.newValue || '{}'));
       if (e.key === 'profit_records') setProfitRecords(JSON.parse(e.newValue || '[]'));
     };
     window.addEventListener('storage', handleStorageChange);
@@ -395,7 +395,7 @@ export const WalletProvider = ({ children }) => {
   }, [liveBets]);
 
   useEffect(() => {
-    localStorage.setItem('admin_settings', JSON.stringify(adminSettings));
+    localStorage.setItem('platform_settings', JSON.stringify(adminSettings));
   }, [adminSettings]);
 
   useEffect(() => {

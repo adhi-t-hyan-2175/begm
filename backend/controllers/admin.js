@@ -29,22 +29,37 @@ const logAdminSession = async (email, req) => {
 
 // ─── POST /api/admin/login ───────────────────────────────────────────────────
 exports.adminLogin = async (req, res) => {
-  const { email, password } = req.body;
-  const adminEmail = 'adithyan3847@gmail.com';
-  const adminPassword = process.env.ADMIN_PASSWORD || 'TREESADHI2175@20';
+  // Trim to avoid trailing whitespace / encoding issues
+  const email    = (req.body.email    || '').trim();
+  const password = (req.body.password || '').trim();
 
-  if (email === adminEmail && password === adminPassword) {
+  const ADMIN_EMAIL    = 'adithyan3847@gmail.com';
+  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'TREESADHI2175@20';
+
+  // ── Temporary debug logs (remove after verifying login works) ──
+  console.log('[AdminLogin] received email   :', JSON.stringify(email));
+  console.log('[AdminLogin] expected email   :', JSON.stringify(ADMIN_EMAIL));
+  console.log('[AdminLogin] email match      :', email === ADMIN_EMAIL);
+  console.log('[AdminLogin] password match   :', password === ADMIN_PASSWORD);
+  // ── End debug logs ──
+
+  if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+    const payload = { admin: true, username: email, email };
     const token = jwt.sign(
-      { admin: true, username: email, email: email },
+      payload,
       process.env.JWT_SECRET || 'super_secret_admin_key',
       { expiresIn: '24h' }
     );
-    
+
+    console.log('[AdminLogin] JWT issued for  :', email);
+
     await logAdminSession(email, req);
     await logAdminAction(email, 'Login', null, null, null, req);
 
     return res.json({ success: true, token, admin: { username: email, email } });
   }
+
+  console.log('[AdminLogin] REJECTED — email or password mismatch');
   return res.status(403).json({ success: false, message: 'Forbidden: Only the global administrator can login.' });
 };
 
@@ -638,6 +653,39 @@ exports.getGameAnalytics = async (req, res) => {
   }
 };
 
+// ─── POST /api/admin/set-game-result ───────────────────────────────────────────
+exports.setGameResult = async (req, res) => {
+  try {
+    const { gameType, result } = req.body;
+    if (!gameType) return res.status(400).json({ success: false, error: 'Missing gameType' });
+
+    // Write override into global_game_state (correct table — admin_settings no longer exists)
+    if (!result) {
+      // Clear override
+      const { error } = await supabase
+        .from('global_game_state')
+        .update({ admin_override: null })
+        .eq('game', gameType);
+      if (error) throw error;
+    } else {
+      const overrideValue = typeof result === 'object'
+        ? JSON.stringify(result)
+        : JSON.stringify({ label: result });
+
+      const { error } = await supabase
+        .from('global_game_state')
+        .update({ admin_override: overrideValue })
+        .eq('game', gameType);
+      if (error) throw error;
+    }
+
+    await logAdminAction(req.user?.email, 'Force Game Result', null, null, `Game: ${gameType}, Result: ${JSON.stringify(result)}`, req);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
 // ─── GET /api/admin/financial-analytics ──────────────────────────────────────
 exports.getFinancialAnalytics = async (req, res) => {
   try {
@@ -660,24 +708,7 @@ exports.getFinancialAnalytics = async (req, res) => {
   }
 };
 
-// ─── POST /api/admin/set-game-result ─────────────────────────────────────────
-exports.setGameResult = async (req, res) => {
-  try {
-    const { gameType, result } = req.body;
-    
-    // Store in admin_settings to override the next spin
-    const { error } = await supabase.from('admin_settings').update({ 
-      forced_game_result: JSON.stringify({ gameType, result, timestamp: Date.now() })
-    }).eq('id', 1);
-    
-    if (error) throw error;
 
-    await logAdminAction(req.user?.email, 'Force Game Result', null, null, `Game: ${gameType}, Result: ${result}`, req);
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-};
 
 // ─── GET /api/admin/live-bets ────────────────────────────────────────────────
 exports.getLiveBets = async (req, res) => {
