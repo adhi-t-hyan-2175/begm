@@ -318,7 +318,7 @@ const RazorpayTransactions = () => {
 
 
 const Admin = () => {
-  const [authState, setAuthState] = useState({ checking: true, authenticated: false, username: '' });
+  const [authState, setAuthState] = useState({ checking: true, authenticated: false, email: '' });
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [loginError, setLoginError] = useState('');
   const [activeTab, setActiveTab] = useState('games');
@@ -659,7 +659,7 @@ const Admin = () => {
   useEffect(() => {
     const token = sessionStorage.getItem('admin_token');
     if (!token) {
-      setAuthState({ checking: false, authenticated: false, username: '' });
+      setAuthState({ checking: false, authenticated: false, email: '' });
       return;
     }
 
@@ -669,15 +669,15 @@ const Admin = () => {
       .then((res) => res.json())
       .then((data) => {
         if (data.admin) {
-          setAuthState({ checking: false, authenticated: true, username: data.admin.username });
+          setAuthState({ checking: false, authenticated: true, email: data.admin.email });
         } else {
           sessionStorage.removeItem('admin_token');
-          setAuthState({ checking: false, authenticated: false, username: '' });
+          setAuthState({ checking: false, authenticated: false, email: '' });
         }
       })
       .catch(() => {
         sessionStorage.removeItem('admin_token');
-        setAuthState({ checking: false, authenticated: false, username: '' });
+        setAuthState({ checking: false, authenticated: false, email: '' });
       });
   }, []);
 
@@ -703,12 +703,12 @@ const Admin = () => {
     }
 
     sessionStorage.setItem('admin_token', data.token);
-    setAuthState({ checking: false, authenticated: true, username: data.admin.username });
+    setAuthState({ checking: false, authenticated: true, email: data.admin.email });
   };
 
   const handleLogout = () => {
     sessionStorage.removeItem('admin_token');
-    setAuthState({ checking: false, authenticated: false, username: '' });
+    setAuthState({ checking: false, authenticated: false, email: '' });
   };
 
   const updateSettingSection = async (type, data) => {
@@ -829,7 +829,7 @@ const Admin = () => {
           <h1>Admin Dashboard</h1>
         </div>
         <div className="admin-topbar-actions">
-          <span className="admin-pill">Signed in as {authState.username}</span>
+          <span className="admin-pill">Signed in as {authState.email}</span>
           <button className="admin-btn danger" onClick={handleLogout}>Logout</button>
         </div>
       </div>
