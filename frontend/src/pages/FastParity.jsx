@@ -47,7 +47,7 @@ const FastParity = () => {
   const settledRef = useRef('');
 
   const {
-    placeBet, myOrders, getGameResultForPeriod
+    placeBet, myOrders
   } = useWallet();
 
   const history = (realHistory || []).map(r => ({
