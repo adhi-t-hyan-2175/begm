@@ -684,11 +684,16 @@ const Admin = () => {
   const handleLogin = async (event) => {
     event.preventDefault();
     setLoginError('');
+    
+    // Extract directly from the DOM to bypass any browser autofill React state staleness
+    const formData = new FormData(event.target);
+    const email = formData.get('email') || loginForm.email;
+    const password = formData.get('password') || loginForm.password;
 
     const response = await fetch(`${API_BASE}/api/admin/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(loginForm),
+      body: JSON.stringify({ email, password }),
     });
 
     const data = await response.json();
@@ -802,11 +807,11 @@ const Admin = () => {
           <form onSubmit={handleLogin} className="admin-form">
             <label>
               Email Address
-              <input type="email" value={loginForm.email} onChange={(event) => setLoginForm({ ...loginForm, email: event.target.value })} placeholder="admin@example.com" />
+              <input type="email" name="email" value={loginForm.email} onChange={(event) => setLoginForm({ ...loginForm, email: event.target.value })} placeholder="admin@example.com" required />
             </label>
             <label>
               Password
-              <input type="password" value={loginForm.password} onChange={(event) => setLoginForm({ ...loginForm, password: event.target.value })} placeholder="Enter secret password" />
+              <input type="password" name="password" value={loginForm.password} onChange={(event) => setLoginForm({ ...loginForm, password: event.target.value })} placeholder="Enter secret password" required />
             </label>
             {loginError && <div className="admin-error">{loginError}</div>}
             <button type="submit" className="admin-btn primary">Unlock Admin Panel</button>
