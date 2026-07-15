@@ -484,13 +484,28 @@ const Admin = () => {
     };
     fetchAdminData();
 
-    // Polling fallback to test if realtime causes white screen
-    const interval = setInterval(() => {
-      fetchAdminData();
-    }, 3000);
+    // Realtime subscriptions for admin panel
+    let subscriptions = [];
+    
+    import('../services/supabase').then(({ supabase, isSupabaseReady }) => {
+      if (isSupabaseReady()) {
+        const handleDbChange = () => fetchAdminData();
+        
+        subscriptions = [
+          supabase.channel('admin:recharge_requests').on('postgres_changes', { event: '*', schema: 'public', table: 'recharge_requests' }, handleDbChange).subscribe(),
+          supabase.channel('admin:withdrawal_requests').on('postgres_changes', { event: '*', schema: 'public', table: 'withdrawal_requests' }, handleDbChange).subscribe(),
+          supabase.channel('admin:users').on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, handleDbChange).subscribe(),
+          supabase.channel('admin:wallets').on('postgres_changes', { event: '*', schema: 'public', table: 'wallets' }, handleDbChange).subscribe(),
+          supabase.channel('admin:bets').on('postgres_changes', { event: '*', schema: 'public', table: 'bets' }, handleDbChange).subscribe(),
+          supabase.channel('admin:transactions').on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, handleDbChange).subscribe(),
+        ];
+      }
+    }).catch(err => console.warn('Supabase realtime error', err));
 
     return () => {
-      clearInterval(interval);
+      import('../services/supabase').then(({ supabase }) => {
+        subscriptions.forEach(sub => supabase.removeChannel(sub));
+      });
     };
   }, [authState.authenticated]);
 

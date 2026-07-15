@@ -50,33 +50,44 @@ export const GlobalGameProvider = ({ children }) => {
     };
     fetchHistories();
 
-    // Polling fallback to test if realtime causes white screen
-    const fetchGlobalState = async () => {
-      const { data, error } = await supabase
-        .from('global_game_state')
-        .select('*');
-      if (data && !error) {
-        setGameStates(prev => {
-          let updated = { ...prev };
-          data.forEach(row => {
+    const subscription = supabase
+      .channel('public:global_game_state')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'global_game_state' }, payload => {
+        const row = payload.new;
+        if (row && row.game) {
+          setGameStates(prev => {
             const oldState = prev[row.game];
+            // If transitioned from resolving to betting, or period changed
             if (oldState && oldState.period !== row.period) {
+              // Trigger a global event so components can hydrate
               window.dispatchEvent(new CustomEvent('global_period_changed', { detail: { game: row.game, period: row.period } }));
             }
-            updated[row.game] = row;
+            return {
+              ...prev,
+              [row.game]: row
+            };
           });
-          return updated;
-        });
-      }
-    };
+        }
+      })
+      .subscribe();
 
-    const intervalId = setInterval(() => {
-      fetchGlobalState();
-      fetchHistories();
-    }, 3000);
+    const historySub = supabase
+      .channel('public:game_results')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'game_results' }, payload => {
+        const row = payload.new;
+        if (row && row.game) {
+          setGameHistories(prev => ({
+            ...prev,
+            [row.game]: [row, ...(prev[row.game] || [])]
+          }));
+        }
+      })
+      .subscribe();
+
 
     return () => {
-      clearInterval(intervalId);
+      supabase.removeChannel(subscription);
+      supabase.removeChannel(historySub);
     };
   }, []);
 

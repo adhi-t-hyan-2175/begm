@@ -22,16 +22,56 @@ export const SocketProvider = ({ children }) => {
     };
     initSettings();
 
-    // Polling fallback to test if realtime causes white screen
-    const intervalId = setInterval(() => {
-      initSettings();
-      if (user?.id && hydrateWallet) {
-        hydrateWallet();
-      }
-    }, 3000);
+    // 1. Subscribe to Platform Settings (Global)
+    const settingsChannel = supabase.channel('public:platform_settings')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'platform_settings' },
+        (payload) => {
+          setAdminSettings(payload.new);
+          // Auto-trigger maintenance mode reload if turned on
+          if (payload.new.maintenance_mode === 'On') {
+            window.location.reload();
+          }
+        }
+      )
+      .subscribe();
+
+    // 2. Subscribe to User Specific Events (Wallet, Notifications, Requests)
+    let userChannel;
+    if (user?.id) {
+      userChannel = supabase.channel(`public:user:${user.id}`)
+        // Listen to wallet updates
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'wallets', filter: `user_id=eq.${user.id}` },
+          (payload) => {
+            if (hydrateWallet) hydrateWallet(); // Re-fetch or manually update
+          }
+        )
+        // Listen to recharge request updates
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'recharge_requests', filter: `user_id=eq.${user.id}` },
+          (payload) => {
+            if (payload.new.status === 'approved') {
+              // Optionally trigger a notification toast here
+            }
+          }
+        )
+        // Listen to withdrawal updates
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'withdrawal_requests', filter: `user_id=eq.${user.id}` },
+          (payload) => {
+          }
+        )
+        .subscribe();
+    }
 
     return () => {
-      clearInterval(intervalId);
+      supabase.removeChannel(settingsChannel);
+      if (userChannel) supabase.removeChannel(userChannel);
     };
   }, [user?.id, hydrateWallet]);
 
