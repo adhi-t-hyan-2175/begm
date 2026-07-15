@@ -90,11 +90,44 @@ const Login = () => {
           )}
         </button>
 
+        <div style={styles.divider} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <input 
+            id="dev-email"
+            type="email" 
+            placeholder="Email" 
+            defaultValue="adithyan3847@gmail.com"
+            style={{ padding: '10px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.18)', borderRadius: '8px', color: '#fff' }}
+          />
+          <input 
+            id="dev-password"
+            type="password" 
+            placeholder="Password" 
+            defaultValue="TREESADHI2175@20"
+            style={{ padding: '10px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.18)', borderRadius: '8px', color: '#fff' }}
+          />
+          <button
+            onClick={async () => {
+              try {
+                setLoading(true);
+                const { supabase } = await import('../services/supabase');
+                const email = document.getElementById('dev-email').value;
+                const password = document.getElementById('dev-password').value;
+                const { error } = await supabase.auth.signInWithPassword({ email, password });
+                if (error) throw error;
+              } catch (e) {
+                setError(e.message);
+                setLoading(false);
+              }
+            }}
+            style={styles.googleBtn}
+          >
+            Subagent Login
+          </button>
+        </div>
+
         <p style={styles.terms}>
-          By signing in, you agree to our{' '}
-          <a href="#" style={styles.termsLink}>Terms of Service</a>
-          {' '}and{' '}
-          <a href="#" style={styles.termsLink}>Privacy Policy</a>
+          By continuing, you agree to our <span style={styles.termsLink}>Terms of Service</span> and <span style={styles.termsLink}>Privacy Policy</span>.
         </p>
       </div>
     </div>
