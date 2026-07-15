@@ -536,6 +536,43 @@ export const WalletProvider = ({ children }) => {
       return null;
     }
   };
+  const requestWithdrawal = async (userId, email, amount, paymentDetails) => {
+    try {
+      const token = localStorage.getItem('token');
+      const parts = paymentDetails.split(' - ');
+      const upiName = parts[0] || '';
+      const upiId = parts.length > 1 ? parts[1] : paymentDetails;
+
+      const res = await fetch(`${API_URL}/api/wallet/request-withdrawal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ amount, upiId, upiName })
+      });
+      const data = await res.json();
+      
+      if (data.success && data.request) {
+        const newRequest = {
+          id: String(data.request.id),
+          userId: String(userId),
+          amount,
+          paymentDetails,
+          status: 'pending',
+          timestamp: data.request.created_at || new Date().toISOString()
+        };
+        // Local optimisic UI update (backend will also trigger realtime update)
+        setPendingWithdrawals(prev => [...prev, newRequest]);
+        setBalance(data.main_balance !== undefined ? parseFloat(data.main_balance) : balance - amount);
+        return newRequest.id;
+      } else {
+        alert(data.message || data.error || 'Failed to submit withdrawal request');
+        return null;
+      }
+    } catch (err) {
+      console.error('[requestWithdrawal] Network error:', err.message);
+      alert('Network error. Please try again.');
+      return null;
+    }
+  };
 
 
 
