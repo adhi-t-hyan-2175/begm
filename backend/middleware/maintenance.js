@@ -1,4 +1,4 @@
-const { supabase } = require('../services/supabase');
+const { supabase } = require('../config/supabase');
 
 const checkMaintenanceMode = async (req, res, next) => {
   try {
