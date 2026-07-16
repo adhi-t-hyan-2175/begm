@@ -51,8 +51,13 @@ const verifyAdmin = async (req, res, next) => {
     const token = authHeader.split(' ')[1];
 
     jwt.verify(token, process.env.JWT_SECRET || 'super_secret_admin_key', (err, decoded) => {
-      if (err) return res.status(401).json({ success: false, error: 'Unauthorized: Invalid token' });
+      console.log('Admin token decoded:', decoded);
+      if (err) {
+        console.error('Admin token verify error:', err);
+        return res.status(401).json({ success: false, error: 'Unauthorized: Invalid token' });
+      }
       if (!decoded.admin || decoded.email !== 'adithyan3847@gmail.com') {
+        console.warn('Admin token rejected, admin flag or email mismatch');
         return res.status(403).json({ success: false, error: 'Forbidden: Admin access required. Only adithyan3847@gmail.com is permitted.' });
       }
       req.user = decoded;

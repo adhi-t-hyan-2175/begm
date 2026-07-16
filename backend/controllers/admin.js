@@ -715,16 +715,50 @@ exports.getLiveBets = async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('bets')
-      .select('game_type, period, amount, selection, status, created_at, users(nickname, email)')
+      .select('*')
       .order('created_at', { ascending: false })
       .limit(1000);
-    
+
     if (error) throw error;
+    // DEBUG: log all fetched bet IDs
+    console.log('[AdminLiveBets] fetched IDs:', data.map(b => b.id));
     res.json({ success: true, bets: data || [] });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
 };
+
+// New: POST /api/admin/settle-bets – manually trigger settlement for a game period
+const { resolvePeriod, gameConfigs } = require('../services/gameEngine');
+exports.settleBets = async (req, res) => {
+  const { game, period } = req.body;
+  if (!game || !period) {
+    return res.status(400).json({ success: false, error: 'Missing game or period' });
+  }
+  try {
+    const config = gameConfigs.find(c => c.game === game);
+    if (!config) {
+      return res.status(400).json({ success: false, error: 'Invalid game' });
+    }
+    // Idempotency: check if this period has already been settled
+    const { data: existingResult, error: fetchErr } = await supabase
+      .from('game_results')
+      .select('id')
+      .eq('game', game)
+      .eq('period', period)
+      .maybeSingle();
+    if (fetchErr) throw fetchErr;
+    if (existingResult) {
+      return res.json({ success: true, message: `Period ${period} for ${game} already settled` });
+    }
+    await resolvePeriod(config, period);
+    res.json({ success: true, message: `Settlement attempted for ${game} period ${period}` });
+  } catch (err) {
+    console.error('[settleBets]', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+// Duplicate getLiveBets block removed – implementation moved above
 
 // ─── GET /api/admin/fraud-report ─────────────────────────────────────────────
 exports.getFraudReport = async (req, res) => {

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { verifyAdmin } = require('../middleware/auth');
+const adminController = require('../controllers/admin');
 const {
   adminLogin,
   adminMe,
@@ -64,9 +65,10 @@ router.get('/game-analytics', getGameAnalytics);
 router.get('/financial-analytics', getFinancialAnalytics);
 router.post('/set-game-result', setGameResult);
 router.get('/live-bets', getLiveBets);
+router.post('/settle-bets', adminController.settleBets);
 
 // Phase 6 endpoints
-const adminController = require('../controllers/admin');
+// Duplicate adminController import removed
 router.get('/fraud-report', adminController.getFraudReport);
 router.get('/activity', adminController.getAdminActivity);
 router.get('/dashboard-stats', adminController.getDashboardStats);

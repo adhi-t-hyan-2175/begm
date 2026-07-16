@@ -163,7 +163,12 @@ const resolvePeriod = async (gameConfig, period) => {
     if (adminOverride) {
       const overrideObj = typeof adminOverride === 'string' ? JSON.parse(adminOverride) : adminOverride;
       const outcomes = getPossibleOutcomes(game);
-      const match = outcomes.find(o => String(o.label).toLowerCase().trim() === String(overrideObj.label).toLowerCase().trim());
+      let match = null;
+      if (overrideObj.label) {
+        match = outcomes.find(o => String(o.label).toLowerCase().trim() === String(overrideObj.label).toLowerCase().trim());
+      } else if (overrideObj.color) {
+        match = outcomes.find(o => JSON.stringify(o.color) === JSON.stringify(overrideObj.color));
+      }
       const base = generateBaseResult(game, period);
       finalResult = match ? { ...base, ...match } : { ...base, ...overrideObj };
       // Calculate profit for admin override
@@ -317,4 +322,4 @@ const startGameEngine = () => {
   setInterval(tick, 500);
 };
 
-module.exports = startGameEngine;
+module.exports = { startGameEngine, resolvePeriod, gameConfigs };

@@ -114,6 +114,18 @@ const sleep = ms => new Promise(res => setTimeout(res, ms));
     const preResult = await supabase.from('game_results').select('*').eq('game', game).eq('period', period).maybeSingle();
 
     // 3. Trigger settlement via admin endpoint
+    // Force game result to match selection (win)
+    const setResultRes = await fetch('http://localhost:5000/api/admin/set-game-result', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${adminToken}`
+      },
+      body: JSON.stringify({ gameType: game, result: { label: selection } })
+    });
+    const setResultData = await setResultRes.json();
+    console.log('Set result response', setResultData);
+    // Now trigger settlement
     const settleRes = await fetch('http://localhost:5000/api/admin/settle-bets', {
       method: 'POST',
       headers: {
