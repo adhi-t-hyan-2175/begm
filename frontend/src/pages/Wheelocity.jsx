@@ -40,6 +40,7 @@ const getSelColor = (sel) => {
 const Wheelocity = () => {
   const navigate = useNavigate();
   const { timeLeft, isBettingOpen, period, previousPeriod, formatTime, secondsIntoPeriod, status, realHistory } = useGlobalGame(GAME);
+  const { balance, placeBet, myOrders } = useWallet();
   const timeStr = formatTime();
 
   const [showHistoryModal, setShowHistoryModal] = useState(false);
