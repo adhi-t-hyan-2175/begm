@@ -123,6 +123,9 @@ export const useGlobalGame = (gameType) => {
     ...localTimer,
     status: localTimer.isBettingOpen ? 'betting' : 'resolving',
     formatTime,
-    realHistory: realHistory.length > 0 ? realHistory : generateHistory(gameType, localTimer.period, 50)
+    realHistory: realHistory.length > 0 ? realHistory : generateHistory(gameType, localTimer.period, 50).map(h => ({
+      period: h.period,
+      result: { label: h.label, number: h.number, color: h.color }
+    }))
   };
 };
