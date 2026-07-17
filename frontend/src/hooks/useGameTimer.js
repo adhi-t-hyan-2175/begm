@@ -36,7 +36,7 @@ export const generateHistory = (gameType, currentPeriod, count = 50) => {
     const rnd = deterministicRandom(gameType + pStr);
     
     let result = {};
-    if (gameType === 'FastParty' || gameType === 'PrimePick' || gameType === 'LuckyPick') {
+    if (gameType === 'FastParty' || gameType === 'PrimePick' || gameType === 'LuckyPick' || gameType === 'Parity' || gameType === 'Sapre') {
       // Color-only result for Parity / Fast Parity / Sapre
       const choices = ['Red', 'Green', 'Violet'];
       const selected = choices[Math.floor(rnd * choices.length)];

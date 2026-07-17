@@ -112,11 +112,11 @@ const Dice = () => {
         </div>
       </div>
       <div className="rui-bet-row">
-        <button className="rui-bet-pill rui-pill-green" onClick={() => openBetCard('Small')} disabled={!isBettingOpen}>
+        <button className="rui-bet-pill" style={{ background: '#0ea5e9' }} onClick={() => openBetCard('Small')} disabled={!isBettingOpen}>
           <span className="rui-bet-pill-label">Small</span>
           <span className="rui-bet-pill-ratio">1:1.9</span>
         </button>
-        <button className="rui-bet-pill rui-pill-violet" onClick={() => openBetCard('Tie')} disabled={!isBettingOpen}>
+        <button className="rui-bet-pill" style={{ background: '#e8b84d' }} onClick={() => openBetCard('Tie')} disabled={!isBettingOpen}>
           <span className="rui-bet-pill-label">Tie</span>
           <span className="rui-bet-pill-ratio">1:5</span>
         </button>
@@ -134,7 +134,8 @@ const Dice = () => {
           {displayHistory.slice().reverse().map((rec, i) => {
             const num = rec.number;
             const color = getDiceColor(num);
-            return (<div key={i} className="rui-ball-item"><div className="rui-ball" style={{ background: color }}>{num ?? '?'}</div><div className="rui-ball-period">{rec.period.slice(-3)}</div></div>);
+            const letter = num === 7 ? 'T' : (num >= 2 && num <= 6) ? 'S' : (num >= 8 && num <= 12) ? 'L' : '?';
+            return (<div key={i} className="rui-ball-item"><div className="rui-ball" style={{ background: color }}>{letter}</div><div className="rui-ball-period">{rec.period.slice(-3)}</div></div>);
           })}
         </div>
       </div>
@@ -191,7 +192,7 @@ const Dice = () => {
               {history.map((rec, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #f5f5f5', alignItems: 'center' }}>
                   <span style={{ fontWeight: 600, color: '#444' }}>{rec.period}</span>
-                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: getDiceColor(rec.number), display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '0.8rem' }}>{rec.number ?? '?'}</div>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: getDiceColor(rec.number), display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '0.8rem' }}>{rec.number === 7 ? 'T' : (rec.number >= 2 && rec.number <= 6) ? 'S' : (rec.number >= 8 && rec.number <= 12) ? 'L' : '?'}</div>
                   <span style={{ color: '#aaa', fontSize: '0.8rem' }}>{getDiceResultLabel(rec)}</span>
                 </div>
               ))}
