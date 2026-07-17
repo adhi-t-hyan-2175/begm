@@ -53,8 +53,8 @@ exports.adminLogin = async (req, res) => {
 
     console.log('[AdminLogin] JWT issued for  :', email);
 
-    await logAdminSession(email, req);
-    await logAdminAction(email, 'Login', null, null, null, req);
+    logAdminSession(email, req).catch(err => console.error('[LogSessionError]', err));
+    logAdminAction(email, 'Login', null, null, null, req).catch(err => console.error('[LogActionError]', err));
 
     return res.json({ success: true, token, admin: { username: email, email } });
   }
