@@ -42,7 +42,7 @@ export const GlobalGameProvider = ({ children }) => {
         .limit(300);
       
       if (data && !error) {
-        const hists = { FastParty: [], PrimePick: [], LuckyPick: [], Dice: [], Wheelocity: [], AndarBahar: [] };
+        const hists = { FastParty: [], Parity: [], Sapre: [], Dice: [], Wheelocity: [], AndarBahar: [] };
         data.forEach(row => {
           if (hists[row.game]) hists[row.game].push(row);
         });

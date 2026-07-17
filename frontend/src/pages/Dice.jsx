@@ -58,6 +58,14 @@ const Dice = () => {
   const settledRef = useRef('');
   // Fake orders removed.
 
+  const history = (realHistory || []).map(r => ({
+    period: r.period,
+    label: r.result?.label,
+    number: r.result?.number,
+    color: r.result?.color
+  }));
+  const displayHistory = history.slice(0, 14);
+
   useEffect(() => {
     if (settledRef.current === previousPeriod || status === 'betting') return;
 
