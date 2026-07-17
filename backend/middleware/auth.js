@@ -50,7 +50,7 @@ const verifyAdmin = async (req, res, next) => {
 
     const token = authHeader.split(' ')[1];
 
-    jwt.verify(token, process.env.JWT_SECRET || 'super_secret_admin_key', (err, decoded) => {
+    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
       console.log('Admin token decoded:', decoded);
       if (err) {
         console.error('Admin token verify error:', err);

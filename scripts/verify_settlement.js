@@ -27,17 +27,28 @@ const sleep = ms => new Promise(res => setTimeout(res, ms));
 
 (async () => {
   try {
-    // Fetch admin token for protected endpoints
-    const adminLoginRes = await fetch('http://localhost:5000/api/admin/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'adithyan3847@gmail.com', password: process.env.ADMIN_PASSWORD || 'TREESADHI2175@20' })
-    });
-    const adminLoginData = await adminLoginRes.json();
-    if (!adminLoginData.success) {
-      throw new Error('Admin login failed: ' + (adminLoginData.message || 'unknown'));
+    const fs = require('fs');
+    const path = require('path');
+    const tokenPath = path.resolve(__dirname, '../admin_token.txt');
+    let adminToken;
+    if (fs.existsSync(tokenPath)) {
+      adminToken = fs.readFileSync(tokenPath, 'utf8').trim();
+      console.log('Reusing cached admin token');
+    } else {
+      // Perform admin login once and cache token
+      const adminLoginRes = await fetch('http://localhost:5000/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'adithyan3847@gmail.com', password: process.env.ADMIN_PASSWORD || 'TREESADHI2175@20' })
+      });
+      const adminLoginData = await adminLoginRes.json();
+      if (!adminLoginData.success) {
+        throw new Error('Admin login failed: ' + (adminLoginData.message || 'unknown'));
+      }
+      adminToken = adminLoginData.token;
+      fs.writeFileSync(tokenPath, adminToken, { encoding: 'utf8' });
+      console.log('Admin token cached for future runs');
     }
-    const adminToken = adminLoginData.token;
 
     // 1. Ensure a test user exists (create if not)
     const testEmail = 'test_user@example.com';
@@ -84,6 +95,8 @@ const sleep = ms => new Promise(res => setTimeout(res, ms));
     const selection = 'Red'; // valid selection for FastParty
 
     // 2. Place a test bet directly via DB (simpler than API)
+    // Capture wallet balance before placing bet
+    const walletBefore = wallet ? wallet.main_balance : 0;
     const { data: bet, error: betErr } = await supabase
       .from('bets')
       .insert({
@@ -93,6 +106,7 @@ const sleep = ms => new Promise(res => setTimeout(res, ms));
         amount: betAmount,
         selection,
         status: 'pending',
+        wallet_before: walletBefore,
         created_at: new Date().toISOString()
       })
       .select()
@@ -150,14 +164,20 @@ const sleep = ms => new Promise(res => setTimeout(res, ms));
     console.log('--- BEFORE SETTLEMENT ---');
     console.log('Bet:', preBet.data);
     console.log('Wallet balance:', preWallet.data?.main_balance);
-    console.log('Result row:', preResult.data);
     console.log('Transactions count before:', preTxCount.count);
+
+    // Fetch transaction count after settlement correctly
+    const postTxCount = await supabase.from('transactions').select('id', { count: 'exact', head: true }).eq('user_id', userId);
+    const postTxRows = await supabase.from('transactions').select('*').eq('user_id', userId);
 
     console.log('--- AFTER SETTLEMENT ---');
     console.log('Bet:', postBet.data);
     console.log('Wallet balance:', postWallet.data?.main_balance);
     console.log('Result row:', postResult.data);
-    console.log('Transactions count after:', postTx.length);
+    console.log('Transactions count after:', postTxCount.count);
+    console.log('Transaction rows:', postTxRows.data);
+    console.log('Result row (pre):', preResult.data);
+    console.log('Transactions count before:', preTxCount.count);
 
     // Simple assertions
     if (!postBet.data || !postBet.data.status || postBet.data.status === 'pending') {

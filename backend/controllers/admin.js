@@ -47,7 +47,7 @@ exports.adminLogin = async (req, res) => {
     const payload = { admin: true, username: email, email };
     const token = jwt.sign(
       payload,
-      process.env.JWT_SECRET || 'super_secret_admin_key',
+      process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
 
@@ -72,7 +72,7 @@ exports.adminMe = async (req, res) => {
   
   const token = authHeader.split(' ')[1];
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'super_secret_admin_key');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     if (decoded.admin) {
       return res.json({ admin: { username: decoded.username } });
     }

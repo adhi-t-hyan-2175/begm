@@ -242,15 +242,45 @@ const resolvePeriod = async (gameConfig, period) => {
             
             await supabase.from('wallets').update({ main_balance: newBalance, updated_at: new Date().toISOString() }).eq('user_id', bet.user_id);
             
-            await supabase.from('transactions').insert({
+            // Verify user exists before inserting transaction
+            const { data: userRow, error: userErr } = await supabase.from('users').select('*').eq('id', bet.user_id).single();
+            if (!userRow) {
+              console.error(`User with id ${bet.user_id} not found. Aborting transaction insert.`);
+              throw new Error(`User with id ${bet.user_id} not found`);
+            }
+              console.error(`User with id ${bet.user_id} not found. Aborting transaction insert.`);
+              throw new Error(`User with id ${bet.user_id} not found`);
+            }
+
+            const txPayload = {
               user_id: bet.user_id,
               amount: payoutAmount,
               type: 'Win',
               status: 'Success',
-              notes: `${game} Period ${period} — Won`,
-              previous_balance: currentBalance,
-              new_balance: newBalance
-            });
+              notes: `${game} Period ${period} — Won`
+            };
+            const { data: txData, error: txError } = await supabase
+              .from('transactions')
+              .insert(txPayload)
+              .select();
+
+            if (txError) {
+              console.error('Transaction insert error:', txError);
+              throw txError;
+            }
+
+            // If insert succeeded, fetch the row directly to verify it exists
+            if (txData && txData.length > 0) {
+              const insertedId = txData[0].id;
+              const { data: fetchedRow, error: fetchError } = await supabase
+                .from('transactions')
+                .select('*')
+                .eq('id', insertedId)
+                .single();
+              if (fetchError) throw fetchError;
+            }
+
+            console.log(`[Transaction] Success for user ${bet.user_id}`);
             currentBalance = newBalance;
           }
         }
