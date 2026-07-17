@@ -5,10 +5,11 @@ import { useGameTimer, generateHistory } from '../hooks/useGameTimer';
 
 const GAME_CONFIGS = {
   FastParty: { duration: 60, bettingDuration: 30 },
-  PrimePick: { duration: 120, bettingDuration: 60 },
-  LuckyPick: { duration: 180, bettingDuration: 120 },
+  Parity: { duration: 60, bettingDuration: 30 },
+  Sapre: { duration: 60, bettingDuration: 30 },
   Dice: { duration: 60, bettingDuration: 30 },
-  Wheelocity: { duration: 60, bettingDuration: 30 }
+  Wheelocity: { duration: 60, bettingDuration: 30 },
+  AndarBahar: { duration: 60, bettingDuration: 30 }
 };
 
 export const GlobalGameContext = createContext({});
@@ -16,7 +17,7 @@ export const GlobalGameContext = createContext({});
 export const GlobalGameProvider = ({ children }) => {
   const [gameStates, setGameStates] = useState({});
   const [gameHistories, setGameHistories] = useState({
-    FastParty: [], PrimePick: [], LuckyPick: [], Dice: [], Wheelocity: [], AndarBahar: []
+    FastParty: [], Parity: [], Sapre: [], Dice: [], Wheelocity: [], AndarBahar: []
   });
 
   useEffect(() => {

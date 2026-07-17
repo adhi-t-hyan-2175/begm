@@ -13,16 +13,16 @@ const gameConfigs = [
   },
   { 
     name: 'Parity', 
-    key: 'PrimePick', 
-    duration: 120, 
-    bettingDuration: 60,
+    key: 'Parity', 
+    duration: 60, 
+    bettingDuration: 30,
     options: ['Red', 'Green', 'Violet'] 
   },
   { 
     name: 'Sapre', 
-    key: 'LuckyPick', 
-    duration: 180, 
-    bettingDuration: 120,
+    key: 'Sapre', 
+    duration: 60, 
+    bettingDuration: 30,
     options: ['Red', 'Green', 'Violet'] 
   },
   { 
@@ -43,8 +43,8 @@ const gameConfigs = [
 
 const payoutRatios = {
   FastParty: { Green: 1.9, Red: 1.9, Violet: 4.5 },
-  PrimePick: { Green: 1.9, Red: 1.9, Violet: 4.5 },
-  LuckyPick: { Green: 1.9, Red: 1.9, Violet: 4.5 },
+  Parity: { Green: 1.9, Red: 1.9, Violet: 4.5 },
+  Sapre: { Green: 1.9, Red: 1.9, Violet: 4.5 },
   Wheelocity: { '2 Hits': 1.9, '3 Hits': 3, '5 Hits': 5 },
   Dice: { Small: 1.9, Large: 1.9, Tie: 5 }
 };
@@ -80,7 +80,7 @@ const AdminGameCard = ({ game, timerState, liveBets, selectedWinner, onSetWinner
     return '#0ff';
   };
 
-  const colorOnlyGames = ['FastParty', 'PrimePick', 'LuckyPick'];
+  const colorOnlyGames = ['FastParty', 'Parity', 'Sapre'];
   const wheelOnlyGames = ['Wheelocity'];
   const displayOptions = colorOnlyGames.includes(game.key)
     ? ['Green', 'Violet', 'Red']

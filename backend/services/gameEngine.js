@@ -3,11 +3,11 @@ const supabase = require('../config/supabase');
 const EPOCH = 1783617840000;
 
 const gameConfigs = [
+  { game: 'Parity', totalDuration: 60, bettingDuration: 30 },
+  { game: 'Sapre', totalDuration: 60, bettingDuration: 30 },
   { game: 'FastParty', totalDuration: 60, bettingDuration: 30 },
-  { game: 'PrimePick', totalDuration: 120, bettingDuration: 60 },
-  { game: 'LuckyPick', totalDuration: 180, bettingDuration: 120 },
-  { game: 'Dice', totalDuration: 60, bettingDuration: 30 },
   { game: 'Wheelocity', totalDuration: 60, bettingDuration: 30 },
+  { game: 'Dice', totalDuration: 60, bettingDuration: 30 },
   { game: 'AndarBahar', totalDuration: 60, bettingDuration: 30 }
 ];
 
@@ -245,9 +245,6 @@ const resolvePeriod = async (gameConfig, period) => {
             // Verify user exists before inserting transaction
             const { data: userRow, error: userErr } = await supabase.from('users').select('*').eq('id', bet.user_id).single();
             if (!userRow) {
-              console.error(`User with id ${bet.user_id} not found. Aborting transaction insert.`);
-              throw new Error(`User with id ${bet.user_id} not found`);
-            }
               console.error(`User with id ${bet.user_id} not found. Aborting transaction insert.`);
               throw new Error(`User with id ${bet.user_id} not found`);
             }

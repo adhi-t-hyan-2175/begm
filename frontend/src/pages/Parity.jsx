@@ -10,7 +10,7 @@ import { useWallet } from '../contexts/WalletContext';
 import BetCardModal from '../components/BetCardModal';
 import ResultCard from '../components/ResultCard';
 
-const GAME = 'PrimePick';
+const GAME = 'Parity';
 const MULTIPLIERS = { Green: 1.9, Red: 1.9, Violet: 4.5, green: 1.9, red: 1.9, violet: 4.5 };
 
 const AVATARS = ['🧑','👩','👦','👧','🧔','👱','🧕','🧑‍🦱'];
