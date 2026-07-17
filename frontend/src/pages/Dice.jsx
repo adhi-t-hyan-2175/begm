@@ -132,9 +132,8 @@ const Dice = () => {
         </div>
         <div className="rui-ball-row" style={{ padding: '0 4px 4px', width: '100%' }}>
           {displayHistory.slice().reverse().map((rec, i) => {
-            const num = rec.number;
-            const color = getDiceColor(num);
-            const letter = num === 7 ? 'T' : (num >= 2 && num <= 6) ? 'S' : (num >= 8 && num <= 12) ? 'L' : '?';
+            const letter = rec.label ? rec.label.charAt(0) : '?';
+            const color = rec.color ? rec.color[0] : (rec.label === 'Small' ? '#0ea5e9' : rec.label === 'Large' ? '#dc3545' : rec.label === 'Tie' ? '#f1c40f' : '#3d4477');
             return (<div key={i} className="rui-ball-item"><div className="rui-ball" style={{ background: color }}>{letter}</div><div className="rui-ball-period">{rec.period.slice(-3)}</div></div>);
           })}
         </div>

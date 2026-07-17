@@ -162,7 +162,7 @@ const FastParity = () => {
             const color = rec.color ? rec.color[0] : getBallColor(rec);
             return (
               <div key={i} className="rui-ball-item">
-                <div className="rui-ball" style={{ background: color }}>{rec.label?.charAt(0) || '?'}</div>
+                <div className="rui-ball" style={{ background: color }}>{rec.number !== undefined ? rec.number : (rec.label?.charAt(0) || '?')}</div>
                 <div className="rui-ball-period">{rec.period.slice(-3)}</div>
               </div>
             );

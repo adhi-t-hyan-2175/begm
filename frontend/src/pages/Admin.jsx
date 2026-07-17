@@ -708,20 +708,25 @@ const Admin = () => {
     const email = formData.get('email') || loginForm.email;
     const password = formData.get('password') || loginForm.password;
 
-    const response = await fetch(`${API_BASE}/api/admin/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
 
-    const data = await response.json();
-    if (!response.ok) {
-      setLoginError(data.message || 'Login failed');
-      return;
+      const data = await response.json();
+      if (!response.ok) {
+        setLoginError(data.message || data.error || 'Login failed');
+        return;
+      }
+
+      sessionStorage.setItem('admin_token', data.token);
+      setAuthState({ checking: false, authenticated: true, email: data.admin.email });
+    } catch (error) {
+      console.error('Login error:', error);
+      setLoginError('Network or server error: ' + error.message);
     }
-
-    sessionStorage.setItem('admin_token', data.token);
-    setAuthState({ checking: false, authenticated: true, email: data.admin.email });
   };
 
   const handleLogout = () => {

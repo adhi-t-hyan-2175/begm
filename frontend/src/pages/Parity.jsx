@@ -141,7 +141,7 @@ const Parity = () => {
             const color = getBallColor(rec);
             return (
               <div key={i} className="rui-ball-item">
-                <div className="rui-ball" style={{ background: color }}>{label?.charAt(0) || '?'}</div>
+                <div className="rui-ball" style={{ background: color }}>{rec.number !== undefined ? rec.number : (label?.charAt(0) || '?')}</div>
                 <div className="rui-ball-period">{rec.period.slice(-3)}</div>
               </div>
             );

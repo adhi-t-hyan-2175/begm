@@ -41,6 +41,17 @@ const BetCardModal = ({
     ? `Pick ${selection}`
     : `Join ${selection}`;
 
+  const getButtonColor = () => {
+    const s = String(selection).toLowerCase();
+    if (s.includes('green') || s.includes('5 hits')) return '#48b85c';
+    if (s.includes('red') || s.includes('large')) return '#e0413c';
+    if (s.includes('violet')) return '#7c4ab8';
+    if (s.includes('small') || s.includes('2 hits') || s.includes('blue')) return '#0ea5e9';
+    if (s.includes('tie') || s === '7' || s.includes('yellow')) return '#e8b84d';
+    if (s.includes('3 hits') || s.includes('pink')) return '#e87fb0';
+    return '#0095ff';
+  };
+
   return (
     <div className="bet-modal-backdrop" onClick={onClose}>
       <div className="bet-card-modal" onClick={(e) => e.stopPropagation()}>
@@ -106,6 +117,7 @@ const BetCardModal = ({
           type="button"
           onClick={() => onConfirm(selection, contractAmount)}
           className="bet-card-confirm"
+          style={{ background: getButtonColor() }}
         >
           Confirm
         </button>
