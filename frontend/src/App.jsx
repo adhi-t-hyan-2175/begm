@@ -22,6 +22,7 @@ const Withdraw = React.lazy(() => import('./pages/Withdraw'));
 const About = React.lazy(() => import('./pages/About'));
 const Support = React.lazy(() => import('./pages/Support'));
 const Leaderboard = React.lazy(() => import('./pages/Leaderboard'));
+const NotFound = React.lazy(() => import('./pages/NotFound'));
 import { WalletProvider } from './contexts/WalletContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SocketProvider, useSocket } from './contexts/SocketContext';
@@ -121,7 +122,7 @@ const MainApp = () => {
           <Route path="/game/dice" element={<ProtectedRoute><React.Suspense fallback={<LoadingScreen />}><Dice /></React.Suspense></ProtectedRoute>} />
 
           {/* Fallback */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<React.Suspense fallback={<LoadingScreen />}><NotFound /></React.Suspense>} />
         </Routes>
       </div>
       {!hideBottomNav && user && <BottomNav />}
