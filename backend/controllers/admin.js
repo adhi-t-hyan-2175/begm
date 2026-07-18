@@ -34,7 +34,7 @@ exports.adminLogin = async (req, res) => {
   const password = (req.body.password || '').trim();
 
   const ADMIN_EMAIL    = 'adithyan3847@gmail.com';
-  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'TREESADHI2175@20';
+  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'TREESADHI@2175';
 
   // ── Temporary debug logs (remove after verifying login works) ──
   console.log('[AdminLogin] received email   :', JSON.stringify(email));
