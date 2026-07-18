@@ -4,7 +4,7 @@ import { supabase, isSupabaseReady, getBy, updateWhere, getAll } from '../servic
 const AuthContext = createContext();
 export const useAuth = () => useContext(AuthContext);
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5002';
+const API_URL = import.meta.env.VITE_API_URL || 'https://begm.onrender.com';
 
 // ─── VIP level helpers ────────────────────────────────────────────────────────
 export const getVipLevel = (totalRecharge = 0) => {
