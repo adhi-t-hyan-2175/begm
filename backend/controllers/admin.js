@@ -192,7 +192,6 @@ exports.approveRecharge = async (req, res) => {
       .from('recharge_requests')
       .update({ 
         status: 'approved',
-        approved_by: adminName,
         approved_at: now
       })
       .eq('id', requestId)
@@ -296,8 +295,7 @@ exports.rejectRecharge = async (req, res) => {
       .from('recharge_requests')
       .update({ 
         status: 'rejected', 
-        reject_reason: reason || 'Rejected by Admin',
-        approved_by: adminName
+        reject_reason: reason || 'Rejected by Admin'
       })
       .eq('id', requestId)
       .eq('status', 'pending')
@@ -353,7 +351,6 @@ exports.approveWithdrawal = async (req, res) => {
       .from('withdrawal_requests')
       .update({ 
         status: 'completed',
-        approved_by: adminName,
         approved_at: now
       })
       .eq('id', requestId)
@@ -402,8 +399,7 @@ exports.rejectWithdrawal = async (req, res) => {
       .from('withdrawal_requests')
       .update({ 
         status: 'rejected',
-        reject_reason: reason,
-        approved_by: adminName
+        reject_reason: reason
       })
       .eq('id', requestId)
       .eq('status', 'pending')
