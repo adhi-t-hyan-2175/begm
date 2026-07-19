@@ -62,7 +62,7 @@ const deterministicRandom = (seed) => {
 
 const getPossibleOutcomes = (gameType) => {
   const normalized = gameType.toLowerCase();
-  if (normalized.includes('party') || normalized.includes('pick')) {
+  if (normalized.includes('party') || normalized.includes('pick') || normalized.includes('parity') || normalized.includes('sapre')) {
     return [
       { label: 'Green', color: ['#28a745'] },
       { label: 'Red', color: ['#dc3545'] },
@@ -93,7 +93,7 @@ const generateBaseResult = (gameType, period) => {
   const rnd = deterministicRandom(gameType + period);
   let result = {};
   
-  if (gameType === 'FastParty' || gameType === 'PrimePick' || gameType === 'LuckyPick') {
+  if (gameType === 'FastParty' || gameType === 'PrimePick' || gameType === 'LuckyPick' || gameType === 'Parity' || gameType === 'Sapre') {
     const choices = ['Red', 'Green', 'Violet'];
     const selected = choices[Math.floor(rnd * choices.length)];
     result.label = selected;

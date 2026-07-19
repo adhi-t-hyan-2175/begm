@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useEffect } from 'react';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -20,6 +21,14 @@ const Login = () => {
       setLoading(false);
     }
   };
+
+  // Redirect to home when user is authenticated
+  const { user } = useAuth();
+  useEffect(() => {
+    if (user) {
+      navigate('/');
+    }
+  }, [user, navigate]);
 
   return (
     <div className="auth-page" style={styles.page}>
@@ -98,7 +107,9 @@ const Login = () => {
       </div>
     </div>
   );
-};
+  };
+
+
 
 const styles = {
   page: {

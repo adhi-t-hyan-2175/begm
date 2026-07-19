@@ -2,9 +2,7 @@ const supabase = require('../config/supabase');
 
 const getLeaderboards = async (req, res) => {
   try {
-    // 1. Highest Recharge (from wallets table total_recharge if it exists, or via transactions)
-    // Supabase REST doesn't easily do SUM/GROUP BY without an RPC, so we fetch users sorted by total_recharge or similar.
-    // Since we don't have total_recharge readily aggregated, let's just fetch top 10 wallets ordered by main_balance for simplicity.
+    // 1. Highest Recharge
     const { data: rechargeLeaderboard, error: rechargeErr } = await supabase
       .from('wallets')
       .select('user_id, main_balance, users(nickname, email)')
@@ -13,8 +11,40 @@ const getLeaderboards = async (req, res) => {
       
     if (rechargeErr) throw rechargeErr;
 
-    // 2. We don't have referrals tracked properly yet in the new schema, so returning empty for now
+    // 2. Top Referrers
+    const { data: usersData, error: usersErr } = await supabase
+      .from('users')
+      .select('referred_by');
+
+    if (usersErr) throw usersErr;
+
+    // Count referrals
+    const referralCounts = {};
+    if (usersData) {
+      for (const u of usersData) {
+        if (u.referred_by) {
+          referralCounts[u.referred_by] = (referralCounts[u.referred_by] || 0) + 1;
+        }
+      }
+    }
+
+    // Convert to array and get top 10
+    const topReferrerIds = Object.entries(referralCounts)
+      .map(([playerId, count]) => ({ playerId: parseInt(playerId, 10), count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
     const referralLeaderboard = [];
+    for (const ref of topReferrerIds) {
+      const { data: user } = await supabase
+        .from('users')
+        .select('nickname, email')
+        .eq('player_id', ref.playerId)
+        .maybeSingle();
+      if (user) {
+        referralLeaderboard.push({ ...user, total_referrals: ref.count });
+      }
+    }
 
     res.json({
       recharge: rechargeLeaderboard || [],

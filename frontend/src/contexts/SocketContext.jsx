@@ -8,7 +8,7 @@ const SocketContext = createContext();
 export const useSocket = () => useContext(SocketContext);
 
 export const SocketProvider = ({ children }) => {
-  const { user, fetchAdminSettings } = useAuth();
+  const { user } = useAuth();
   const { hydrateWallet } = useWallet(); // We'll need to add this to WalletContext
   const [adminSettings, setAdminSettings] = useState(null);
   

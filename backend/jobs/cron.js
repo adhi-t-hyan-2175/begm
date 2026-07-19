@@ -39,12 +39,20 @@ const startCronJobs = () => {
       if (expiredWithdrawals && expiredWithdrawals.length > 0) {
         for (const req of expiredWithdrawals) {
           // Refund wallet
-          await supabase.rpc('credit_wallet_and_log', {
-            p_user_id: req.user_id,
-            p_amount: req.amount,
-            p_type: 'Withdrawal Refund',
-            p_notes: 'System auto-rejected expired withdrawal'
-          });
+          const { data: w } = await supabase.from('wallets').select('main_balance').eq('user_id', req.user_id).single();
+          if (w) {
+            const prevBal = parseFloat(w.main_balance || 0);
+            const newBal = prevBal + req.amount;
+            await supabase.from('wallets').update({ main_balance: newBal, updated_at: new Date().toISOString() }).eq('user_id', req.user_id);
+            await supabase.from('transactions').insert({
+              user_id: req.user_id,
+              amount: req.amount,
+              type: 'Withdrawal Refund',
+              status: 'Success',
+              notes: 'System auto-rejected expired withdrawal',
+              created_at: new Date().toISOString()
+            });
+          }
           // Mark as rejected
           await supabase
             .from('withdrawal_requests')

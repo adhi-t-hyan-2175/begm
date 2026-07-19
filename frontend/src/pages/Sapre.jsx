@@ -58,13 +58,13 @@ const Sapre = () => {
     if (settledRef.current === previousPeriod || status === 'betting') return;
     
     // Check if user had a bet on the previous period
-    const myPrevBets = myOrders.filter(o => o.game_type === GAME && o.period === previousPeriod);
+    const myPrevBets = myOrders.filter(o => o.game === GAME && o.period === previousPeriod);
     if (myPrevBets.length > 0) {
       const bet = myPrevBets[0];
       // Only show card if the bet is resolved by backend
-      if (bet.status !== 'pending') {
+      if (bet.status !== 'Pending') {
         settledRef.current = previousPeriod;
-        const won = bet.status === 'won';
+        const won = bet.status === 'Won';
         const resultLabel = bet.result;
         
         setTimeout(() => {

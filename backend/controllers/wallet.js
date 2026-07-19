@@ -39,13 +39,35 @@ const deposit = async (req, res) => {
     if (fetchErr) throw fetchErr;
     if (!wallet) return res.status(404).json({ success: false, message: 'Wallet not found' });
 
-    const { data: newBalance, error: updateErr } = await supabase.rpc('credit_wallet_and_log', { 
-      p_user_id: userId, 
-      p_amount: amount,
-      p_type: 'Deposit',
-      p_notes: 'Manual deposit'
-    });
-    if (updateErr) throw updateErr;
+    let rpcError = null;
+    let newBalance = 0;
+
+    try {
+      const previousBalance = parseFloat(wallet.main_balance || 0);
+      newBalance = previousBalance + amount;
+      
+      const { error: wErr } = await supabase
+        .from('wallets')
+        .update({ main_balance: newBalance, updated_at: new Date().toISOString() })
+        .eq('user_id', userId);
+        
+      if (wErr) throw wErr;
+
+      const { error: tErr } = await supabase.from('transactions').insert({
+        user_id: userId,
+        amount: amount,
+        type: 'Deposit',
+        status: 'Success',
+        notes: 'Manual deposit',
+        created_at: new Date().toISOString()
+      });
+      
+      if (tErr) throw tErr;
+    } catch (err) {
+      rpcError = err;
+    }
+
+    if (rpcError) throw rpcError;
 
     res.json({ success: true, message: 'Deposit successful', main_balance: newBalance });
   } catch (err) {

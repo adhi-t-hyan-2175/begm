@@ -1,3 +1,6 @@
+==========================================================
+FILE: frontend/src/pages/Admin.jsx
+==========================================================
 import React, { useEffect, useMemo, useRef, useState, useContext } from 'react';
 import { calculateTimerState, useGameTimer } from '../hooks/useGameTimer';
 import { GlobalGameContext } from '../contexts/GlobalGameContext';
@@ -39,13 +42,6 @@ const gameConfigs = [
     bettingDuration: 30,
     options: ['2 Hits', '3 Hits', '5 Hits'] 
   },
-  { 
-    name: 'Andar Bahar', 
-    key: 'AndarBahar', 
-    duration: 60, 
-    bettingDuration: 30,
-    options: ['Andar', 'Bahar'] 
-  },
 ];
 
 const payoutRatios = {
@@ -53,8 +49,7 @@ const payoutRatios = {
   Parity: { Green: 1.9, Red: 1.9, Violet: 4.5 },
   Sapre: { Green: 1.9, Red: 1.9, Violet: 4.5 },
   Wheelocity: { '2 Hits': 1.9, '3 Hits': 3, '5 Hits': 5 },
-  Dice: { Small: 1.9, Large: 1.9, Tie: 5 },
-  AndarBahar: { Andar: 1.9, Bahar: 1.9 }
+  Dice: { Small: 1.9, Large: 1.9, Tie: 5 }
 };
 
 const AdminGameCard = ({ game, timerState, liveBets, selectedWinner, onSetWinner, onClearWinner }) => {
@@ -272,6 +267,59 @@ const tabs = ['dashboard', 'recharges', 'withdrawals', 'games', 'users', 'settin
 // Removed mock gameStatus, recentPeriods, and users arrays to ensure only real DB data is shown.
 
 
+const RazorpayTransactions = () => {
+  const [deposits, setDeposits] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDeposits = async () => {
+      try {
+        const token = localStorage.getItem('adminToken');
+        const res = await fetch(`${API_BASE}/api/admin/all-deposits`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success) {
+          // Filter only razorpay transactions
+          const razorpayTxns = data.deposits.filter(t => t.notes && t.notes.includes('Razorpay'));
+          setDeposits(razorpayTxns);
+        }
+      } catch (err) {
+        console.error('Failed to fetch deposits:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDeposits();
+  }, []);
+
+  if (loading) return <p className="admin-empty">Loading transactions...</p>;
+  if (deposits.length === 0) return <p className="admin-empty">No Razorpay transactions found.</p>;
+
+  return (
+    <div className="admin-list-stack">
+      {deposits.map(txn => (
+        <div key={txn.id} className="admin-request-row" style={{ alignItems: 'center' }}>
+          <div>
+            <strong>Payment ID: {txn.razorpay_payment_id || 'Unknown'}</strong>
+            <p>Amount: <span style={{ color: '#10b981', fontWeight: 'bold' }}>₹{txn.amount}</span></p>
+            <p style={{ fontSize: '0.85rem', color: '#64748b' }}>
+              User: {txn.users?.nickname} ({txn.users?.email}) â€¢ Player ID: {txn.users?.player_id}
+            </p>
+            <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+              Time: {new Date(txn.created_at).toLocaleString()}
+            </p>
+          </div>
+          <div className="admin-actions">
+            <span className="admin-pill" style={{ background: '#10b981', color: 'white' }}>Success</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+
 const Admin = () => {
   const [authState, setAuthState] = useState({ checking: true, authenticated: false, email: '' });
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
@@ -334,7 +382,7 @@ const Admin = () => {
     setUserProfileLoading(false);
   };
   const getGlobalLiveBetStats = (gameKey, period) => {
-    const relevantBets = globalLiveBets.filter(b => b.game === gameKey && String(b.period) === String(period));
+    const relevantBets = globalLiveBets.filter(b => b.game_type === gameKey && String(b.period) === String(period));
     const bySelection = {};
     let total = 0;
     relevantBets.forEach(b => {
@@ -1020,7 +1068,7 @@ const Admin = () => {
                       return (
                         (b.users?.nickname || '').toLowerCase().includes(s) ||
                         (b.users?.email || '').toLowerCase().includes(s) ||
-                        String(b.game).toLowerCase().includes(s) ||
+                        String(b.game_type).toLowerCase().includes(s) ||
                         String(b.period).includes(s) ||
                         String(b.amount).includes(s)
                       );
@@ -1034,13 +1082,15 @@ const Admin = () => {
                         <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{bet.users?.email}</span>
                       </td>
                       <td>
-                        {bet.game.toUpperCase()}<br/>
+                        {bet.game_type.toUpperCase()}<br/>
                         <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{bet.period}</span>
                       </td>
                       <td><strong>{String(bet.selection).toUpperCase()}</strong></td>
                       <td>₹{bet.amount}</td>
                       <td>
-                        <span className={`admin-pill ${bet.status === 'Won' ? 'success' : bet.status === 'Lost' ? 'danger' : 'warning'}`}>\n                          {bet.status.toUpperCase()}\n                        </span>
+                        <span className={`admin-pill ${bet.status === 'won' ? 'success' : bet.status === 'lost' ? 'danger' : 'warning'}`}>
+                          {bet.status.toUpperCase()}
+                        </span>
                       </td>
                     </tr>
                   ))}
@@ -1367,10 +1417,10 @@ const Admin = () => {
                         {selectedUserProfile.bets?.map((b, i) => (
                           <tr key={i}>
                             <td>{new Date(b.created_at).toLocaleString()}</td>
-                            <td>{b.game}</td>
+                            <td>{b.game_type}</td>
                             <td>{b.period}</td>
                             <td>₹{b.amount}</td>
-                            <td><span className={`admin-pill ${b.status === 'Won' ? 'success' : b.status === 'Lost' ? 'danger' : 'warning'}`}>{b.status}</span></td>
+                            <td><span className={`admin-pill ${b.status === 'won' ? 'success' : b.status === 'lost' ? 'danger' : 'warning'}`}>{b.status}</span></td>
                           </tr>
                         ))}
                       </tbody>
@@ -1667,3 +1717,1618 @@ const Admin = () => {
 };
 
 export default Admin;
+
+
+==========================================================
+FILE: frontend/src/main.jsx
+==========================================================
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App';
+import './styles/global.css';
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+
+
+==========================================================
+FILE: frontend/src/App.jsx
+==========================================================
+import React from 'react';
+import { BrowserRouter as Router, Route, Routes, useLocation, Navigate } from 'react-router-dom';
+import BottomNav from './components/BottomNav';
+import LoadingScreen from './components/LoadingScreen';
+const Home = React.lazy(() => import('./pages/Home'));
+const Login = React.lazy(() => import('./pages/Login'));
+const Wallet = React.lazy(() => import('./pages/Wallet'));
+const Profile = React.lazy(() => import('./pages/Profile'));
+const FastParity = React.lazy(() => import('./pages/FastParity'));
+const AndarBahar = React.lazy(() => import('./pages/AndarBahar'));
+const Wheelocity = React.lazy(() => import('./pages/Wheelocity'));
+const Dice = React.lazy(() => import('./pages/Dice'));
+const CheckIn = React.lazy(() => import('./pages/CheckIn'));
+const Task = React.lazy(() => import('./pages/Task'));
+const Parity = React.lazy(() => import('./pages/Parity'));
+const Sapre = React.lazy(() => import('./pages/Sapre'));
+const OrderRecord = React.lazy(() => import('./pages/OrderRecord'));
+const FinancialDetails = React.lazy(() => import('./pages/FinancialDetails'));
+const Invite = React.lazy(() => import('./pages/Invite'));
+const Admin = React.lazy(() => import('./pages/Admin'));
+const Withdraw = React.lazy(() => import('./pages/Withdraw'));
+const About = React.lazy(() => import('./pages/About'));
+const Support = React.lazy(() => import('./pages/Support'));
+const Leaderboard = React.lazy(() => import('./pages/Leaderboard'));
+const NotFound = React.lazy(() => import('./pages/NotFound'));
+import { WalletProvider } from './contexts/WalletContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { SocketProvider, useSocket } from './contexts/SocketContext';
+import { GlobalGameProvider } from './contexts/GlobalGameContext';
+
+const PUBLIC_PATHS = ['/login'];
+
+// Protect routes — if not logged in, go to /login
+const ProtectedRoute = ({ children }) => {
+  const { user } = useAuth();
+  const location = useLocation();
+
+  if (!user && !PUBLIC_PATHS.includes(location.pathname)) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+};
+
+const App = () => {
+  return (
+    <AuthProvider>
+      <WalletProvider>
+        <SocketProvider>
+          <GlobalGameProvider>
+            <Router>
+              <MainApp />
+            </Router>
+          </GlobalGameProvider>
+        </SocketProvider>
+      </WalletProvider>
+    </AuthProvider>
+  );
+};
+
+const MainApp = () => {
+  const location = useLocation();
+  const { user, loading } = useAuth();
+  const { adminSettings } = useSocket();
+  const hideBottomNav = ['/login', '/treesadhi', '/leaderboard'].includes(location.pathname);
+  const [showSplash, setShowSplash] = React.useState(true);
+
+  if (adminSettings?.maintenance_mode === 'On' && location.pathname !== '/treesadhi') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#080808', color: '#fff', textAlign: 'center', padding: '20px' }}>
+        <h1 style={{ color: '#0ea5e9', fontSize: '2.5rem', marginBottom: '16px' }}>🛠️ Under Maintenance</h1>
+        <p style={{ color: '#aaa', fontSize: '1.1rem', maxWidth: '400px', lineHeight: '1.6' }}>We are currently upgrading our servers to provide you with a better experience. Please check back shortly.</p>
+      </div>
+    );
+  }
+
+  // Keep the splash screen alive for 3 seconds to let the animation play out
+  React.useEffect(() => {
+    // Capture referral code if present
+    const searchParams = new URLSearchParams(location.search);
+    const ref = searchParams.get('ref');
+    if (ref) {
+      localStorage.setItem('ref_code', ref);
+    }
+    const timer = setTimeout(() => setShowSplash(false), 3000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // If auth finishes before 3 seconds, showSplash keeps the animation playing.
+  // We render LoadingScreen at the top level so it never unmounts/remounts.
+  return (
+    <>
+      {(loading || showSplash) && <LoadingScreen />}
+      
+      {/* Only render the actual app once auth is finished loading */}
+      {!loading && (
+        <div className="app-wrapper">
+          <div className="page-content">
+            <Routes>
+          {/* Public routes */}
+          <Route path="/login" element={user ? <Navigate to="/" replace /> : <React.Suspense fallback={<LoadingScreen />}><Login /></React.Suspense>} />
+          <Route path="/register" element={<Navigate to="/login" replace />} />
+          <Route path="/treesadhi" element={<React.Suspense fallback={<LoadingScreen />}><Admin /></React.Suspense>} />
+
+          {/* Protected routes */}
+          <Route path="/" element={<ProtectedRoute><React.Suspense fallback={<LoadingScreen />}><Home /></React.Suspense></ProtectedRoute>} />
+          <Route path="/recharge" element={<ProtectedRoute><React.Suspense fallback={<LoadingScreen />}><Wallet /></React.Suspense></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><React.Suspense fallback={<LoadingScreen />}><Profile /></React.Suspense></ProtectedRoute>} />
+          <Route path="/checkin" element={<ProtectedRoute><React.Suspense fallback={<LoadingScreen />}><CheckIn /></React.Suspense></ProtectedRoute>} />
+          <Route path="/task" element={<ProtectedRoute><React.Suspense fallback={<LoadingScreen />}><Task /></React.Suspense></ProtectedRoute>} />
+          <Route path="/invite" element={<ProtectedRoute><React.Suspense fallback={<LoadingScreen />}><Invite /></React.Suspense></ProtectedRoute>} />
+          <Route path="/order-record" element={<ProtectedRoute><React.Suspense fallback={<LoadingScreen />}><OrderRecord /></React.Suspense></ProtectedRoute>} />
+          <Route path="/financial-details" element={<ProtectedRoute><React.Suspense fallback={<LoadingScreen />}><FinancialDetails /></React.Suspense></ProtectedRoute>} />
+          <Route path="/withdraw" element={<ProtectedRoute><React.Suspense fallback={<LoadingScreen />}><Withdraw /></React.Suspense></ProtectedRoute>} />
+          <Route path="/about" element={<ProtectedRoute><React.Suspense fallback={<LoadingScreen />}><About /></React.Suspense></ProtectedRoute>} />
+          <Route path="/support" element={<ProtectedRoute><React.Suspense fallback={<LoadingScreen />}><Support /></React.Suspense></ProtectedRoute>} />
+          <Route path="/leaderboard" element={<ProtectedRoute><React.Suspense fallback={<LoadingScreen />}><Leaderboard /></React.Suspense></ProtectedRoute>} />
+          <Route path="/game/fast-parity" element={<ProtectedRoute><React.Suspense fallback={<LoadingScreen />}><FastParity /></React.Suspense></ProtectedRoute>} />
+          <Route path="/game/parity" element={<ProtectedRoute><React.Suspense fallback={<LoadingScreen />}><Parity /></React.Suspense></ProtectedRoute>} />
+          <Route path="/game/sapre" element={<ProtectedRoute><React.Suspense fallback={<LoadingScreen />}><Sapre /></React.Suspense></ProtectedRoute>} />
+          <Route path="/game/andar-bahar" element={<ProtectedRoute><React.Suspense fallback={<LoadingScreen />}><AndarBahar /></React.Suspense></ProtectedRoute>} />
+          <Route path="/game/wheelocity" element={<ProtectedRoute><React.Suspense fallback={<LoadingScreen />}><Wheelocity /></React.Suspense></ProtectedRoute>} />
+          <Route path="/game/dice" element={<ProtectedRoute><React.Suspense fallback={<LoadingScreen />}><Dice /></React.Suspense></ProtectedRoute>} />
+
+          {/* Fallback */}
+          <Route path="*" element={<React.Suspense fallback={<LoadingScreen />}><NotFound /></React.Suspense>} />
+        </Routes>
+      </div>
+      {!hideBottomNav && user && <BottomNav />}
+    </div>
+    )}
+    </>
+  );
+};
+
+export default App;
+
+
+==========================================================
+FILE: frontend/src/contexts/AuthContext.jsx
+==========================================================
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { supabase, isSupabaseReady, getBy, updateWhere, getAll } from '../services/supabase';
+
+const AuthContext = createContext();
+export const useAuth = () => useContext(AuthContext);
+
+const API_URL = import.meta.env.VITE_API_URL || 'https://begm.onrender.com';
+
+// ─── VIP level helpers ────────────────────────────────────────────────────────
+export const getVipLevel = (totalRecharge = 0) => {
+  if (totalRecharge >= 100000) return { name: 'Master',  emoji: '👑', color: '#7c3aed', bg: 'linear-gradient(135deg,#7c3aed,#4f46e5)', min: 100000 };
+  if (totalRecharge >= 50000)  return { name: 'Diamond', emoji: '💎', color: '#0ea5e9', bg: 'linear-gradient(135deg,#0ea5e9,#38bdf8)', min: 50000  };
+  if (totalRecharge >= 25000)  return { name: 'Gold',    emoji: '🥇', color: '#d97706', bg: 'linear-gradient(135deg,#f59e0b,#d97706)',  min: 25000  };
+  if (totalRecharge >= 10000)  return { name: 'Silver',  emoji: '🥈', color: '#64748b', bg: 'linear-gradient(135deg,#94a3b8,#64748b)',  min: 10000  };
+  return                              { name: 'Bronze',  emoji: '🥉', color: '#b45309', bg: 'linear-gradient(135deg,#d97706,#b45309)',  min: 0      };
+};
+
+// ─── Ensure a user profile + wallet row exists after OAuth login ──────────────
+async function upsertProfile(session) {
+  const { user: authUser } = session;
+  if (!authUser) return null;
+
+  try {
+    const refCode = localStorage.getItem('ref_code');
+    // Call backend to upsert profile (creates row if not exists, returns it)
+    const res = await fetch(`${API_URL}/api/auth/upsert-profile`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ referredBy: refCode }),
+    });
+    const data = await res.json();
+    if (data.success) return data.user;
+  } catch (err) {
+    console.warn('[upsertProfile] Backend unavailable, using Supabase directly:', err.message);
+  }
+
+  // Fallback: directly upsert in Supabase if backend is down
+  const email = authUser.email;
+  const nickname = authUser.user_metadata?.full_name || email?.split('@')[0] || 'Player';
+
+  // Check if profile already exists
+  const { data: existing } = await supabase
+    .from('users')
+    .select('*')
+    .eq('email', email)
+    .maybeSingle();
+
+  if (existing) {
+    // Fetch wallet too
+    const { data: wallet } = await supabase
+      .from('wallets')
+      .select('*')
+      .eq('user_id', existing.id)
+      .maybeSingle();
+    return { ...existing, main_balance: wallet?.main_balance || 0, bonus_balance: wallet?.bonus_balance || 0 };
+  }
+
+  // Insert new profile
+  const refCode = localStorage.getItem('ref_code');
+  const { data: newUser, error } = await supabase
+    .from('users')
+    .insert({
+      email,
+      google_id: authUser.id,
+      nickname,
+      vip_level: 'Bronze',
+      status: 'Active',
+      role: 'user',
+      total_recharge: 0,
+      referred_by: refCode ? parseInt(refCode, 10) : null,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('[upsertProfile] Failed to create user profile:', error.message);
+    return null;
+  }
+
+  // Create wallet for the new user
+  await supabase.from('wallets').insert({
+    user_id: newUser.id,
+    main_balance: 0,
+    bonus_balance: 0,
+  });
+
+  return { ...newUser, main_balance: 0, bonus_balance: 0 };
+}
+
+// ─── Provider ─────────────────────────────────────────────────────────────────
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [allUsers, setAllUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // On mount: subscribe to Supabase auth state changes
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session) {
+        const profile = await upsertProfile(session);
+        setUser(profile);
+        // Store access_token so backend API calls can use it
+        localStorage.setItem('token', session.access_token);
+      }
+      setLoading(false);
+    });
+
+    // Listen for auth state changes (login, logout, token refresh)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        const profile = await upsertProfile(session);
+        setUser(profile);
+        localStorage.setItem('token', session.access_token);
+      } else if (event === 'TOKEN_REFRESHED' && session) {
+        // Update token in localStorage silently
+        localStorage.setItem('token', session.access_token);
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+        localStorage.removeItem('token');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // ── Sign in with Google ───────────────────────────────────────────────────────
+  const signInWithGoogle = useCallback(async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin,
+      },
+    });
+    if (error) {
+      console.error('[signInWithGoogle]', error.message);
+      throw new Error(error.message || 'Google sign-in failed');
+    }
+  }, []);
+
+  // ── Sign out ──────────────────────────────────────────────────────────────────
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    localStorage.removeItem('token');
+  }, []);
+
+  // ── updateUserRecharge — called when a recharge is approved ──────────────────
+  const updateUserRecharge = useCallback(async (userId, amount) => {
+    const targetUser = allUsers.find(u => String(u.id) === String(userId));
+    if (!targetUser) return;
+
+    const newTotal = (targetUser.total_recharge || 0) + amount;
+    const newVip = getVipLevel(newTotal).name;
+    const updates = { total_recharge: newTotal, vip_level: newVip };
+
+    if (isSupabaseReady()) {
+      try {
+        await updateWhere('users', 'id', userId, updates);
+      } catch (err) {
+        console.warn('[updateUserRecharge] Supabase failed:', err.message);
+      }
+    }
+
+    setAllUsers(prev => prev.map(u =>
+      String(u.id) === String(userId) ? { ...u, ...updates } : u
+    ));
+    if (user && String(user.id) === String(userId)) {
+      setUser(prev => ({ ...prev, ...updates }));
+    }
+  }, [allUsers, user]);
+
+  // ── Refresh all users from Supabase (called by Admin) ────────────────────────
+  const refreshAllUsers = useCallback(async () => {
+    if (!isSupabaseReady()) return;
+    try {
+      const dbUsers = await getAll('users', null, 'created_at');
+      setAllUsers(dbUsers);
+    } catch (err) {
+      console.warn('[refreshAllUsers] Supabase failed:', err.message);
+    }
+  }, []);
+
+  // ── Freeze / unfreeze user (admin action) ─────────────────────────────────────
+  const setUserStatus = useCallback(async (userId, status) => {
+    if (isSupabaseReady()) {
+      try { await updateWhere('users', 'id', userId, { status }); } catch {}
+    }
+    setAllUsers(prev => prev.map(u => String(u.id) === String(userId) ? { ...u, status } : u));
+  }, []);
+
+  return (
+    <AuthContext.Provider value={{
+      user, setUser,
+      allUsers, setAllUsers,
+      loading,
+      signInWithGoogle,
+      logout,
+      updateUserRecharge,
+      refreshAllUsers,
+      setUserStatus,
+      getVipLevel,
+      isSupabaseReady,
+    }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+
+==========================================================
+FILE: frontend/vite.config.js
+==========================================================
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    port: 5173,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5002',
+        changeOrigin: true,
+      },
+    },
+  },
+  build: {
+    outDir: 'dist',
+    sourcemap: false,
+  },
+  esbuild: {
+    drop: ['console', 'debugger'],
+  },
+});
+
+
+
+==========================================================
+FILE: backend/server.js
+==========================================================
+const http = require('http');
+const app = require('./app');
+const startCronJobs = require('./jobs/cron');
+const { startGameEngine } = require('./services/gameEngine');
+
+// Global error handlers to keep server responsive even if DB is down
+process.on('unhandledRejection', (reason, p) => {
+  console.error('Unhandled Rejection at:', p, 'reason:', reason && reason.message ? reason.message : reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err && err.message ? err.message : err);
+});
+
+// Start server
+const PORT = process.env.PORT || 5002;
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  startCronJobs();
+  startGameEngine();
+});
+
+
+==========================================================
+FILE: backend/app.js
+==========================================================
+require('dotenv').config({ path: __dirname + '/.env' });
+const express = require('express');
+const app = express();
+const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const routes = require('./routes');
+const maintenanceMiddleware = require('./middleware/maintenance');
+
+// ─── Security headers ─────────────────────────────────────────────────────────
+app.use(helmet());
+
+// ─── CORS ─────────────────────────────────────────────────────────────────────
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://begm.vercel.app',
+  process.env.FRONTEND_URL,
+].filter(Boolean);
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow no-origin requests (mobile apps, curl, Postman)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error(`CORS: Origin ${origin} not allowed`));
+  },
+  credentials: true,
+}));
+
+app.use(express.json({ limit: '10kb' })); // Prevent oversized payloads
+
+// ─── Maintenance Mode ─────────────────────────────────────────────────────────
+app.use(maintenanceMiddleware);
+
+// ─── Rate limiting ──────────────────────────────────────────────────────────────
+const { globalApiLimiter, adminLoginLimiter, authLimiter, financialRequestLimiter, bettingLimiter } = require('./middleware/rateLimiter');
+
+// Apply global rate limit
+app.use('/api', globalApiLimiter);
+
+// Apply strict limits
+app.use('/api/admin/login', adminLoginLimiter);        // 5 attempts / 15 min
+app.use('/api/auth/send-otp', authLimiter);            // 5 / min
+app.use('/api/wallet/request-recharge', financialRequestLimiter); // 3 / min
+app.use('/api/wallet/request-withdraw', financialRequestLimiter); // 3 / min
+app.use('/api/game/place-bet', bettingLimiter);        // 30 / min
+
+// ─── Health check ─────────────────────────────────────────────────────────────
+app.get('/', (req, res) => {
+  res.json({ message: 'BETX API is running', status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// ─── Routes ───────────────────────────────────────────────────────────────────
+app.use('/api/auth', routes.auth);
+app.use('/api/game', routes.game);
+app.use('/api/user', routes.user);
+app.use('/api/wallet', routes.wallet);
+app.use('/api/admin', routes.admin);
+app.use('/api/community', routes.community);
+
+// ─── 404 handler ─────────────────────────────────────────────────────────────
+app.use((req, res) => {
+  res.status(404).json({ success: false, error: `Route ${req.method} ${req.path} not found` });
+});
+
+// ─── Global error handler ─────────────────────────────────────────────────────
+const supabase = require('./config/supabase');
+app.use(async (err, req, res, next) => {
+  console.error('[Unhandled Error]', err.stack || err.message);
+  try {
+    await supabase.from('system_logs').insert({
+      type: 'API_ERROR',
+      error_message: err.message || 'Unknown error',
+      stack_trace: err.stack || null
+    });
+  } catch (logErr) {
+    console.error('Failed to log error to database:', logErr.message);
+  }
+  res.status(500).json({ success: false, error: 'Internal server error' });
+});
+
+module.exports = app;
+
+
+==========================================================
+FILE: backend/routes/admin.js
+==========================================================
+const express = require('express');
+const router = express.Router();
+const { verifyAdmin } = require('../middleware/auth');
+const adminController = require('../controllers/admin');
+const {
+  adminLogin,
+  adminMe,
+  getAllUsers,
+  getUserProfile,
+  getRechargeRequests,
+  approveRecharge,
+  rejectRecharge,
+  getWithdrawalRequests,
+  approveWithdrawal,
+  rejectWithdrawal,
+  getUserTransactions,
+  setUserStatus,
+  getDashboard,
+  getAllDeposits,
+  getSettings,
+  updateSettings,
+  getAuditLogs,
+  getGameAnalytics,
+  getFinancialAnalytics,
+  setGameResult,
+  getLiveBets,
+} = require('../controllers/admin');
+const { getBackups, createBackup, deleteBackup } = require('../controllers/backup');
+
+// Unprotected Admin Login Routes
+router.post('/login', adminLogin);
+router.get('/me', adminMe);
+router.get('/settings', getSettings);
+
+// Apply verifyAdmin middleware to all subsequent routes
+router.use(verifyAdmin);
+
+// Users
+router.get('/users', getAllUsers);
+router.get('/user/:id', getUserProfile);
+router.post('/set-user-status', setUserStatus);
+router.post('/edit-user', require('../controllers/admin').editUser);
+
+// Recharges
+router.get('/recharge-requests', getRechargeRequests);
+router.post('/approve-recharge', approveRecharge);
+router.post('/reject-recharge', rejectRecharge);
+router.get('/all-deposits', getAllDeposits);
+
+// Withdrawals
+router.get('/withdrawal-requests', getWithdrawalRequests);
+router.post('/approve-withdrawal', approveWithdrawal);
+router.post('/reject-withdrawal', rejectWithdrawal);
+
+// History
+router.get('/transactions/:userId', getUserTransactions);
+
+// Stats dashboard
+router.get('/dashboard', getDashboard);
+router.post('/update-settings', updateSettings);
+
+// Analytics & Audit
+router.get('/audit-logs', getAuditLogs);
+router.get('/game-analytics', getGameAnalytics);
+router.get('/financial-analytics', getFinancialAnalytics);
+router.post('/set-game-result', setGameResult);
+router.get('/live-bets', getLiveBets);
+router.post('/settle-bets', adminController.settleBets);
+
+// Phase 6 endpoints
+// Duplicate adminController import removed
+router.get('/fraud-report', adminController.getFraudReport);
+router.get('/activity', adminController.getAdminActivity);
+router.get('/dashboard-stats', adminController.getDashboardStats);
+
+// Backups
+router.get('/backups', getBackups);
+router.post('/backups/create', createBackup);
+router.delete('/backups/:name', deleteBackup);
+
+module.exports = router;
+
+
+==========================================================
+FILE: backend/controllers/admin.js
+==========================================================
+const supabase = require('../config/supabase');
+const jwt = require('jsonwebtoken');
+
+const logAdminAction = async (adminEmail, action, targetUser = null, oldValue = null, newValue = null, req = null) => {
+  const ip = req ? (req.headers['x-forwarded-for'] || req.socket.remoteAddress) : null;
+  const device = req ? req.headers['user-agent'] : null;
+
+  await supabase.from('admin_audit_logs').insert({
+    admin_email: adminEmail || 'adithyan3847@gmail.com',
+    action,
+    target_user: targetUser ? String(targetUser) : null,
+    old_value: oldValue ? String(oldValue) : null,
+    new_value: newValue ? String(newValue) : null,
+    ip,
+    device
+  });
+};
+
+const logAdminSession = async (email, req) => {
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+  const browser = req.headers['user-agent'];
+  await supabase.from('admin_sessions').insert({
+    admin_email: email,
+    ip,
+    browser,
+    last_action: 'Admin Logged In'
+  });
+};
+
+// ─── POST /api/admin/login ───────────────────────────────────────────────────
+exports.adminLogin = async (req, res) => {
+  // Trim to avoid trailing whitespace / encoding issues
+  const email    = (req.body.email    || '').trim();
+  const password = (req.body.password || '').trim();
+
+  const ADMIN_EMAIL    = 'adithyan3847@gmail.com';
+  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'TREESADHI@2175';
+
+  // ── Temporary debug logs (remove after verifying login works) ──
+  console.log('[AdminLogin] received email   :', JSON.stringify(email));
+  console.log('[AdminLogin] expected email   :', JSON.stringify(ADMIN_EMAIL));
+  console.log('[AdminLogin] email match      :', email === ADMIN_EMAIL);
+  console.log('[AdminLogin] password match   :', password === ADMIN_PASSWORD);
+  // ── End debug logs ──
+
+  if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+    const payload = { admin: true, username: email, email };
+    const token = jwt.sign(
+      payload,
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    console.log('[AdminLogin] JWT issued for  :', email);
+
+    logAdminSession(email, req).catch(err => console.error('[LogSessionError]', err));
+    logAdminAction(email, 'Login', null, null, null, req).catch(err => console.error('[LogActionError]', err));
+
+    return res.json({ success: true, token, admin: { username: email, email } });
+  }
+
+  console.log('[AdminLogin] REJECTED — email or password mismatch');
+  return res.status(403).json({ success: false, message: 'Forbidden: Only the global administrator can login.' });
+};
+
+// ─── GET /api/admin/me ───────────────────────────────────────────────────────
+exports.adminMe = async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) {
+    return res.status(401).json({ admin: null });
+  }
+  
+  const token = authHeader.split(' ')[1];
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (decoded.admin) {
+      return res.json({ admin: { username: decoded.username } });
+    }
+    return res.status(401).json({ admin: null });
+  } catch (err) {
+    return res.status(401).json({ admin: null });
+  }
+};
+
+// ─── GET /api/admin/users — all users with wallets ───────────────────────────
+exports.getAllUsers = async (req, res) => {
+  try {
+    const [usersRes, betsRes, withdrawalsRes] = await Promise.all([
+      supabase.from('users').select(`
+        id, player_id, email, nickname, vip_level, status, role, total_recharge, created_at,
+        wallets ( main_balance, bonus_balance )
+      `).order('created_at', { ascending: false }),
+      supabase.from('bets').select('user_id, amount, status'),
+      supabase.from('transactions').select('user_id, amount').eq('type', 'Withdraw').eq('status', 'Success')
+    ]);
+
+    if (usersRes.error) throw usersRes.error;
+
+    const bets = betsRes.data || [];
+    const withdrawals = withdrawalsRes.data || [];
+
+    const mapped = usersRes.data.map(u => {
+      const userBets = bets.filter(b => b.user_id === u.id);
+      const userWithdrawals = withdrawals.filter(w => w.user_id === u.id);
+      
+      const total_bets = userBets.length;
+      const total_wins = userBets.filter(b => b.status === 'won').length;
+      const total_losses = userBets.filter(b => b.status === 'lost').length;
+      const total_withdrawal = userWithdrawals.reduce((sum, w) => sum + parseFloat(w.amount || 0), 0);
+
+      return {
+        id: u.id,
+        player_id: u.player_id,
+        email: u.email,
+        nickname: u.nickname,
+        vip_level: u.vip_level,
+        status: u.status,
+        role: u.role,
+        total_recharge: u.total_recharge,
+        total_withdrawal,
+        total_bets,
+        total_wins,
+        total_losses,
+        wallet: u.wallets?.main_balance || 0,
+        bonus_balance: u.wallets?.bonus_balance || 0,
+        created_at: u.created_at,
+      };
+    });
+
+    res.json({ success: true, users: mapped });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// ─── GET /api/admin/user/:id — deep dive user profile ───────────────────────
+exports.getUserProfile = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const [userRes, walletRes, betsRes, txnsRes, rechargesRes, withdrawalsRes] = await Promise.all([
+      supabase.from('users').select('*').eq('id', id).single(),
+      supabase.from('wallets').select('*').eq('user_id', id).single(),
+      supabase.from('bets').select('*').eq('user_id', id).order('created_at', { ascending: false }).limit(200),
+      supabase.from('transactions').select('*').eq('user_id', id).order('created_at', { ascending: false }).limit(200),
+      supabase.from('recharge_requests').select('*').eq('user_id', id).order('created_at', { ascending: false }),
+      supabase.from('withdrawal_requests').select('*').eq('user_id', id).order('created_at', { ascending: false })
+    ]);
+
+    if (userRes.error) throw userRes.error;
+
+    res.json({
+      success: true,
+      user: userRes.data,
+      wallet: walletRes.data,
+      bets: betsRes.data || [],
+      transactions: txnsRes.data || [],
+      recharges: rechargesRes.data || [],
+      withdrawals: withdrawalsRes.data || []
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// ─── GET /api/admin/recharge-requests — pending recharges ────────────────────
+exports.getRechargeRequests = async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('recharge_requests')
+      .select('*, users(nickname, email, player_id, first_recharge_bonus_claimed)')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.json({ success: true, requests: data });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// ─── POST /api/admin/approve-recharge ────────────────────────────────────────
+exports.approveRecharge = async (req, res) => {
+  try {
+    const { requestId, userId, amount } = req.body;
+
+    const adminName = req.user?.username || 'System';
+    const now = new Date().toISOString();
+
+    // ATOMIC UPDATE: Only update if it is currently 'pending'. 
+    // This strictly prevents double-clicks from crediting twice.
+    const { data: req_, error: updateErr } = await supabase
+      .from('recharge_requests')
+      .update({ 
+        status: 'approved',
+        approved_by: adminName,
+        approved_at: now
+      })
+      .eq('id', requestId)
+      .eq('status', 'pending')
+      .select()
+      .single();
+
+    if (updateErr || !req_) {
+      return res.status(400).json({ success: false, error: 'Atomic update failed: Request already processed or not found' });
+    }
+
+    const targetUserId = req_.user_id;
+    const targetAmount = req_.amount;
+
+    // Fetch user details for bonus logic
+    const { data: user } = await supabase.from('users').select('*').eq('id', targetUserId).single();
+
+    const { data: wallet } = await supabase
+      .from('wallets')
+      .select('*')
+      .eq('user_id', targetUserId)
+      .single();
+
+    let bonusAmount = 0;
+    let mainBalanceAdd = targetAmount;
+    let updateFirstRecharge = false;
+
+    // First Recharge Bonus
+    if (user && !user.first_recharge_bonus_claimed) {
+      bonusAmount = targetAmount; // STRICT 100% BONUS AS PER REQUIREMENTS
+      updateFirstRecharge = true;
+    }
+
+    // 1. Credit the recharge
+    await supabase.rpc('credit_wallet_and_log', {
+      p_user_id: targetUserId,
+      p_amount: targetAmount,
+      p_type: 'Recharge',
+      p_notes: 'Admin approved'
+    });
+
+    // Update VIP and mark first_recharge_bonus_claimed if needed
+    const newTotal = (user?.total_recharge || 0) + targetAmount;
+    const newVip = newTotal >= 100000 ? 'Master' : newTotal >= 50000 ? 'Diamond' : newTotal >= 25000 ? 'Gold' : newTotal >= 10000 ? 'Silver' : 'Bronze';
+    
+    let userUpdates = { total_recharge: newTotal, vip_level: newVip };
+    if (updateFirstRecharge) {
+      userUpdates.first_recharge_bonus_claimed = true;
+    }
+    await supabase.from('users').update(userUpdates).eq('id', targetUserId);
+
+    if (bonusAmount > 0) {
+      await supabase.rpc('credit_wallet_and_log', {
+        p_user_id: targetUserId,
+        p_amount: bonusAmount,
+        p_type: 'First Recharge Bonus',
+        p_notes: 'Admin approved first recharge bonus'
+      });
+      await supabase.from('notifications').insert({ user_id: targetUserId, message: `Congratulations! You received a First Recharge Bonus of ₹${bonusAmount}.` });
+    }
+
+    // Referral Bonus Logic
+    if (user && user.referred_by && updateFirstRecharge && targetAmount >= 500) {
+      const { data: adminSettings } = await supabase.from('platform_settings').select('referral_bonus').eq('id', 1).single();
+      const refBonus = adminSettings?.referral_bonus || 25; 
+
+      // Find the inviter by player_id
+      const { data: inviter } = await supabase.from('users').select('id, nickname').eq('player_id', user.referred_by).single();
+      if (inviter) {
+        await supabase.rpc('credit_wallet_and_log', {
+          p_user_id: inviter.id,
+          p_amount: refBonus,
+          p_type: 'Referral Bonus',
+          p_notes: `Referral Bonus for inviting ${user.nickname}`
+        });
+
+        // Send notification
+        await supabase.from('notifications').insert({ 
+          user_id: inviter.id, 
+          message: `Your referral ${user.nickname} made their first recharge! You've received a ₹${refBonus} referral bonus.` 
+        });
+      }
+    }
+
+    await logAdminAction(req.user?.email, 'Approved Recharge', user?.player_id, 'pending', targetAmount, req);
+
+    res.json({ success: true, credited: targetAmount, bonus: bonusAmount, newVip });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// ─── POST /api/admin/reject-recharge ────────────────────────────────────────
+exports.rejectRecharge = async (req, res) => {
+  try {
+    const { requestId, reason } = req.body;
+    if (!requestId) return res.status(400).json({ success: false, error: 'requestId required' });
+
+    const adminName = req.user?.username || 'System';
+    const { data: updateRes } = await supabase
+      .from('recharge_requests')
+      .update({ 
+        status: 'rejected', 
+        reject_reason: reason || 'Rejected by Admin',
+        approved_by: adminName
+      })
+      .eq('id', requestId)
+      .eq('status', 'pending')
+      .select()
+      .single();
+
+    if (!updateRes) {
+      return res.status(400).json({ success: false, error: 'Request already processed or not found' });
+    }
+
+    await logAdminAction(req.user?.email, 'Rejected Recharge', null, 'pending', `Rejected: ${reason}`, req);
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// ─── GET /api/admin/withdrawal-requests ──────────────────────────────────────
+exports.getWithdrawalRequests = async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('withdrawal_requests')
+      .select('*, users(nickname, email, player_id, total_recharge)')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.json({ success: true, requests: data });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// ─── POST /api/admin/approve-withdrawal ──────────────────────────────────────
+exports.approveWithdrawal = async (req, res) => {
+  try {
+    const { requestId } = req.body;
+
+    const adminName = req.user?.username || 'System';
+    const now = new Date().toISOString();
+
+    const { data: wr } = await supabase
+      .from('withdrawal_requests')
+      .select('*')
+      .eq('id', requestId)
+      .single();
+
+    if (!wr) return res.status(404).json({ success: false, error: 'Not found' });
+    if (wr.status !== 'pending') return res.status(400).json({ success: false, error: 'Already processed' });
+
+    // ATOMIC UPDATE: Ensure it only updates if pending
+    const { data: updateRes, error: updateErr } = await supabase
+      .from('withdrawal_requests')
+      .update({ 
+        status: 'completed',
+        approved_by: adminName,
+        approved_at: now
+      })
+      .eq('id', requestId)
+      .eq('status', 'pending')
+      .select()
+      .single();
+
+    if (updateErr || !updateRes) {
+      return res.status(400).json({ success: false, error: 'Atomic update failed, might have been already processed' });
+    }
+
+    // Balance was already deducted at request time — just mark complete and log
+    await supabase.from('transactions').update({ status: 'Success' })
+      .eq('user_id', wr.user_id)
+      .eq('type', 'Withdraw')
+      .eq('status', 'Pending')
+      .gte('created_at', new Date(Date.now() - 86400000).toISOString()); // last 24h
+
+    await logAdminAction(req.user?.email, 'Approved Withdrawal', wr.user_id, 'pending', wr.amount, req);
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// ─── POST /api/admin/reject-withdrawal ───────────────────────────────────────
+exports.rejectWithdrawal = async (req, res) => {
+  try {
+    const { requestId } = req.body;
+
+    const adminName = req.user?.username || 'System';
+    const reason = req.body.reason || 'Rejected by Admin';
+
+    const { data: wr } = await supabase
+      .from('withdrawal_requests')
+      .select('*')
+      .eq('id', requestId)
+      .single();
+
+    if (!wr) return res.status(404).json({ success: false, error: 'Not found' });
+    if (wr.status !== 'pending') return res.status(400).json({ success: false, error: 'Already processed' });
+
+    // ATOMIC UPDATE
+    const { data: updateRes, error: updateErr } = await supabase
+      .from('withdrawal_requests')
+      .update({ 
+        status: 'rejected',
+        reject_reason: reason,
+        approved_by: adminName
+      })
+      .eq('id', requestId)
+      .eq('status', 'pending')
+      .select()
+      .single();
+
+    if (updateErr || !updateRes) {
+      return res.status(400).json({ success: false, error: 'Atomic update failed' });
+    }
+
+    // Refund the amount back to wallet
+    const { data: wallet } = await supabase.from('wallets').select('*').eq('user_id', wr.user_id).maybeSingle();
+    if (wallet) {
+      await supabase.rpc('credit_wallet_and_log', {
+        p_user_id: wr.user_id,
+        p_amount: wr.amount,
+        p_type: 'Withdrawal Refund',
+        p_notes: `Admin rejected: ${reason}`
+      });
+    }
+    await logAdminAction(req.user?.email, 'Rejected Withdrawal', wr.user_id, 'pending', wr.amount, req);
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// ─── GET /api/admin/transactions/:userId ─────────────────────────────────────
+exports.getUserTransactions = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.json({ success: true, transactions: data });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// ─── POST /api/admin/set-user-status ─────────────────────────────────────────
+exports.setUserStatus = async (req, res) => {
+  try {
+    const { userId, status } = req.body;
+    if (!['Active', 'Frozen'].includes(status)) {
+      return res.status(400).json({ success: false, error: 'Invalid status. Use Active or Frozen.' });
+    }
+    await supabase.from('users').update({ status }).eq('id', userId);
+    await logAdminAction(req.user?.email, 'Set User Status', userId, null, status, req);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+exports.editUser = async (req, res) => {
+  const { userId, nickname, vipLevel, mainBalance, status, adminNote } = req.body;
+  try {
+    const updates = {};
+    if (nickname !== undefined) updates.nickname = nickname;
+    if (vipLevel !== undefined) updates.vip_level = vipLevel;
+    if (status !== undefined) updates.status = status;
+    if (adminNote !== undefined) updates.admin_note = adminNote;
+
+    if (Object.keys(updates).length > 0) {
+      await supabase.from('users').update(updates).eq('id', userId);
+    }
+    
+    if (mainBalance !== undefined) {
+      const { data: w } = await supabase.from('wallets').select('main_balance').eq('user_id', userId).single();
+      const diff = Number(mainBalance) - (w?.main_balance || 0);
+      if (diff !== 0) {
+        await supabase.rpc('credit_wallet_and_log', {
+          p_user_id: userId,
+          p_amount: diff,
+          p_type: 'Admin Adjustment',
+          p_notes: 'Admin manually edited wallet balance'
+        });
+      }
+    }
+    
+    await logAdminAction(req.user?.email, 'Edited User', userId, null, `Updates: ${JSON.stringify({ nickname, vipLevel, status, adminNote, mainBalance })}`, req);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// ─── GET /api/admin/all-deposits ─────────────────────────────────────────────
+exports.getAllDeposits = async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('*, users(player_id, nickname, email)')
+      .eq('type', 'Deposit')
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    if (error) throw error;
+    res.json({ success: true, deposits: data });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// ─── GET /api/admin/dashboard ─ dashboard summary ─────────────────────────────
+exports.getDashboard = async (req, res) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString();
+
+    const [
+      usersRes, 
+      walletsRes, 
+      pendingRechargeRes, 
+      pendingWithdrawalRes,
+      todayBetsRes,
+      todayTxnRes
+    ] = await Promise.all([
+      supabase.from('users').select('id', { count: 'exact', head: true }),
+      supabase.from('wallets').select('main_balance'),
+      supabase.from('recharge_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+      supabase.from('withdrawal_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+      supabase.from('bets').select('amount, status').gte('created_at', todayStr),
+      supabase.from('transactions').select('amount, type, status').gte('created_at', todayStr).eq('status', 'Success')
+    ]);
+
+    const totalUsers = usersRes.count || 0;
+    const onlineUsers = Math.max(1, Math.floor(totalUsers * 0.1)); // Approximate for now
+    
+    const wallets = walletsRes.data || [];
+    const totalWalletBalance = wallets.reduce((sum, w) => sum + parseFloat(w.main_balance || 0), 0);
+
+    const pendingRechargeCount = pendingRechargeRes.count || 0;
+    const pendingWithdrawalsCount = pendingWithdrawalRes.count || 0;
+
+    const todayBets = todayBetsRes.data || [];
+    const todayTotalBets = todayBets.reduce((sum, b) => sum + parseFloat(b.amount || 0), 0);
+    const todayPayouts = todayBets.filter(b => b.status === 'won').reduce((sum, b) => sum + parseFloat(b.amount * 1.9 || 0), 0); // Approx payout calculation if specific payout column is not used
+    const todayRevenue = todayTotalBets - todayPayouts;
+    const todayProfit = todayRevenue; // Typically revenue = profit for the house
+
+    const activeUsers = Math.max(1, Math.floor(totalUsers * 0.05)); // Approximate active users
+
+    const todayTxns = todayTxnRes.data || [];
+    const todayRecharge = todayTxns.filter(t => t.type === 'Recharge' || t.type === 'Deposit').reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
+    const todayWithdrawal = todayTxns.filter(t => t.type === 'Withdraw' || t.type === 'Withdrawal').reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
+
+    res.json({ 
+      success: true, 
+      stats: { 
+        totalUsers, 
+        onlineNow: onlineUsers,
+        activeUsers,
+        totalWalletBalance,
+        pendingRechargeCount,
+        pendingWithdrawalsCount,
+        todayTotalBets,
+        todayRevenue,
+        todayProfit,
+        todayRecharge,
+        todayWithdrawal
+      } 
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// ─── GET /api/admin/settings ──────────────────────────────────────────────────
+exports.getSettings = async (req, res) => {
+  try {
+    const [platformRes, vipRes, taskRes, gameRes] = await Promise.all([
+      supabase.from('platform_settings').select('*').eq('id', 1).single(),
+      supabase.from('vip_levels').select('*').order('level', { ascending: true }),
+      supabase.from('task_settings').select('*').eq('id', 1).single(),
+      supabase.from('game_settings').select('*').order('game_key', { ascending: true })
+    ]);
+
+    res.json({
+      success: true,
+      settings: {
+        platform: platformRes.data || {},
+        vip_levels: vipRes.data || [],
+        tasks: taskRes.data || {},
+        games: gameRes.data || []
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// ─── POST /api/admin/update-settings ──────────────────────────────────────────
+exports.updateSettings = async (req, res) => {
+  try {
+    const { type, data } = req.body;
+    
+    if (type === 'platform') {
+      const { error } = await supabase.from('platform_settings').upsert({ id: 1, ...data });
+      if (error) throw error;
+    } else if (type === 'tasks') {
+      const { error } = await supabase.from('task_settings').upsert({ id: 1, ...data });
+      if (error) throw error;
+    } else if (type === 'vip') {
+      const { error } = await supabase.from('vip_levels').upsert(data);
+      if (error) throw error;
+    } else if (type === 'games') {
+      const { error } = await supabase.from('game_settings').upsert(data);
+      if (error) throw error;
+    } else {
+      return res.status(400).json({ success: false, error: 'Invalid settings type' });
+    }
+
+    await logAdminAction(req.user?.email, 'Updated Settings', null, null, `Type: ${type}`, req);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// ─── GET /api/admin/audit-logs ────────────────────────────────────────────────
+exports.getAuditLogs = async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('admin_audit_logs').select('*').order('created_at', { ascending: false }).limit(500);
+    if (error) throw error;
+    res.json({ success: true, logs: data || [] });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// ─── GET /api/admin/game-analytics ───────────────────────────────────────────
+exports.getGameAnalytics = async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('bets').select('game_type, amount, payout, status, created_at, user_id').order('created_at', { ascending: false }).limit(5000);
+    if (error) throw error;
+    res.json({ success: true, bets: data || [] });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// ─── POST /api/admin/set-game-result ───────────────────────────────────────────
+exports.setGameResult = async (req, res) => {
+  try {
+    const { gameType, result } = req.body;
+    if (!gameType) return res.status(400).json({ success: false, error: 'Missing gameType' });
+
+    // Write override into global_game_state (correct table — admin_settings no longer exists)
+    if (!result) {
+      // Clear override
+      const { error } = await supabase
+        .from('global_game_state')
+        .update({ admin_override: null })
+        .eq('game', gameType);
+      if (error) throw error;
+    } else {
+      const overrideValue = typeof result === 'object'
+        ? JSON.stringify(result)
+        : JSON.stringify({ label: result });
+
+      const { error } = await supabase
+        .from('global_game_state')
+        .update({ admin_override: overrideValue })
+        .eq('game', gameType);
+      if (error) throw error;
+    }
+
+    await logAdminAction(req.user?.email, 'Force Game Result', null, null, `Game: ${gameType}, Result: ${JSON.stringify(result)}`, req);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// ─── GET /api/admin/financial-analytics ──────────────────────────────────────
+exports.getFinancialAnalytics = async (req, res) => {
+  try {
+    const [recharges, withdrawals, users, txns] = await Promise.all([
+      supabase.from('recharge_requests').select('amount, status, created_at').order('created_at', { ascending: false }).limit(5000),
+      supabase.from('withdrawal_requests').select('amount, status, created_at').order('created_at', { ascending: false }).limit(5000),
+      supabase.from('users').select('created_at').order('created_at', { ascending: false }).limit(5000),
+      supabase.from('transactions').select('amount, type, status, created_at').order('created_at', { ascending: false }).limit(5000)
+    ]);
+    
+    res.json({ 
+      success: true, 
+      recharges: recharges.data || [], 
+      withdrawals: withdrawals.data || [], 
+      users: users.data || [],
+      transactions: txns.data || []
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+
+
+// ─── GET /api/admin/live-bets ────────────────────────────────────────────────
+exports.getLiveBets = async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('bets')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(1000);
+
+    if (error) throw error;
+    // DEBUG: log all fetched bet IDs
+    console.log('[AdminLiveBets] fetched IDs:', data.map(b => b.id));
+    res.json({ success: true, bets: data || [] });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// New: POST /api/admin/settle-bets – manually trigger settlement for a game period
+const { resolvePeriod, gameConfigs } = require('../services/gameEngine');
+exports.settleBets = async (req, res) => {
+  const { game, period } = req.body;
+  if (!game || !period) {
+    return res.status(400).json({ success: false, error: 'Missing game or period' });
+  }
+  try {
+    const config = gameConfigs.find(c => c.game === game);
+    if (!config) {
+      return res.status(400).json({ success: false, error: 'Invalid game' });
+    }
+    // Idempotency: check if this period has already been settled
+    const { data: existingResult, error: fetchErr } = await supabase
+      .from('game_results')
+      .select('id')
+      .eq('game', game)
+      .eq('period', period)
+      .maybeSingle();
+    if (fetchErr) throw fetchErr;
+    if (existingResult) {
+      return res.json({ success: true, message: `Period ${period} for ${game} already settled` });
+    }
+    await resolvePeriod(config, period);
+    res.json({ success: true, message: `Settlement attempted for ${game} period ${period}` });
+  } catch (err) {
+    console.error('[settleBets]', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+// Duplicate getLiveBets block removed – implementation moved above
+
+// ─── GET /api/admin/fraud-report ─────────────────────────────────────────────
+exports.getFraudReport = async (req, res) => {
+  try {
+    // 1. Duplicate UTR Numbers
+    const { data: utrs } = await supabase
+      .from('recharge_requests')
+      .select('utr_number, user_id, amount, created_at, users(nickname, email)')
+      .not('utr_number', 'is', null);
+
+    const dupUtrs = [];
+    const utrMap = {};
+    if (utrs) {
+      utrs.forEach(u => {
+        if (!utrMap[u.utr_number]) utrMap[u.utr_number] = [];
+        utrMap[u.utr_number].push(u);
+      });
+      Object.keys(utrMap).forEach(k => {
+        if (utrMap[k].length > 1) {
+          dupUtrs.push({ utr: k, accounts: utrMap[k] });
+        }
+      });
+    }
+
+    // 2. Duplicate Withdrawals (same UPI ID used across multiple accounts)
+    const { data: withdrawals } = await supabase
+      .from('withdrawal_requests')
+      .select('upi_id, user_id, amount, created_at, users(nickname, email)')
+      .not('upi_id', 'is', null);
+
+    const dupUpis = [];
+    const upiMap = {};
+    if (withdrawals) {
+      withdrawals.forEach(w => {
+        if (!upiMap[w.upi_id]) upiMap[w.upi_id] = [];
+        upiMap[w.upi_id].push(w);
+      });
+      Object.keys(upiMap).forEach(k => {
+        const uniqueUsers = new Set(upiMap[k].map(x => x.user_id));
+        if (uniqueUsers.size > 1) {
+          dupUpis.push({ upi_id: k, accounts: upiMap[k] });
+        }
+      });
+    }
+
+    // 3. Shared Devices (same device_info across multiple accounts)
+    const { data: users } = await supabase
+      .from('users')
+      .select('id, nickname, email, device_info, created_at')
+      .not('device_info', 'is', null);
+
+    const dupDevices = [];
+    const deviceMap = {};
+    if (users) {
+      users.forEach(u => {
+        if (!deviceMap[u.device_info]) deviceMap[u.device_info] = [];
+        deviceMap[u.device_info].push(u);
+      });
+      Object.keys(deviceMap).forEach(k => {
+        if (deviceMap[k].length > 1) {
+          dupDevices.push({ device: k, accounts: deviceMap[k] });
+        }
+      });
+    }
+
+    res.json({
+      success: true,
+      duplicate_utrs: dupUtrs,
+      duplicate_upis: dupUpis,
+      duplicate_devices: dupDevices
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// ─── GET /api/admin/activity ─────────────────────────────────────────────────
+exports.getAdminActivity = async (req, res) => {
+  try {
+    const { data: sessions, error: sessErr } = await supabase
+      .from('admin_sessions')
+      .select('*')
+      .order('last_active_time', { ascending: false })
+      .limit(50);
+
+    const { data: audits, error: auditErr } = await supabase
+      .from('admin_audit_logs')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    if (sessErr || auditErr) throw sessErr || auditErr;
+
+    res.json({ success: true, sessions: sessions || [], logs: audits || [] });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// ─── GET /api/admin/dashboard-stats ──────────────────────────────────────────
+exports.getDashboardStats = async (req, res) => {
+  try {
+    const now = new Date();
+    const oneMinAgo = new Date(now.getTime() - 60000).toISOString();
+    const fiveMinAgo = new Date(now.getTime() - 300000).toISOString();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+
+    const [activeUsersCount, bpmCount, totalRechargeToday, totalWithdrawToday, errorCount, systemLogs] = await Promise.all([
+      // 1. Active Users (Users who loaded the app or registered recently)
+      supabase.from('users').select('id', { count: 'exact', head: true }),
+      // 2. Bets per minute
+      supabase.from('bets').select('id', { count: 'exact', head: true }).gte('created_at', oneMinAgo),
+      // 3. Recharge Volume Today
+      supabase.from('recharge_requests').select('amount').eq('status', 'approved').gte('created_at', startOfToday),
+      // 4. Withdrawal Volume Today
+      supabase.from('withdrawal_requests').select('amount').eq('status', 'completed').gte('created_at', startOfToday),
+      // 5. Unresolved Errors Today
+      supabase.from('system_logs').select('id', { count: 'exact', head: true }).eq('resolved', false).gte('created_at', startOfToday),
+      // 6. Recent System Logs
+      supabase.from('system_logs').select('*').order('created_at', { ascending: false }).limit(20)
+    ]);
+
+    const rechargeVol = (totalRechargeToday.data || []).reduce((sum, r) => sum + parseFloat(r.amount || 0), 0);
+    const withdrawVol = (totalWithdrawToday.data || []).reduce((sum, w) => sum + parseFloat(w.amount || 0), 0);
+
+    res.json({
+      success: true,
+      stats: {
+        server_status: 'Healthy',
+        database_status: 'Connected',
+        active_users: activeUsersCount.count || 0,
+        bets_per_minute: bpmCount.count || 0,
+        recharge_volume_today: rechargeVol,
+        withdrawal_volume_today: withdrawVol,
+        errors_today: errorCount.count || 0
+      },
+      system_logs: systemLogs.data || []
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+
+==========================================================
+FILE: backend/middleware/auth.js
+==========================================================
+const supabase = require('../config/supabase');
+const jwt = require('jsonwebtoken');
+
+// ─── Auth Middleware — verifies Supabase Google OAuth JWT ─────────────────────
+const auth = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: No token provided' });
+    }
+
+    const token = authHeader.split(' ')[1];
+
+    // Verify the Supabase-issued JWT (works for Google OAuth sessions)
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+
+    if (error || !user) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: Invalid or expired token' });
+    }
+
+    // Fetch the app profile from our users table
+    const { data: profile } = await supabase
+      .from('users')
+      .select('id, email, nickname, role, status, vip_level, total_recharge')
+      .eq('email', user.email)
+      .maybeSingle();
+
+    // Attach user info to request — shape preserved for all existing route handlers
+    req.user = {
+      id: profile?.id || user.id,
+      email: profile?.email || user.email,
+      role: profile?.role || 'user',
+      status: profile?.status || 'Active',
+    };
+
+    next();
+  } catch (error) {
+    console.error('[Auth Middleware]', error.message);
+    res.status(401).json({ success: false, error: 'Unauthorized: Invalid token' });
+  }
+};
+
+// ─── Admin Auth Middleware ─────────────────────────────────────────────────────
+const verifyAdmin = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: No token provided' });
+    }
+
+    const token = authHeader.split(' ')[1];
+
+    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+      console.log('Admin token decoded:', decoded);
+      if (err) {
+        console.error('Admin token verify error:', err);
+        return res.status(401).json({ success: false, error: 'Unauthorized: Invalid token' });
+      }
+      if (!decoded.admin || decoded.email !== 'adithyan3847@gmail.com') {
+        console.warn('Admin token rejected, admin flag or email mismatch');
+        return res.status(403).json({ success: false, error: 'Forbidden: Admin access required. Only adithyan3847@gmail.com is permitted.' });
+      }
+      req.user = decoded;
+      next();
+    });
+  } catch (error) {
+    console.error('[Admin Middleware]', error.message);
+    res.status(401).json({ success: false, error: 'Unauthorized: Invalid token' });
+  }
+};
+
+module.exports = { auth, verifyAdmin };
+
+
+==========================================================
+FILE: backend/package.json
+==========================================================
+{
+  "name": "gambling-platform-backend",
+  "version": "1.0.0",
+  "description": "Backend for gambling platform",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.110.2",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
+    "express": "^4.18.2",
+    "express-rate-limit": "^8.5.2",
+    "helmet": "^8.2.0",
+    "jsonwebtoken": "^9.0.3",
+    "node-cron": "^4.6.0",
+    "pg": "^8.11.3",
+    "pg-hstore": "^2.3.4"
+  }
+}
+
+

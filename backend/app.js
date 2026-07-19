@@ -43,7 +43,7 @@ app.use('/api', globalApiLimiter);
 app.use('/api/admin/login', adminLoginLimiter);        // 5 attempts / 15 min
 app.use('/api/auth/send-otp', authLimiter);            // 5 / min
 app.use('/api/wallet/request-recharge', financialRequestLimiter); // 3 / min
-app.use('/api/wallet/request-withdraw', financialRequestLimiter); // 3 / min
+app.use('/api/wallet/withdraw', financialRequestLimiter); // 3 / min
 app.use('/api/game/place-bet', bettingLimiter);        // 30 / min
 
 // ─── Health check ─────────────────────────────────────────────────────────────

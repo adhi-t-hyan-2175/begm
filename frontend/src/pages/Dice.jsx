@@ -69,12 +69,12 @@ const Dice = () => {
   useEffect(() => {
     if (settledRef.current === previousPeriod || status === 'betting') return;
 
-    const myPrevBets = myOrders.filter(o => o.game_type === GAME && o.period === previousPeriod);
+    const myPrevBets = myOrders.filter(o => o.game === GAME && o.period === previousPeriod);
     if (myPrevBets.length > 0) {
       const bet = myPrevBets[0];
-      if (bet.status !== 'pending') {
+      if (bet.status !== 'Pending') {
         settledRef.current = previousPeriod;
-        const won = bet.status === 'won';
+        const won = bet.status === 'Won';
         const resultLabel = bet.result;
 
         setTimeout(() => setResultCard({

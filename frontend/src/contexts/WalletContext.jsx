@@ -543,10 +543,10 @@ export const WalletProvider = ({ children }) => {
       const upiName = parts[0] || '';
       const upiId = parts.length > 1 ? parts[1] : paymentDetails;
 
-      const res = await fetch(`${API_URL}/api/wallet/request-withdrawal`, {
+      const res = await fetch(`${API_URL}/api/wallet/withdraw`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ amount, upiId, upiName })
+        body: JSON.stringify({ amount, upi_id: upiId, upi_name: upiName })
       });
       const data = await res.json();
       

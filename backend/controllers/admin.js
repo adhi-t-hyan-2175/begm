@@ -225,13 +225,56 @@ exports.approveRecharge = async (req, res) => {
       updateFirstRecharge = true;
     }
 
-    // 1. Credit the recharge
-    await supabase.rpc('credit_wallet_and_log', {
-      p_user_id: targetUserId,
-      p_amount: targetAmount,
-      p_type: 'Recharge',
-      p_notes: 'Admin approved'
-    });
+    let rpcError = null;
+    let newMainBalance = 0;
+
+    // --- MANUAL CREDIT LOGIC (Replacing missing RPC) ---
+    try {
+      if (!wallet) throw new Error('Wallet not found for user');
+      
+      const previousBalance = parseFloat(wallet.main_balance || 0);
+      newMainBalance = previousBalance + targetAmount;
+      
+      // Update wallet
+      const { error: wErr } = await supabase
+        .from('wallets')
+        .update({ main_balance: newMainBalance, updated_at: now })
+        .eq('user_id', targetUserId);
+      
+      if (wErr) throw wErr;
+
+      // Insert transaction log
+      const { error: tErr } = await supabase.from('transactions').insert({
+        user_id: targetUserId,
+        amount: targetAmount,
+        type: 'Recharge',
+        status: 'Success',
+        notes: 'Admin approved',
+        created_at: now
+      });
+      
+      if (tErr) throw tErr;
+    } catch (err) {
+      rpcError = err;
+    }
+
+    console.log('[approveRecharge] Manual credit result. newBalance:', newMainBalance, 'error:', rpcError);
+
+    if (rpcError) {
+      console.error('[approveRecharge] Failed to credit wallet:', rpcError);
+      
+      // ROLLBACK: Revert the recharge_request status to 'pending'
+      await supabase
+        .from('recharge_requests')
+        .update({ status: 'pending', approved_at: null })
+        .eq('id', requestId);
+        
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Database transaction failed while crediting wallet. Request rolled back.',
+        details: rpcError.message || rpcError
+      });
+    }
 
     // Update VIP and mark first_recharge_bonus_claimed if needed
     const newTotal = (user?.total_recharge || 0) + targetAmount;
@@ -244,13 +287,41 @@ exports.approveRecharge = async (req, res) => {
     await supabase.from('users').update(userUpdates).eq('id', targetUserId);
 
     if (bonusAmount > 0) {
-      await supabase.rpc('credit_wallet_and_log', {
-        p_user_id: targetUserId,
-        p_amount: bonusAmount,
-        p_type: 'First Recharge Bonus',
-        p_notes: 'Admin approved first recharge bonus'
-      });
-      await supabase.from('notifications').insert({ user_id: targetUserId, message: `Congratulations! You received a First Recharge Bonus of ₹${bonusAmount}.` });
+      let bonusError = null;
+      let afterBonusBalance = 0;
+      
+      try {
+        const bonusPrevious = newMainBalance;
+        afterBonusBalance = bonusPrevious + bonusAmount;
+        
+        // Update wallet
+        const { error: bwErr } = await supabase
+          .from('wallets')
+          .update({ main_balance: afterBonusBalance, updated_at: now })
+          .eq('user_id', targetUserId);
+          
+        if (bwErr) throw bwErr;
+
+        // Insert transaction log
+        const { error: btErr } = await supabase.from('transactions').insert({
+          user_id: targetUserId,
+          amount: bonusAmount,
+          type: 'First Recharge Bonus',
+          status: 'Success',
+          notes: 'Admin approved first recharge bonus',
+          created_at: now
+        });
+        
+        if (btErr) throw btErr;
+      } catch (err) {
+        bonusError = err;
+      }
+
+      console.log('[approveRecharge] bonus credit result:', afterBonusBalance, 'error:', bonusError);
+      
+      if (!bonusError) {
+        await supabase.from('notifications').insert({ user_id: targetUserId, message: `Congratulations! You received a First Recharge Bonus of ₹${bonusAmount}.` });
+      }
     }
 
     // Referral Bonus Logic
@@ -261,12 +332,21 @@ exports.approveRecharge = async (req, res) => {
       // Find the inviter by player_id
       const { data: inviter } = await supabase.from('users').select('id, nickname').eq('player_id', user.referred_by).single();
       if (inviter) {
-        await supabase.rpc('credit_wallet_and_log', {
-          p_user_id: inviter.id,
-          p_amount: refBonus,
-          p_type: 'Referral Bonus',
-          p_notes: `Referral Bonus for inviting ${user.nickname}`
-        });
+        const { data: inviterWallet } = await supabase.from('wallets').select('main_balance').eq('user_id', inviter.id).single();
+        if (inviterWallet) {
+          const invPrev = parseFloat(inviterWallet.main_balance || 0);
+          const invNew = invPrev + refBonus;
+          
+          await supabase.from('wallets').update({ main_balance: invNew, updated_at: now }).eq('user_id', inviter.id);
+          await supabase.from('transactions').insert({
+            user_id: inviter.id,
+            amount: refBonus,
+            type: 'Referral Bonus',
+            status: 'Success',
+            notes: `Referral Bonus for inviting ${user.nickname}`,
+            created_at: now
+          });
+        }
 
         // Send notification
         await supabase.from('notifications').insert({ 
@@ -413,11 +493,16 @@ exports.rejectWithdrawal = async (req, res) => {
     // Refund the amount back to wallet
     const { data: wallet } = await supabase.from('wallets').select('*').eq('user_id', wr.user_id).maybeSingle();
     if (wallet) {
-      await supabase.rpc('credit_wallet_and_log', {
-        p_user_id: wr.user_id,
-        p_amount: wr.amount,
-        p_type: 'Withdrawal Refund',
-        p_notes: `Admin rejected: ${reason}`
+      const refPrev = parseFloat(wallet.main_balance || 0);
+      const refNew = refPrev + wr.amount;
+      await supabase.from('wallets').update({ main_balance: refNew, updated_at: now }).eq('user_id', wr.user_id);
+      await supabase.from('transactions').insert({
+        user_id: wr.user_id,
+        amount: wr.amount,
+        type: 'Withdrawal Refund',
+        status: 'Success',
+        notes: `Admin rejected: ${reason}`,
+        created_at: now
       });
     }
     await logAdminAction(req.user?.email, 'Rejected Withdrawal', wr.user_id, 'pending', wr.amount, req);
@@ -477,11 +562,16 @@ exports.editUser = async (req, res) => {
       const { data: w } = await supabase.from('wallets').select('main_balance').eq('user_id', userId).single();
       const diff = Number(mainBalance) - (w?.main_balance || 0);
       if (diff !== 0) {
-        await supabase.rpc('credit_wallet_and_log', {
-          p_user_id: userId,
-          p_amount: diff,
-          p_type: 'Admin Adjustment',
-          p_notes: 'Admin manually edited wallet balance'
+        const prevBal = parseFloat(w?.main_balance || 0);
+        const newBal = prevBal + diff;
+        await supabase.from('wallets').update({ main_balance: newBal, updated_at: new Date().toISOString() }).eq('user_id', userId);
+        await supabase.from('transactions').insert({
+          user_id: userId,
+          amount: diff,
+          type: 'Admin Adjustment',
+          status: 'Success',
+          notes: 'Admin manually edited wallet balance',
+          created_at: new Date().toISOString()
         });
       }
     }
