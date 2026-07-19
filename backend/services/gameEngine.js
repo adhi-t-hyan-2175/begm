@@ -211,16 +211,28 @@ const resolvePeriod = async (gameConfig, period) => {
       }
     }
 
-    // 4. Save to game_results
-    await supabase.from('game_results').upsert({
-      game,
-      period,
-      result: finalResult,
-      is_override: !!adminOverride,
-      profit: maxProfit,
-      total_bets: allBets.length,
-      created_at: new Date().toISOString()
-    }, { onConflict: 'game,period' });
+    // 4. Save to game_results safely (prevent overwrite by multiple instances)
+    const { data: existing } = await supabase.from('game_results').select('id, is_override').eq('game', game).eq('period', period).maybeSingle();
+    
+    if (!existing) {
+      await supabase.from('game_results').insert({
+        game,
+        period,
+        result: finalResult,
+        is_override: !!adminOverride,
+        profit: maxProfit,
+        total_bets: allBets.length,
+        created_at: new Date().toISOString()
+      });
+    } else if (adminOverride) {
+      // Only allow admin override to overwrite an existing settled result
+      await supabase.from('game_results').update({
+        result: finalResult,
+        is_override: true,
+        profit: maxProfit,
+        total_bets: allBets.length
+      }).eq('game', game).eq('period', period);
+    }
 
     // 5. Settle real bets
     if (realBets && realBets.length > 0) {

@@ -112,7 +112,7 @@ const Dice = () => {
           won, period: previousPeriod, game: GAME,
           selection: bet.selection, selectionColor: getLabelColor(bet.selection),
           resultLabel, resultColor: getLabelColor(resultLabel),
-          betAmount: bet.amount, winAmount: parseFloat(bet.payout || 0),
+          betAmount: bet.amount, winAmount: parseFloat(bet.winAmount || 0),
         }), 800);
       }
     }

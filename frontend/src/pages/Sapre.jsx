@@ -108,7 +108,7 @@ const Sapre = () => {
             resultLabel,
             resultColor: getSelColor(resultLabel),
             betAmount: bet.amount,
-            winAmount: parseFloat(bet.payout || 0),
+            winAmount: parseFloat(bet.winAmount || 0),
           });
         }, 800);
       }
