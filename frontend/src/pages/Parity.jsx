@@ -90,22 +90,20 @@ const Parity = () => {
 
 
   useEffect(() => {
-    if (settledRef.current === previousPeriod || status === 'betting') return;
-    
-    // Check if user had a bet on the previous period
-    const myPrevBets = myOrders.filter(o => o.game === GAME && o.period === previousPeriod);
-    if (myPrevBets.length > 0) {
-      const bet = myPrevBets[0];
+    // We want to show the result card as soon as the CURRENT period is settled (e.g., in the last 5-20 seconds)
+    const myCurrentBets = myOrders.filter(o => o.game === GAME && o.period === period);
+    if (myCurrentBets.length > 0) {
+      const bet = myCurrentBets[0];
       // Only show card if the bet is resolved by backend
-      if (bet.status !== 'Pending') {
-        settledRef.current = previousPeriod;
+      if (bet.status !== 'Pending' && settledRef.current !== period) {
+        settledRef.current = period;
         const won = bet.status === 'Won';
         const resultLabel = bet.result;
         
         setTimeout(() => {
           setResultCard({
             won,
-            period: previousPeriod,
+            period: period,
             game: GAME,
             selection: bet.selection,
             selectionColor: getSelColor(bet.selection),
@@ -117,7 +115,7 @@ const Parity = () => {
         }, 800);
       }
     }
-  }, [previousPeriod, status, myOrders]);
+  }, [period, myOrders]);
 
   const openBetCard = (sel) => { if (!isBettingOpen) return; setPendingSelection(sel); setBetModalOpen(true); };
   const handleConfirmBet = (selection, amount) => { setBetModalOpen(false); if (!placeBet(GAME, period, selection, amount)) alert('Insufficient balance'); };

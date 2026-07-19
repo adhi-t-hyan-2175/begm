@@ -212,7 +212,7 @@ const resolvePeriod = async (gameConfig, period) => {
     }
 
     // 4. Save to game_results safely (prevent overwrite by multiple instances)
-    const { data: existing } = await supabase.from('game_results').select('id, is_override').eq('game', game).eq('period', period).maybeSingle();
+    const { data: existing } = await supabase.from('game_results').select('id, is_override, result').eq('game', game).eq('period', period).maybeSingle();
     
     if (!existing) {
       await supabase.from('game_results').insert({
@@ -232,6 +232,10 @@ const resolvePeriod = async (gameConfig, period) => {
         profit: maxProfit,
         total_bets: allBets.length
       }).eq('game', game).eq('period', period);
+    } else {
+      // If result was already locked in by another instance, we MUST use the global truth!
+      // Otherwise, we might settle bets against Violet while the DB displays Red.
+      finalResult = existing.result;
     }
 
     // 5. Settle real bets
