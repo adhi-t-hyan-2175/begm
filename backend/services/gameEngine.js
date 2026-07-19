@@ -3,8 +3,8 @@ const supabase = require('../config/supabase');
 const EPOCH = 1783617840000;
 
 const gameConfigs = [
-  { game: 'Parity', totalDuration: 60, bettingDuration: 30 },
-  { game: 'Sapre', totalDuration: 60, bettingDuration: 30 },
+  { game: 'Parity', totalDuration: 120, bettingDuration: 60 },
+  { game: 'Sapre', totalDuration: 180, bettingDuration: 120 },
   { game: 'FastParty', totalDuration: 60, bettingDuration: 30 },
   { game: 'Wheelocity', totalDuration: 60, bettingDuration: 30 },
   { game: 'Dice', totalDuration: 60, bettingDuration: 30 },

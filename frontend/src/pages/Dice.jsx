@@ -56,7 +56,38 @@ const Dice = () => {
   const [resultCard, setResultCard] = useState(null);
   const [liveOrders, setLiveOrders] = useState([]);
   const settledRef = useRef('');
-  // Fake orders removed.
+
+  // Fake orders restored per Phase 2
+  const fakePoolRef = useRef([]);
+
+  useEffect(() => {
+    setLiveOrders([]);
+    const selections = ['Small', 'Tie', 'Large'];
+    const amounts = [10, 20, 50, 100, 200, 500, 1000, 2000, 5000];
+    const newPool = [];
+    for (let i = 0; i < 150; i++) {
+        newPool.push({
+            id: period + '_' + i + '_' + Math.random().toString(36).substring(7),
+            period: period,
+            user: '**' + Math.floor(Math.random() * 900 + 100),
+            select: selections[Math.floor(Math.random() * selections.length)],
+            point: amounts[Math.floor(Math.random() * amounts.length)]
+        });
+    }
+    fakePoolRef.current = newPool;
+  }, [period]);
+
+  useEffect(() => {
+    if (!isBettingOpen) return;
+    const interval = setInterval(() => {
+       if (fakePoolRef.current.length > 0) {
+           const nextOrder = fakePoolRef.current.shift();
+           setLiveOrders(prev => [nextOrder, ...prev].slice(0, 50));
+       }
+    }, Math.floor(Math.random() * 2000) + 1000); // 1 to 3 seconds
+    return () => clearInterval(interval);
+  }, [isBettingOpen]);
+
 
   const history = (realHistory || []).map(r => ({
     period: r.period,

@@ -5,8 +5,8 @@ import { useGameTimer, generateHistory } from '../hooks/useGameTimer';
 
 const GAME_CONFIGS = {
   FastParty: { duration: 60, bettingDuration: 30 },
-  Parity: { duration: 60, bettingDuration: 30 },
-  Sapre: { duration: 60, bettingDuration: 30 },
+  Parity: { duration: 120, bettingDuration: 60 },
+  Sapre: { duration: 180, bettingDuration: 120 },
   Dice: { duration: 60, bettingDuration: 30 },
   Wheelocity: { duration: 60, bettingDuration: 30 },
   AndarBahar: { duration: 60, bettingDuration: 30 }
