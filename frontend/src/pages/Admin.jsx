@@ -334,7 +334,7 @@ const Admin = () => {
     setUserProfileLoading(false);
   };
   const getGlobalLiveBetStats = (gameKey, period) => {
-    const relevantBets = globalLiveBets.filter(b => b.game === gameKey && String(b.period) === String(period));
+    const relevantBets = globalLiveBets.filter(b => b.game_type === gameKey && String(b.period) === String(period));
     const bySelection = {};
     let total = 0;
     relevantBets.forEach(b => {
@@ -1020,7 +1020,7 @@ const Admin = () => {
                       return (
                         (b.users?.nickname || '').toLowerCase().includes(s) ||
                         (b.users?.email || '').toLowerCase().includes(s) ||
-                        String(b.game).toLowerCase().includes(s) ||
+                        String(b.game_type).toLowerCase().includes(s) ||
                         String(b.period).includes(s) ||
                         String(b.amount).includes(s)
                       );
@@ -1034,7 +1034,7 @@ const Admin = () => {
                         <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{bet.users?.email}</span>
                       </td>
                       <td>
-                        {bet.game.toUpperCase()}<br/>
+                        {bet.game_type.toUpperCase()}<br/>
                         <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{bet.period}</span>
                       </td>
                       <td><strong>{String(bet.selection).toUpperCase()}</strong></td>
@@ -1367,7 +1367,7 @@ const Admin = () => {
                         {selectedUserProfile.bets?.map((b, i) => (
                           <tr key={i}>
                             <td>{new Date(b.created_at).toLocaleString()}</td>
-                            <td>{b.game}</td>
+                            <td>{b.game_type}</td>
                             <td>{b.period}</td>
                             <td>₹{b.amount}</td>
                             <td><span className={`admin-pill ${b.status === 'Won' ? 'success' : b.status === 'Lost' ? 'danger' : 'warning'}`}>{b.status}</span></td>
