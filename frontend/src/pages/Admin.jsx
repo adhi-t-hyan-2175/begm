@@ -14,15 +14,15 @@ const gameConfigs = [
   { 
     name: 'Parity', 
     key: 'Parity', 
-    duration: 60, 
-    bettingDuration: 30,
+    duration: 120, 
+    bettingDuration: 60,
     options: ['Red', 'Green', 'Violet'] 
   },
   { 
     name: 'Sapre', 
     key: 'Sapre', 
-    duration: 60, 
-    bettingDuration: 30,
+    duration: 180, 
+    bettingDuration: 120,
     options: ['Red', 'Green', 'Violet'] 
   },
   { 
