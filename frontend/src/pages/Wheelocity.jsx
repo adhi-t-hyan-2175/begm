@@ -95,41 +95,61 @@ const Wheelocity = () => {
 
   useEffect(() => {
     if (!isBettingOpen) {
-      setWheelRotation(1440 + Math.floor(deterministicRandom(period) * 360));
+      // Find the result for the current period from the global truth
+      const currentResult = (realHistory || []).find(r => r.period === period);
+      if (currentResult) {
+        const label = currentResult.result?.label;
+        let angle = 0;
+        if (label === '2 Hits') angle = 0;
+        else if (label === '3 Hits') angle = 120;
+        else if (label === '5 Hits') angle = 240;
+        
+        // Add a deterministic offset within the segment so it doesn't look identical every time
+        const offset = Math.floor(deterministicRandom(period + 'spin') * 60) - 30;
+        setWheelRotation(1440 + angle + offset);
+      }
     } else {
       setWheelRotation(0);
     }
-  }, [isBettingOpen, period]);
+  }, [isBettingOpen, period, realHistory]);
 
   useEffect(() => {
-    if (settledRef.current === previousPeriod || status === 'betting') return;
-    
-    // Check if user had a bet on the previous period
-    const myPrevBets = myOrders.filter(o => o.game === GAME && o.period === previousPeriod);
-    if (myPrevBets.length > 0) {
-      const bet = myPrevBets[0];
-      // Only show card if the bet is resolved by backend
-      if (bet.status !== 'Pending') {
-        settledRef.current = previousPeriod;
-        const won = bet.status === 'Won';
-        const resultLabel = bet.result;
+    const myCurrentBets = myOrders.filter(o => o.game === GAME && o.period === period);
+    if (myCurrentBets.length > 0) {
+      // Check if ALL bets for this period have been settled
+      const isSettled = myCurrentBets.every(b => b.status !== 'Pending');
+      if (isSettled && settledRef.current !== period) {
+        settledRef.current = period;
         
+        // Aggregate total bets and total winnings
+        const totalBet = myCurrentBets.reduce((sum, b) => sum + parseFloat(b.amount), 0);
+        const totalWin = myCurrentBets.reduce((sum, b) => sum + parseFloat(b.winAmount || 0), 0);
+        
+        const won = myCurrentBets.some(b => b.status === 'Won');
+        // If multiple selections, list them joined by ' + '
+        const uniqueSelections = [...new Set(myCurrentBets.map(b => b.selection))];
+        const selectionStr = uniqueSelections.join(' + ');
+        
+        // We use the first bet's result (which is identical across all of them)
+        const resultLabel = myCurrentBets[0].result;
+        
+        // Delay result card slightly longer for Wheelocity so the wheel has time to spin and stop
         setTimeout(() => {
           setResultCard({
             won,
-            period: previousPeriod,
+            period: period,
             game: GAME,
-            selection: bet.selection,
-            selectionColor: getSelColor(bet.selection),
+            selection: selectionStr,
+            selectionColor: uniqueSelections.length > 1 ? '#555' : getSelColor(selectionStr),
             resultLabel,
             resultColor: getSelColor(resultLabel),
-            betAmount: bet.amount,
-            winAmount: parseFloat(bet.winAmount || 0),
+            betAmount: totalBet,
+            winAmount: totalWin > 0 ? totalWin : 0,
           });
-        }, 800);
+        }, 4000); // 4 seconds allows the CSS rotation animation to complete
       }
     }
-  }, [previousPeriod, status, myOrders]);
+  }, [period, myOrders]);
 
   const openBetCard = (sel) => { if (!isBettingOpen) return; setPendingSelection(sel); setBetModalOpen(true); };
   const handleConfirmBet = (selection, amount) => { setBetModalOpen(false); if (!placeBet(GAME, period, selection, amount)) alert('Insufficient balance'); };

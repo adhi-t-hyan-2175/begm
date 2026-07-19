@@ -90,27 +90,36 @@ const Parity = () => {
 
 
   useEffect(() => {
-    // We want to show the result card as soon as the CURRENT period is settled (e.g., in the last 5-20 seconds)
     const myCurrentBets = myOrders.filter(o => o.game === GAME && o.period === period);
     if (myCurrentBets.length > 0) {
-      const bet = myCurrentBets[0];
-      // Only show card if the bet is resolved by backend
-      if (bet.status !== 'Pending' && settledRef.current !== period) {
+      // Check if ALL bets for this period have been settled
+      const isSettled = myCurrentBets.every(b => b.status !== 'Pending');
+      if (isSettled && settledRef.current !== period) {
         settledRef.current = period;
-        const won = bet.status === 'Won';
-        const resultLabel = bet.result;
+        
+        // Aggregate total bets and total winnings
+        const totalBet = myCurrentBets.reduce((sum, b) => sum + parseFloat(b.amount), 0);
+        const totalWin = myCurrentBets.reduce((sum, b) => sum + parseFloat(b.winAmount || 0), 0);
+        
+        const won = myCurrentBets.some(b => b.status === 'Won');
+        // If multiple selections, list them joined by ' + '
+        const uniqueSelections = [...new Set(myCurrentBets.map(b => b.selection))];
+        const selectionStr = uniqueSelections.join(' + ');
+        
+        // We use the first bet's result (which is identical across all of them)
+        const resultLabel = myCurrentBets[0].result;
         
         setTimeout(() => {
           setResultCard({
             won,
             period: period,
             game: GAME,
-            selection: bet.selection,
-            selectionColor: getSelColor(bet.selection),
+            selection: selectionStr,
+            selectionColor: uniqueSelections.length > 1 ? '#555' : getSelColor(selectionStr),
             resultLabel,
             resultColor: getSelColor(resultLabel),
-            betAmount: bet.amount,
-            winAmount: parseFloat(bet.winAmount || 0),
+            betAmount: totalBet,
+            winAmount: totalWin > 0 ? totalWin : 0,
           });
         }, 800);
       }

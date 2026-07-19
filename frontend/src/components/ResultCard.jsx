@@ -11,18 +11,22 @@ const ResultCard = ({ isOpen, result, onClose }) => {
     if (isOpen) {
       // Small delay for smooth entrance
       const t = setTimeout(() => setVisible(true), 50);
-      return () => clearTimeout(t);
+      const closeTimer = setTimeout(() => {
+        setVisible(false);
+        setTimeout(onClose, 400); // Wait for transition
+      }, 4000);
+      return () => { clearTimeout(t); clearTimeout(closeTimer); };
     } else {
       setVisible(false);
     }
-  }, [isOpen]);
+  }, [isOpen, onClose]);
 
   if (!isOpen || !result) return null;
 
   const isWin = result.won;
-  const accentColor = isWin ? '#f5a623' : '#e53935';
+  const accentColor = isWin ? '#16a34a' : '#e53935';
   const bgGradient = isWin
-    ? 'linear-gradient(160deg, #fff9ec 0%, #fff3d0 100%)'
+    ? 'linear-gradient(160deg, #f0fdf4 0%, #dcfce7 100%)'
     : 'linear-gradient(160deg, #fff5f5 0%, #ffe8e8 100%)';
 
   return (

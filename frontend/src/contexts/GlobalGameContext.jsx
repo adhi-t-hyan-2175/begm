@@ -74,13 +74,27 @@ export const GlobalGameProvider = ({ children }) => {
 
     const historySub = supabase
       .channel('global-game:results')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'game_results' }, payload => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_results' }, payload => {
         const row = payload.new;
         if (row && row.game) {
-          setGameHistories(prev => ({
-            ...prev,
-            [row.game]: [row, ...(prev[row.game] || [])]
-          }));
+          setGameHistories(prev => {
+            const currentList = prev[row.game] || [];
+            // If it's an UPDATE, replace the existing row
+            if (payload.eventType === 'UPDATE') {
+              return {
+                ...prev,
+                [row.game]: currentList.map(item => (item.game === row.game && item.period === row.period) ? row : item)
+              };
+            }
+            // If it's an INSERT, only add if it doesn't exist
+            if (!currentList.some(item => item.game === row.game && item.period === row.period)) {
+              return {
+                ...prev,
+                [row.game]: [row, ...currentList]
+              };
+            }
+            return prev;
+          });
           window.dispatchEvent(new CustomEvent('global_result_received', { detail: { game: row.game, period: row.period } }));
         }
       })

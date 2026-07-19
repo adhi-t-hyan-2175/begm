@@ -329,14 +329,9 @@ const tick = async () => {
     const state = calculateTimerState(config.totalDuration, config.bettingDuration, now);
     const game = config.game;
     
-    // Calculate a deterministic random reveal offset between 5 and 20 seconds for this period
-    const revealOffset = 5 + Math.floor(deterministicRandom(game + state.period + 'reveal') * 16);
-    
-    // Status can be 'betting', 'waiting', or 'resolving' (last 5-20 seconds)
-    let currentStatus = 'waiting';
-    if (state.isBettingOpen) {
-      currentStatus = 'betting';
-    } else if (state.secondsIntoCurrentBlock >= config.totalDuration - revealOffset) {
+    // Resolve immediately when betting closes to lock in the DB winner globally
+    let currentStatus = 'betting';
+    if (!state.isBettingOpen) {
       currentStatus = 'resolving';
     }
     
