@@ -6,7 +6,7 @@ const API_BASE = import.meta.env.VITE_API_URL || 'https://begm.onrender.com';
 const gameConfigs = [
   { 
     name: 'Fast Parity', 
-    key: 'FastParty', 
+    key: 'FastParity', 
     duration: 60, 
     bettingDuration: 30,
     options: ['Red', 'Green', 'Violet'] 
@@ -49,7 +49,7 @@ const gameConfigs = [
 ];
 
 const payoutRatios = {
-  FastParty: { Green: 1.9, Red: 1.9, Violet: 4.5 },
+  FastParity: { Green: 1.9, Red: 1.9, Violet: 4.5 },
   Parity: { Green: 1.9, Red: 1.9, Violet: 4.5 },
   Sapre: { Green: 1.9, Red: 1.9, Violet: 4.5 },
   Wheelocity: { '2 Hits': 1.9, '3 Hits': 3, '5 Hits': 5 },
@@ -57,7 +57,7 @@ const payoutRatios = {
   AndarBahar: { Andar: 1.9, Bahar: 1.9 }
 };
 
-const AdminGameCard = ({ game, timerState, liveBets, selectedWinner, onSetWinner, onClearWinner }) => {
+const AdminGameCard = ({ game, timerState, liveBets, selectedWinner, actualWinner, onSetWinner, onClearWinner }) => {
   const formatTime = (timeLeft) => {
     const min = Math.floor(timeLeft / 60);
     const sec = timeLeft % 60;
@@ -88,7 +88,7 @@ const AdminGameCard = ({ game, timerState, liveBets, selectedWinner, onSetWinner
     return '#0ff';
   };
 
-  const colorOnlyGames = ['FastParty', 'Parity', 'Sapre'];
+  const colorOnlyGames = ['FastParity', 'Parity', 'Sapre'];
   const wheelOnlyGames = ['Wheelocity'];
   const displayOptions = colorOnlyGames.includes(game.key)
     ? ['Green', 'Violet', 'Red']
@@ -230,7 +230,7 @@ const AdminGameCard = ({ game, timerState, liveBets, selectedWinner, onSetWinner
             </div>
           </div>
 
-          {(selectedWinner || projectedWinner) && (
+          {(selectedWinner || projectedWinner || actualWinner) && (
             <div style={{
               display: 'flex',
               gap: 8,
@@ -241,7 +241,14 @@ const AdminGameCard = ({ game, timerState, liveBets, selectedWinner, onSetWinner
               marginBottom: 12
             }}>
               <div style={{ flex: 1, color: '#0f0' }}>
-                <strong>{selectedWinner ? `✓ Manual Winner Selected: ${selectedWinner}` : `✓ Auto-Selected Winner: ${projectedWinner}`}</strong>
+                <strong>
+                  {selectedWinner 
+                    ? `✓ Manual Winner Selected: ${selectedWinner}` 
+                    : actualWinner 
+                      ? `🏆 Final DB Result: ${actualWinner}`
+                      : `✓ Auto-Selected Winner: ${projectedWinner}`
+                  }
+                </strong>
               </div>
               {selectedWinner && (
                 <button
@@ -966,6 +973,15 @@ const Admin = () => {
               const timerState = timerStates[game.key] || calculateTimerState(game.duration, game.bettingDuration);
               let liveBets = getGlobalLiveBetStats(game.key, timerState.period);
               const selectedWinner = getSelectedWinner(game.key);
+              
+              let actualWinner = null;
+              if (!timerState.isBettingOpen && gameHistories[game.key]) {
+                const historyMatch = gameHistories[game.key].find(h => String(h.period) === String(timerState.period));
+                if (historyMatch) {
+                  actualWinner = historyMatch.result?.label || historyMatch.label;
+                }
+              }
+
               return (
                 <AdminGameCard
                   key={game.key}
@@ -973,6 +989,7 @@ const Admin = () => {
                   timerState={timerState}
                   liveBets={liveBets}
                   selectedWinner={selectedWinner}
+                  actualWinner={actualWinner}
                   onSetWinner={(winner) => {
                     setSelectedWinner(game.key, timerState.period, winner);
                   }}

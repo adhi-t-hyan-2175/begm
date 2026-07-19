@@ -64,7 +64,7 @@ Andar Bahar:    http://localhost:3000/game/andar-bahar
 
 ### Admin Game Keys:
 ```
-Fast Parity  → FastParty
+Fast Parity  → FastParity
 Parity       → PrimePick
 Sapre        → LuckyPick
 Dice         → Dice

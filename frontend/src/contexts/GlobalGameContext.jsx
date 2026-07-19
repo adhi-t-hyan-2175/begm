@@ -4,7 +4,7 @@ import { useWallet } from './WalletContext';
 import { useGameTimer, generateHistory } from '../hooks/useGameTimer';
 
 const GAME_CONFIGS = {
-  FastParty: { duration: 60, bettingDuration: 30 },
+  FastParity: { duration: 60, bettingDuration: 30 },
   Parity: { duration: 120, bettingDuration: 60 },
   Sapre: { duration: 180, bettingDuration: 120 },
   Dice: { duration: 60, bettingDuration: 30 },
@@ -17,7 +17,7 @@ export const GlobalGameContext = createContext({});
 export const GlobalGameProvider = ({ children }) => {
   const [gameStates, setGameStates] = useState({});
   const [gameHistories, setGameHistories] = useState({
-    FastParty: [], Parity: [], Sapre: [], Dice: [], Wheelocity: [], AndarBahar: []
+    FastParity: [], Parity: [], Sapre: [], Dice: [], Wheelocity: [], AndarBahar: []
   });
 
   useEffect(() => {
@@ -42,7 +42,7 @@ export const GlobalGameProvider = ({ children }) => {
         .limit(300);
       
       if (data && !error) {
-        const hists = { FastParty: [], Parity: [], Sapre: [], Dice: [], Wheelocity: [], AndarBahar: [] };
+        const hists = { FastParity: [], Parity: [], Sapre: [], Dice: [], Wheelocity: [], AndarBahar: [] };
         data.forEach(row => {
           if (hists[row.game]) hists[row.game].push(row);
         });

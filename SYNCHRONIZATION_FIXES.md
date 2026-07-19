@@ -92,7 +92,7 @@ const clearSelectedWinner = (gameName, period) =>
 ### Storage:
 - Results stored in `game_result_overrides` localStorage
 - Format: `{ gameName: { period: selectedResult, ... }, ... }`
-- Example: `{ FastParty: { "0001": "Green", "0002": "Red" }, ... }`
+- Example: `{ FastParity: { "0001": "Green", "0002": "Red" }, ... }`
 
 ### Admin Panel Integration (Admin.jsx):
 ```javascript
@@ -140,7 +140,7 @@ setSelectedWinner(game.key, timerState.period, winner);
 ## 5. Admin Control - All Games Connected
 
 ### Games Updated:
-1. **FastParity** → Reads `getSelectedWinner('FastParty', period)`
+1. **FastParity** → Reads `getSelectedWinner('FastParity', period)`
 2. **Parity** → Reads `getSelectedWinner('PrimePick', period)`
 3. **Sapre** → Reads `getSelectedWinner('LuckyPick', period)`
 4. **Dice** → Reads `getSelectedWinner('Dice', period)`
@@ -254,7 +254,7 @@ When selecting winners in admin panel, use these game keys:
 
 | Display Name | Game Key in DB |
 |---|---|
-| Fast Parity | `FastParty` |
+| Fast Parity | `FastParity` |
 | Parity | `PrimePick` |
 | Sapre | `LuckyPick` |
 | Dice | `Dice` |

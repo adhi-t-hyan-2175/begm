@@ -276,7 +276,7 @@ CREATE TABLE IF NOT EXISTS game_settings (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 INSERT INTO game_settings (game_key, betting_time, evaluation_time, min_bet, max_bet) VALUES 
-('FastParty', 30, 5, 10, 10000),
+('FastParity', 30, 5, 10, 10000),
 ('Parity', 180, 5, 10, 10000),
 ('Sapre', 180, 5, 10, 10000),
 ('Dice', 60, 5, 10, 10000),

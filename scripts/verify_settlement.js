@@ -89,10 +89,10 @@ const sleep = ms => new Promise(res => setTimeout(res, ms));
       if (walletInsertErr) throw walletInsertErr;
     }
 
-    const game = 'FastParty'; // valid game from config
+    const game = 'FastParity'; // valid game from config
     const period = 'test-period-' + Date.now();
     const betAmount = 100;
-    const selection = 'Red'; // valid selection for FastParty
+    const selection = 'Red'; // valid selection for FastParity
 
     // 2. Place a test bet directly via DB (simpler than API)
     // Capture wallet balance before placing bet

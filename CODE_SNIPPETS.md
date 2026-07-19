@@ -115,7 +115,7 @@ const clearSelectedWinner = (gameName, period) =>
 ```javascript
 // gameResultOverrides in localStorage
 {
-  "FastParty": {
+  "FastParity": {
     "0001": "Green",
     "0002": "Red",
     "0050": "Violet"
@@ -147,14 +147,14 @@ const FastParity = () => {
   
   // ← Get admin result
   const { getLiveBetStats, getSelectedWinner } = useWallet();
-  const liveBets = getLiveBetStats('FastParty', period);
-  const adminResult = getSelectedWinner('FastParty', period);
+  const liveBets = getLiveBetStats('FastParity', period);
+  const adminResult = getSelectedWinner('FastParity', period);
   
   // ← Use admin result if available, otherwise generate random
-  const adminOverride = getGameResultForPeriod('FastParty', period);
+  const adminOverride = getGameResultForPeriod('FastParity', period);
   const displayResult = adminOverride 
     ? normalizeResultOverride(adminOverride) 
-    : generateResult('FastParty', period);
+    : generateResult('FastParity', period);
 
   return (
     <div className="fast-parity-screen">
@@ -254,13 +254,13 @@ Admin clicks "Green" button
     ↓
 onSetWinner("Green")
     ↓
-setSelectedWinner("FastParty", "0050", "Green")
+setSelectedWinner("FastParity", "0050", "Green")
     ↓
-setGameResultForPeriod("FastParty", "0050", "Green")
+setGameResultForPeriod("FastParity", "0050", "Green")
     ↓
 WalletContext state updated:
   gameResultOverrides = {
-    FastParty: { 0050: "Green" }
+    FastParity: { 0050: "Green" }
   }
     ↓
 localStorage persists:
@@ -276,10 +276,10 @@ Player opens Fast Parity game at period 0050
     ↓
 FastParity.jsx component mounts
     ↓
-getSelectedWinner("FastParty", "0050")
+getSelectedWinner("FastParity", "0050")
     ↓
 WalletContext reads:
-  gameResultOverrides.FastParty[0050] = "Green"
+  gameResultOverrides.FastParity[0050] = "Green"
     ↓
 adminResult = "Green"
     ↓
@@ -345,11 +345,11 @@ setInterval(() => {
 // In browser console:
 // Check that bets don't decrease
 const wallet = useWallet();
-const stats1 = wallet.getLiveBetStats("FastParty", "0050");
+const stats1 = wallet.getLiveBetStats("FastParity", "0050");
 console.log("First check:", stats1.total);  // e.g., 100
 
 setTimeout(() => {
-  const stats2 = wallet.getLiveBetStats("FastParty", "0050");
+  const stats2 = wallet.getLiveBetStats("FastParity", "0050");
   console.log("Second check:", stats2.total);  // Should be >= 100
 }, 5000);
 ```
@@ -359,10 +359,10 @@ setTimeout(() => {
 // In browser console:
 // Check admin results are stored
 const wallet = useWallet();
-wallet.setSelectedWinner("FastParty", "0050", "Green");
+wallet.setSelectedWinner("FastParity", "0050", "Green");
 
 // Verify it was set
-const result = wallet.getSelectedWinner("FastParty", "0050");
+const result = wallet.getSelectedWinner("FastParity", "0050");
 console.log("Selected winner:", result);  // Should be: "Green"
 
 // Check localStorage
@@ -385,7 +385,7 @@ console.log(JSON.parse(localStorage.getItem("game_result_overrides")));
   "my_orders": [
     {
       "id": "1720000000000",
-      "game": "FastParty",
+      "game": "FastParity",
       "period": "0050",
       "selection": "Green",
       "amount": 100,
@@ -394,7 +394,7 @@ console.log(JSON.parse(localStorage.getItem("game_result_overrides")));
     }
   ],
   "live_bets": {
-    "FastParty-0050": {
+    "FastParity-0050": {
       "total": 150,
       "maxSeen": 150,
       "bySelection": { "Green": 100, "Red": 50 },
@@ -402,7 +402,7 @@ console.log(JSON.parse(localStorage.getItem("game_result_overrides")));
     }
   },
   "game_result_overrides": {
-    "FastParty": { "0050": "Green" },
+    "FastParity": { "0050": "Green" },
     "PrimePick": { "0001": "Even" }
   }
 }
@@ -433,7 +433,7 @@ console.log(JSON.parse(localStorage.getItem("game_result_overrides")));
 
 // Check if WalletContext has admin result
 const { getSelectedWinner } = useWallet();
-console.log(getSelectedWinner("FastParty", "0050"));
+console.log(getSelectedWinner("FastParity", "0050"));
 
 // Check localStorage directly
 console.log(JSON.parse(localStorage.getItem("game_result_overrides")));

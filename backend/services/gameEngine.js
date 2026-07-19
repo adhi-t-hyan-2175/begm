@@ -5,7 +5,7 @@ const EPOCH = 1783617840000;
 const gameConfigs = [
   { game: 'Parity', totalDuration: 120, bettingDuration: 60 },
   { game: 'Sapre', totalDuration: 180, bettingDuration: 120 },
-  { game: 'FastParty', totalDuration: 60, bettingDuration: 30 },
+  { game: 'FastParity', totalDuration: 60, bettingDuration: 30 },
   { game: 'Wheelocity', totalDuration: 60, bettingDuration: 30 },
   { game: 'Dice', totalDuration: 60, bettingDuration: 30 },
   { game: 'AndarBahar', totalDuration: 60, bettingDuration: 30 }
@@ -93,7 +93,7 @@ const generateBaseResult = (gameType, period) => {
   const rnd = deterministicRandom(gameType + period);
   let result = {};
   
-  if (gameType === 'FastParty' || gameType === 'PrimePick' || gameType === 'LuckyPick' || gameType === 'Parity' || gameType === 'Sapre') {
+  if (gameType === 'FastParity' || gameType === 'PrimePick' || gameType === 'LuckyPick' || gameType === 'Parity' || gameType === 'Sapre') {
     const choices = ['Red', 'Green', 'Violet'];
     const selected = choices[Math.floor(rnd * choices.length)];
     result.label = selected;
@@ -241,70 +241,64 @@ const resolvePeriod = async (gameConfig, period) => {
     // 5. Settle real bets
     if (realBets && realBets.length > 0) {
       for (const bet of realBets) {
-        const won = String(bet.selection).toLowerCase().trim() === String(finalResult.label).toLowerCase().trim();
-        const multiplier = multipliersMap[bet.selection] || multipliersMap[String(bet.selection).toLowerCase().trim()] || 2;
-        const payoutAmount = won ? parseFloat(bet.amount) * multiplier : 0;
-        const betProfit = won ? payoutAmount - parseFloat(bet.amount) : -parseFloat(bet.amount);
-        const newStatus = won ? 'won' : 'lost';
+        try {
+          const won = String(bet.selection).toLowerCase().trim() === String(finalResult.label).toLowerCase().trim();
+          const multiplier = multipliersMap[bet.selection] || multipliersMap[String(bet.selection).toLowerCase().trim()] || 2;
+          const payoutAmount = won ? parseFloat(bet.amount) * multiplier : 0;
+          const betProfit = won ? payoutAmount - parseFloat(bet.amount) : -parseFloat(bet.amount);
+          const newStatus = won ? 'won' : 'lost';
 
-        let currentBalance = parseFloat(bet.wallet_before || 0);
+          let currentBalance = parseFloat(bet.wallet_before || 0);
 
-        if (won && payoutAmount > 0) {
-          // Credit wallet
-          const { data: wallet } = await supabase.from('wallets').select('main_balance').eq('user_id', bet.user_id).single();
-          if (wallet) {
-            currentBalance = parseFloat(wallet.main_balance || 0);
-            const newBalance = currentBalance + payoutAmount;
+          if (won && payoutAmount > 0) {
+            // Credit wallet
+            const { data: wallet, error: walletErr } = await supabase.from('wallets').select('main_balance').eq('user_id', bet.user_id).single();
+            if (walletErr) throw new Error(`Wallet fetch failed for user ${bet.user_id}: ${walletErr.message}`);
             
-            await supabase.from('wallets').update({ main_balance: newBalance, updated_at: new Date().toISOString() }).eq('user_id', bet.user_id);
-            
-            // Verify user exists before inserting transaction
-            const { data: userRow, error: userErr } = await supabase.from('users').select('*').eq('id', bet.user_id).single();
-            if (!userRow) {
-              console.error(`User with id ${bet.user_id} not found. Aborting transaction insert.`);
-              throw new Error(`User with id ${bet.user_id} not found`);
+            if (wallet) {
+              currentBalance = parseFloat(wallet.main_balance || 0);
+              const newBalance = currentBalance + payoutAmount;
+              
+              const { error: walletUpdateErr } = await supabase.from('wallets').update({ main_balance: newBalance, updated_at: new Date().toISOString() }).eq('user_id', bet.user_id);
+              if (walletUpdateErr) throw new Error(`Wallet update failed: ${walletUpdateErr.message}`);
+              
+              // Verify user exists before inserting transaction
+              const { data: userRow, error: userErr } = await supabase.from('users').select('*').eq('id', bet.user_id).single();
+              if (userErr || !userRow) {
+                throw new Error(`User with id ${bet.user_id} not found. Aborting transaction insert.`);
+              }
+              
+              const txPayload = {
+                user_id: bet.user_id,
+                amount: payoutAmount,
+                type: 'Win',
+                status: 'Success',
+                notes: `${game} Period ${period} — Won`
+              };
+              const { error: txError } = await supabase.from('transactions').insert(txPayload);
+              if (txError) {
+                console.error('Transaction insert error:', txError.message);
+                throw txError;
+              }
+              
+              currentBalance = newBalance;
             }
-
-            const txPayload = {
-              user_id: bet.user_id,
-              amount: payoutAmount,
-              type: 'Win',
-              status: 'Success',
-              notes: `${game} Period ${period} — Won`
-            };
-            const { data: txData, error: txError } = await supabase
-              .from('transactions')
-              .insert(txPayload)
-              .select();
-
-            if (txError) {
-              console.error('Transaction insert error:', txError);
-              throw txError;
-            }
-
-            // If insert succeeded, fetch the row directly to verify it exists
-            if (txData && txData.length > 0) {
-              const insertedId = txData[0].id;
-              const { data: fetchedRow, error: fetchError } = await supabase
-                .from('transactions')
-                .select('*')
-                .eq('id', insertedId)
-                .single();
-              if (fetchError) throw fetchError;
-            }
-
-            console.log(`[Transaction] Success for user ${bet.user_id}`);
-            currentBalance = newBalance;
           }
-        }
 
-        await supabase.from('bets').update({ 
-          result: finalResult.label, 
-          payout: payoutAmount, 
-          status: newStatus,
-          profit: betProfit,
-          wallet_after: currentBalance
-        }).eq('id', bet.id);
+          const { error: betUpdateErr } = await supabase.from('bets').update({ 
+            result: finalResult.label, 
+            payout: payoutAmount, 
+            status: newStatus,
+            profit: betProfit,
+            wallet_after: currentBalance
+          }).eq('id', bet.id);
+          
+          if (betUpdateErr) throw new Error(`Bet update failed: ${betUpdateErr.message}`);
+
+        } catch (betError) {
+          console.error(`[GameEngine Error] Failed to process bet ${bet.id} for ${game} ${period}:`, betError.message);
+          // Continue to the next bet even if this one failed
+        }
       }
     }
     
@@ -313,6 +307,7 @@ const resolvePeriod = async (gameConfig, period) => {
       await supabase.from('global_game_state').update({ admin_override: null }).eq('game', game);
     }
     
+    console.log(`[GameEngine] Successfully resolved ${game} Period ${period}. Winner: ${finalResult?.label}`);
   } catch (err) {
     console.error(`[GameEngine Error] Failed to resolve ${game} ${period}:`, err.message);
   }
@@ -340,24 +335,38 @@ const tick = async () => {
     if (lastStateMap[game] !== stateKey) {
       lastStateMap[game] = stateKey;
       
-      // Update the global state table so clients get Realtime events
-      await supabase.from('global_game_state').upsert({
-        game,
-        period: state.period,
-        start_time: state.startTime.toISOString(),
-        end_time: state.endTime.toISOString(),
-        status: currentStatus,
-        updated_at: new Date(now).toISOString()
-      }, { onConflict: 'game' });
-      
-      // If we just transitioned TO betting, it means a new period started,
-      // and the PREVIOUS period needs to be resolved.
-      // Note: we can also resolve right when betting closes. Resolving when betting closes is better
-      // so users see results immediately.
-      
-      if (currentStatus === 'resolving') {
-        // Trigger resolution for the CURRENT period since betting just closed
-        resolvePeriod(config, state.period);
+      if (currentStatus === 'betting') {
+        // Start of a new betting phase (new period). Upsert safely.
+        await supabase.from('global_game_state').upsert({
+          game,
+          period: state.period,
+          start_time: state.startTime.toISOString(),
+          end_time: state.endTime.toISOString(),
+          status: currentStatus,
+          updated_at: new Date(now).toISOString()
+        }, { onConflict: 'game' });
+      } else if (currentStatus === 'resolving') {
+        // Betting just closed. We must acquire the atomic lock before resolving!
+        const { data: lockResult, error: lockErr } = await supabase
+          .from('global_game_state')
+          .update({ status: 'resolving', updated_at: new Date(now).toISOString() })
+          .eq('game', game)
+          .eq('period', state.period)
+          .eq('status', 'betting') // Only succeed if it was currently in betting phase
+          .select()
+          .maybeSingle();
+          
+        if (lockResult && !lockErr) {
+          // 🏆 THIS INSTANCE ACQUIRED THE LOCK!
+          console.log(`[GameEngine] Lock acquired for ${game} Period ${state.period}. Resolving in 2 seconds...`);
+          // Delay by 2000ms to allow all in-flight bet transactions from clients to safely commit to DB
+          setTimeout(() => {
+            resolvePeriod(config, state.period);
+          }, 2000);
+        } else {
+          // Another instance already acquired the lock or the row wasn't ready.
+          console.log(`[GameEngine] Instance skipped resolving ${game} ${state.period} (lock acquired by another instance or invalid state).`);
+        }
       }
     }
   }
