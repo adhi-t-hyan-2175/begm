@@ -88,7 +88,11 @@ export const WalletProvider = ({ children }) => {
       }, 500);
     };
     window.addEventListener('global_period_changed', handlePeriodChange);
-    return () => window.removeEventListener('global_period_changed', handlePeriodChange);
+    window.addEventListener('global_result_received', handlePeriodChange);
+    return () => {
+      window.removeEventListener('global_period_changed', handlePeriodChange);
+      window.removeEventListener('global_result_received', handlePeriodChange);
+    };
   }, [hydrateWallet, hydrateOrders]);
 
   // ── Supabase wallet write helper ─────────────────────────────────────────────

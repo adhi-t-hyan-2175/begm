@@ -325,8 +325,14 @@ const tick = async () => {
     const state = calculateTimerState(config.totalDuration, config.bettingDuration, now);
     const game = config.game;
     
-    // Status can be 'betting' or 'resolving'
-    const currentStatus = state.isBettingOpen ? 'betting' : 'resolving';
+    // Status can be 'betting', 'waiting', or 'resolving' (last 5 seconds)
+    let currentStatus = 'waiting';
+    if (state.isBettingOpen) {
+      currentStatus = 'betting';
+    } else if (state.secondsIntoCurrentBlock >= config.totalDuration - 5) {
+      currentStatus = 'resolving';
+    }
+    
     const stateKey = `${state.period}-${currentStatus}`;
     
     if (lastStateMap[game] !== stateKey) {

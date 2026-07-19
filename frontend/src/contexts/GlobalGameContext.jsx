@@ -81,6 +81,7 @@ export const GlobalGameProvider = ({ children }) => {
             ...prev,
             [row.game]: [row, ...(prev[row.game] || [])]
           }));
+          window.dispatchEvent(new CustomEvent('global_result_received', { detail: { game: row.game, period: row.period } }));
         }
       })
       .subscribe();
