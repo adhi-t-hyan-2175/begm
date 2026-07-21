@@ -580,7 +580,7 @@ export const WalletProvider = ({ children }) => {
 
 
 
-  const placeBet = async (gameName, period, selection, amount) => {
+  const placeBet = async (gameName, period, round_id, selection, amount) => {
     if (balance < amount) return false;
     
     let orderId = Date.now().toString();
@@ -591,7 +591,7 @@ export const WalletProvider = ({ children }) => {
         const res = await fetch(`${API_URL}/api/game/place-bet`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ game_type: gameName, period, amount, selection })
+          body: JSON.stringify({ game_type: gameName, period, round_id, amount, selection })
         });
         const data = await res.json();
         
@@ -617,6 +617,7 @@ export const WalletProvider = ({ children }) => {
           id: orderId,
           game: gameName,
           period,
+          round_id,
           amount,
           selection,
           status: 'Pending',

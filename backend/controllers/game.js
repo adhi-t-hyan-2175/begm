@@ -3,10 +3,10 @@ const supabase = require('../config/supabase');
 // ─── POST /api/game/place-bet ─────────────────────────────────────────────────
 const placeBet = async (req, res) => {
   const userId = req.user.id;
-  const { game_type, period, amount, selection } = req.body;
+  const { game_type, period, round_id, amount, selection } = req.body;
 
-  if (!game_type || !period || !amount || !selection) {
-    return res.status(400).json({ success: false, error: 'Missing required fields: game_type, period, amount, selection' });
+  if (!game_type || !period || !round_id || !amount || !selection) {
+    return res.status(400).json({ success: false, error: 'Missing required fields: game_type, period, round_id, amount, selection' });
   }
 
   const betAmount = parseFloat(amount);
@@ -15,6 +15,22 @@ const placeBet = async (req, res) => {
   }
 
   try {
+    // 1. Ensure betting phase is strictly open globally
+    const { data: gameState, error: gsError } = await supabase
+      .from('global_game_state')
+      .select('status, period')
+      .eq('game', game_type)
+      .single();
+      
+    if (gsError || !gameState) {
+      return res.status(400).json({ success: false, error: 'Game state not found' });
+    }
+    
+    // Strict block if period mismatch or not in betting phase
+    if (gameState.period !== period || gameState.status !== 'betting') {
+      return res.status(400).json({ success: false, error: 'Betting phase is closed for this period.' });
+    }
+
     // Check wallet balance
     const { data: wallet, error: walletErr } = await supabase
       .from('wallets')
@@ -57,6 +73,7 @@ const placeBet = async (req, res) => {
         user_id: userId,
         game_type,
         period,
+        round_id,
         amount: betAmount,
         selection,
         status: 'pending',
@@ -85,6 +102,16 @@ const setGameResultOverride = async (req, res) => {
   if (!game) return res.status(400).json({ success: false, error: 'Missing game' });
 
   try {
+    // 1. Fetch current game state
+    const { data: state, error: stateErr } = await supabase.from('global_game_state').select('period, round_id').eq('game', game).single();
+    if (stateErr || !state) return res.status(400).json({ success: false, error: 'Game state not found' });
+    
+    // 2. Check if a result already exists for this round in game_results
+    const { data: existing } = await supabase.from('game_results').select('id').eq('game', game).eq('round_id', state.round_id).maybeSingle();
+    if (existing) {
+      return res.status(400).json({ success: false, error: 'Override disabled: The result for this round has already been revealed.' });
+    }
+
     if (!result) {
       // Clear override in global_game_state
       await supabase.from('global_game_state').update({ admin_override: null }).eq('game', game);

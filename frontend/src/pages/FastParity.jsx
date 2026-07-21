@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
-  generateHistory,
+  
   getOrderBadgeColor, deterministicRandom
 } from '../hooks/useGameTimer';
 import { useGlobalGame } from '../contexts/GlobalGameContext';
@@ -35,7 +35,7 @@ const getSelColor = (sel) => {
 
 const FastParity = () => {
   const navigate = useNavigate();
-  const { timeLeft, isBettingOpen, period, previousPeriod, formatTime, secondsIntoPeriod, status, realHistory } = useGlobalGame(GAME);
+  const { timeLeft, isBettingOpen, period, round_id, previousPeriod, formatTime, secondsIntoPeriod, status, realHistory } = useGlobalGame(GAME);
   const timeStr = formatTime();
 
   const [showHistoryModal, setShowHistoryModal] = useState(false);
@@ -135,8 +135,12 @@ const FastParity = () => {
   };
 
   const handleConfirmBet = (selection, amount) => {
+    if (!round_id) {
+      alert('Connecting to game server... please wait.');
+      return;
+    }
     setBetModalOpen(false);
-    const ok = placeBet(GAME, period, selection, amount);
+    const ok = placeBet(GAME, period, round_id, selection, amount);
     if (!ok) alert('Insufficient balance');
   };
 

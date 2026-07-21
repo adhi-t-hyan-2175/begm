@@ -1,15 +1,15 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { supabase } from '../services/supabase';
 import { useWallet } from './WalletContext';
-import { useGameTimer, generateHistory } from '../hooks/useGameTimer';
+import { useGameTimer } from '../hooks/useGameTimer';
 
 const GAME_CONFIGS = {
-  FastParity: { duration: 60, bettingDuration: 30 },
-  Parity: { duration: 120, bettingDuration: 60 },
-  Sapre: { duration: 180, bettingDuration: 120 },
-  Dice: { duration: 60, bettingDuration: 30 },
-  Wheelocity: { duration: 60, bettingDuration: 30 },
-  AndarBahar: { duration: 60, bettingDuration: 30 }
+  FastParity: { duration: 60, bettingDuration: 30, evaluationDuration: 30, revealBeforeEnd: 10 },
+  Parity: { duration: 120, bettingDuration: 60, evaluationDuration: 60, revealBeforeEnd: 10 },
+  Sapre: { duration: 180, bettingDuration: 120, evaluationDuration: 60, revealBeforeEnd: 10 },
+  Dice: { duration: 60, bettingDuration: 30, evaluationDuration: 30, revealBeforeEnd: 10 },
+  Wheelocity: { duration: 60, bettingDuration: 30, evaluationDuration: 30, revealBeforeEnd: 10 },
+  AndarBahar: { duration: 60, bettingDuration: 30, evaluationDuration: 30, revealBeforeEnd: 10 }
 };
 
 export const GlobalGameContext = createContext({});
@@ -38,7 +38,7 @@ export const GlobalGameProvider = ({ children }) => {
       const { data, error } = await supabase
         .from('game_results')
         .select('*')
-        .order('period', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(300);
       
       if (data && !error) {
@@ -116,8 +116,9 @@ export const GlobalGameProvider = ({ children }) => {
 
 // Hook to be used inside components
 export const useGlobalGame = (gameType) => {
-  const { gameHistories } = useContext(GlobalGameContext);
+  const { gameHistories, gameStates } = useContext(GlobalGameContext);
   const realHistory = gameHistories[gameType] || [];
+  const state = gameStates?.[gameType] || {};
   
   const config = GAME_CONFIGS[gameType] || { duration: 60, bettingDuration: 30 };
   const localTimer = useGameTimer(config.duration, config.bettingDuration);
@@ -137,11 +138,9 @@ export const useGlobalGame = (gameType) => {
 
   return {
     ...localTimer,
-    status: localTimer.isBettingOpen ? 'betting' : 'resolving',
+    status: state.status || (localTimer.isBettingOpen ? 'betting' : 'resolving'),
+    round_id: state.round_id,
     formatTime,
-    realHistory: realHistory.length > 0 ? realHistory : generateHistory(gameType, localTimer.period, 50).map(h => ({
-      period: h.period,
-      result: { label: h.label, number: h.number, color: h.color }
-    }))
+    realHistory: realHistory
   };
 };

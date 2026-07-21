@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
-  generateHistory,
+  
   getOrderBadgeColor
 } from '../hooks/useGameTimer';
 import { useGlobalGame } from '../contexts/GlobalGameContext';
@@ -34,7 +34,7 @@ const getSelColor = (sel) => {
 
 const Parity = () => {
   const navigate = useNavigate();
-  const { timeLeft, isBettingOpen, period, previousPeriod, formatTime, secondsIntoPeriod, status, realHistory } = useGlobalGame(GAME);
+  const { timeLeft, isBettingOpen, period, round_id, previousPeriod, formatTime, secondsIntoPeriod, status, realHistory } = useGlobalGame(GAME);
   const timeStr = formatTime();
 
   const [showHistoryModal, setShowHistoryModal] = useState(false);

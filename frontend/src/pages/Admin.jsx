@@ -9,6 +9,8 @@ const gameConfigs = [
     key: 'FastParity', 
     duration: 60, 
     bettingDuration: 30,
+    evaluationDuration: 30,
+    revealBeforeEnd: 10,
     options: ['Red', 'Green', 'Violet'] 
   },
   { 
@@ -16,6 +18,8 @@ const gameConfigs = [
     key: 'Parity', 
     duration: 120, 
     bettingDuration: 60,
+    evaluationDuration: 60,
+    revealBeforeEnd: 10,
     options: ['Red', 'Green', 'Violet'] 
   },
   { 
@@ -23,6 +27,8 @@ const gameConfigs = [
     key: 'Sapre', 
     duration: 180, 
     bettingDuration: 120,
+    evaluationDuration: 60,
+    revealBeforeEnd: 10,
     options: ['Red', 'Green', 'Violet'] 
   },
   { 
@@ -30,6 +36,8 @@ const gameConfigs = [
     key: 'Dice', 
     duration: 60, 
     bettingDuration: 30,
+    evaluationDuration: 30,
+    revealBeforeEnd: 10,
     options: ['Small', 'Tie', 'Large'] 
   },
   { 
@@ -37,6 +45,8 @@ const gameConfigs = [
     key: 'Wheelocity', 
     duration: 60, 
     bettingDuration: 30,
+    evaluationDuration: 30,
+    revealBeforeEnd: 10,
     options: ['2 Hits', '3 Hits', '5 Hits'] 
   },
   { 
@@ -44,6 +54,8 @@ const gameConfigs = [
     key: 'AndarBahar', 
     duration: 60, 
     bettingDuration: 30,
+    evaluationDuration: 30,
+    revealBeforeEnd: 10,
     options: ['Andar', 'Bahar'] 
   },
 ];

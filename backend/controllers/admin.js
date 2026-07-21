@@ -814,12 +814,12 @@ exports.getLiveBets = async (req, res) => {
   }
 };
 
-// New: POST /api/admin/settle-bets – manually trigger settlement for a game period
+// New: POST /api/admin/settle-bets – manually trigger settlement for a game round
 const { resolvePeriod, gameConfigs } = require('../services/gameEngine');
 exports.settleBets = async (req, res) => {
-  const { game, period } = req.body;
-  if (!game || !period) {
-    return res.status(400).json({ success: false, error: 'Missing game or period' });
+  const { game, period, round_id } = req.body;
+  if (!game || !period || !round_id) {
+    return res.status(400).json({ success: false, error: 'Missing game, period, or round_id' });
   }
   try {
     const config = gameConfigs.find(c => c.game === game);
@@ -831,14 +831,14 @@ exports.settleBets = async (req, res) => {
       .from('game_results')
       .select('id')
       .eq('game', game)
-      .eq('period', period)
+      .eq('round_id', round_id)
       .maybeSingle();
     if (fetchErr) throw fetchErr;
     if (existingResult) {
-      return res.json({ success: true, message: `Period ${period} for ${game} already settled` });
+      return res.json({ success: true, message: `Round ${round_id} for ${game} already settled` });
     }
-    await resolvePeriod(config, period);
-    res.json({ success: true, message: `Settlement attempted for ${game} period ${period}` });
+    await resolvePeriod(config, period, round_id);
+    res.json({ success: true, message: `Settlement attempted for ${game} round ${round_id}` });
   } catch (err) {
     console.error('[settleBets]', err.message);
     res.status(500).json({ success: false, error: err.message });
