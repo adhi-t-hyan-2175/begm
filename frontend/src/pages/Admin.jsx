@@ -301,6 +301,23 @@ const Admin = () => {
 
   const [adminSettings, setAdminSettings] = useState({ platform: {}, tasks: {}, vip_levels: [], games: [] });
   const [profitRecords, setProfitRecords] = useState([]);
+
+  useEffect(() => {
+    const allRecords = [];
+    Object.keys(gameHistories).forEach(gameKey => {
+      gameHistories[gameKey].forEach(hist => {
+        allRecords.push({
+          game: hist.game,
+          period: hist.period,
+          profit: hist.profit || 0,
+          created_at: hist.created_at,
+          result: hist.result
+        });
+      });
+    });
+    allRecords.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    setProfitRecords(allRecords);
+  }, [gameHistories]);
   
   // Stats state from dashboard API
   const [stats, setStats] = useState({

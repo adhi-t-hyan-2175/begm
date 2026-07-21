@@ -1,6 +1,6 @@
 const supabase = require('../config/supabase');
 
-const EPOCH = 1783617840000;
+const EPOCH = 1784628360000;
 
 const gameConfigs = [
   { game: 'FastParity', totalDuration: 60, bettingDuration: 30, evaluationDuration: 30, revealBeforeEnd: 10 },
@@ -24,7 +24,7 @@ const formatPeriodIndex = (periodIndex) => {
 };
 
 const calculateTimerState = (totalDuration, bettingDuration, now = Date.now()) => {
-  const elapsedSeconds = Math.floor((now - EPOCH) / 1000);
+  const elapsedSeconds = Math.max(0, Math.floor((now - EPOCH) / 1000));
   const elapsedPeriods = Math.floor(elapsedSeconds / totalDuration);
   const secondsIntoCurrentBlock = elapsedSeconds % totalDuration;
   
@@ -39,7 +39,7 @@ const calculateTimerState = (totalDuration, bettingDuration, now = Date.now()) =
   
   return { 
     period, 
-    round_id: elapsedPeriods,
+    round_id: elapsedPeriods + 1000000,
     previousPeriod, 
     isBettingOpen, 
     secondsIntoCurrentBlock,

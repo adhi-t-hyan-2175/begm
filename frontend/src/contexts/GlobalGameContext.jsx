@@ -44,6 +44,9 @@ export const GlobalGameProvider = ({ children }) => {
       if (data && !error) {
         const hists = { FastParity: [], Parity: [], Sapre: [], Dice: [], Wheelocity: [], AndarBahar: [] };
         data.forEach(row => {
+          if (typeof row.result === 'string') {
+            try { row.result = JSON.parse(row.result); } catch (e) {}
+          }
           if (hists[row.game]) hists[row.game].push(row);
         });
         setGameHistories(hists);
@@ -77,6 +80,9 @@ export const GlobalGameProvider = ({ children }) => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'game_results' }, payload => {
         const row = payload.new;
         if (row && row.game) {
+          if (typeof row.result === 'string') {
+            try { row.result = JSON.parse(row.result); } catch (e) {}
+          }
           setGameHistories(prev => {
             const currentList = prev[row.game] || [];
             // If it's an UPDATE, replace the existing row
@@ -99,7 +105,6 @@ export const GlobalGameProvider = ({ children }) => {
         }
       })
       .subscribe();
-
 
     return () => {
       supabase.removeChannel(subscription);
