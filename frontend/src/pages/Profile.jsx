@@ -18,7 +18,7 @@ const VIP_TIERS = [
 const Profile = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { balance } = useWallet();
+  const { balance, adminSettings } = useWallet();
   const [showVipTable, setShowVipTable] = useState(false);
 
   if (!user) {
@@ -173,7 +173,7 @@ const Profile = () => {
           <Copy size={18} color="#2563eb" onClick={copyReferral} style={{ cursor: 'pointer', marginLeft: 10, flexShrink: 0 }} />
         </div>
         <div style={{ marginTop: 8, fontSize: '0.82rem', color: '#64748b' }}>
-          📢 Friends who register with your code give you <strong style={{ color: '#2563eb' }}>₹25</strong> instantly!
+          📢 Friends who register with your code give you <strong style={{ color: '#2563eb' }}>₹{adminSettings?.referral_bonus || adminSettings?.referralBonus || 50}</strong> instantly!
         </div>
       </div>
 
