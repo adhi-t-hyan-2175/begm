@@ -668,10 +668,15 @@ exports.getSettings = async (req, res) => {
       supabase.from('game_settings').select('*').order('game_key', { ascending: true })
     ]);
 
+    const platformData = platformRes.data || {};
+    if (platformData.admin_upi_name && !platformData.upi_name) {
+      platformData.upi_name = platformData.admin_upi_name;
+    }
+
     res.json({
       success: true,
       settings: {
-        platform: platformRes.data || {},
+        platform: platformData,
         vip_levels: vipRes.data || [],
         tasks: taskRes.data || {},
         games: gameRes.data || []
@@ -688,7 +693,13 @@ exports.updateSettings = async (req, res) => {
     const { type, data } = req.body;
     
     if (type === 'platform') {
-      const { error } = await supabase.from('platform_settings').upsert({ id: 1, ...data });
+      const payload = { id: 1, ...data };
+      if (payload.upi_name) {
+        payload.admin_upi_name = payload.upi_name;
+        delete payload.upi_name;
+      }
+      payload.updated_at = new Date().toISOString();
+      const { error } = await supabase.from('platform_settings').upsert(payload);
       if (error) throw error;
     } else if (type === 'tasks') {
       const { error } = await supabase.from('task_settings').upsert({ id: 1, ...data });

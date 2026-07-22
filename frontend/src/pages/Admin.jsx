@@ -741,10 +741,11 @@ const Admin = () => {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sessionStorage.getItem('admin_token')}` },
         body: JSON.stringify({ type, data })
       });
-      if (res.ok) alert(`${type} settings saved successfully!`);
-      else alert(`Failed to save ${type} settings`);
+      const resData = await res.json();
+      if (res.ok && resData.success) alert(`${type} settings saved successfully!`);
+      else alert(resData.error || resData.message || `Failed to save ${type} settings`);
     } catch (err) {
-      alert('Network error while saving settings');
+      alert('Network error while saving settings: ' + err.message);
     }
   };
 
@@ -1471,7 +1472,7 @@ const Admin = () => {
               <li><span>Max Withdrawal (₹)</span><input type="number" value={adminSettings.platform?.max_withdrawal || 0} onChange={e => setAdminSettings({...adminSettings, platform: {...adminSettings.platform, max_withdrawal: Number(e.target.value)}})} style={{ background: '#0a0a1a', border: '1px solid #2a2a4e', color: '#fff', padding: '6px 12px', borderRadius: 4, width: '100px', textAlign: 'right' }}/></li>
               <li><span>Referral Bonus (₹)</span><input type="number" value={adminSettings.platform?.referral_bonus || 0} onChange={e => setAdminSettings({...adminSettings, platform: {...adminSettings.platform, referral_bonus: Number(e.target.value)}})} style={{ background: '#0a0a1a', border: '1px solid #2a2a4e', color: '#fff', padding: '6px 12px', borderRadius: 4, width: '100px', textAlign: 'right' }}/></li>
               <li><span>Registration Bonus (₹)</span><input type="number" value={adminSettings.platform?.registration_bonus || 0} onChange={e => setAdminSettings({...adminSettings, platform: {...adminSettings.platform, registration_bonus: Number(e.target.value)}})} style={{ background: '#0a0a1a', border: '1px solid #2a2a4e', color: '#fff', padding: '6px 12px', borderRadius: 4, width: '100px', textAlign: 'right' }}/></li>
-              <li><span>Receiver Name</span><input type="text" value={adminSettings.platform?.upi_name || ''} onChange={e => setAdminSettings({...adminSettings, platform: {...adminSettings.platform, upi_name: e.target.value}})} style={{ background: '#0a0a1a', border: '1px solid #2a2a4e', color: '#fff', padding: '6px 12px', borderRadius: 4, width: '200px', textAlign: 'right' }}/></li>
+              <li><span>Receiver Name</span><input type="text" value={adminSettings.platform?.upi_name || adminSettings.platform?.admin_upi_name || ''} onChange={e => setAdminSettings({...adminSettings, platform: {...adminSettings.platform, upi_name: e.target.value, admin_upi_name: e.target.value}})} style={{ background: '#0a0a1a', border: '1px solid #2a2a4e', color: '#fff', padding: '6px 12px', borderRadius: 4, width: '200px', textAlign: 'right' }}/></li>
               <li><span>Admin UPI ID</span><input type="text" value={adminSettings.platform?.upi_id || ''} onChange={e => setAdminSettings({...adminSettings, platform: {...adminSettings.platform, upi_id: e.target.value}})} style={{ background: '#0a0a1a', border: '1px solid #2a2a4e', color: '#fff', padding: '6px 12px', borderRadius: 4, width: '200px', textAlign: 'right' }}/></li>
               <li><span>Telegram Link</span><input type="text" value={adminSettings.platform?.telegram_link || ''} onChange={e => setAdminSettings({...adminSettings, platform: {...adminSettings.platform, telegram_link: e.target.value}})} style={{ background: '#0a0a1a', border: '1px solid #2a2a4e', color: '#fff', padding: '6px 12px', borderRadius: 4, width: '200px', textAlign: 'right' }}/></li>
               <li><span>Maintenance Mode</span>
