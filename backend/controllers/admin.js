@@ -320,7 +320,7 @@ exports.approveRecharge = async (req, res) => {
     // Referral Bonus Logic
     if (user && user.referred_by && updateFirstRecharge && targetAmount >= 500) {
       const { data: adminSettings } = await supabase.from('platform_settings').select('referral_bonus').eq('id', 1).single();
-      const refBonus = adminSettings?.referral_bonus || 25; 
+      const refBonus = adminSettings?.referral_bonus || 50; 
 
       // Find the inviter by player_id
       const { data: inviter } = await supabase.from('users').select('id, nickname').eq('player_id', user.referred_by).single();

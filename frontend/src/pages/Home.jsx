@@ -92,9 +92,9 @@ const Home = () => {
       {/* Referral Banner */}
       <div className="referral-banner">
         <div>
-          <div className="referral-caption">🎁 Invite Friends & Earn ₹25 Instantly</div>
+          <div className="referral-caption">🎁 Invite Friends & Earn ₹50 Instantly</div>
           <div className="referral-subtitle" style={{ lineHeight: '1.4', marginTop: '4px' }}>
-            Earn ₹25 in your Main Wallet for every successful referral.<br/>
+            Earn ₹50 in your Main Wallet for every successful referral.<br/>
             Your friend must complete registration and first recharge for the reward to be credited.
           </div>
         </div>

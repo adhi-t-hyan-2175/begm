@@ -375,9 +375,27 @@ html, body {
   margin: 16px;
   padding: 18px 18px 16px;
   border-radius: 20px;
-  background: var(--bg-surface, white);
-  box-shadow: 0 18px 40px rgba(0,0,0,0.2);
-  border: 1px solid var(--border-color, transparent);
+  background: #ffffff;
+  color: #111111;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e5e7eb;
+}
+
+.home-balance-card-new .balance-title {
+  color: #64748b;
+}
+
+.home-balance-card-new .balance-amount {
+  color: #0f172a;
+}
+
+.home-balance-card-new .home-user-id {
+  color: #64748b;
+}
+
+.home-balance-card-new .btn-withdraw {
+  background: #f1f5f9;
+  color: #475569;
 }
 
 @media (max-width: 640px) {

@@ -46,6 +46,7 @@ const Parity = () => {
   const timeStr = formatTime();
 
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [showRule, setShowRule] = useState(false);
   const [activeTab, setActiveTab] = useState('everyone');
   const [betModalOpen, setBetModalOpen] = useState(false);
   const [pendingSelection, setPendingSelection] = useState('Green');
@@ -159,9 +160,10 @@ const Parity = () => {
 
   return (
     <div className="alt-ui">
-      <div className="fp-header-alt">
-        <button className="fp-back-btn" onClick={() => navigate(-1)}>&lt; Parity</button>
-        <button className="fp-rule-btn">Rule</button>
+      <div className="rui-header">
+        <button className="rui-header-back" onClick={() => navigate(-1)}><ChevronLeft size={22} /></button>
+        <div className="rui-header-title">Parity</div>
+        <button className="rui-header-rules" onClick={() => setShowRule(true)}>Rules</button>
       </div>
 
       <div className="fp-timer-bar-alt">
@@ -287,6 +289,21 @@ const Parity = () => {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {showRule && (
+        <div className="rui-modal-backdrop" onClick={() => setShowRule(false)}>
+          <div className="rui-modal" onClick={e => e.stopPropagation()}>
+            <div className="rui-modal-header"><span className="rui-modal-title">Parity Rules</span><button className="rui-modal-close" onClick={() => setShowRule(false)}>×</button></div>
+            <p style={{ color: '#555', lineHeight: 1.6, fontSize: '0.9rem' }}>
+              3 minutes per round. 30 seconds to bet. Choose Green, Violet, or Red.<br /><br />
+              <strong>Green</strong>: 1:2 payout<br />
+              <strong>Red</strong>: 1:2 payout<br />
+              <strong>Violet</strong>: 1:4.5 payout
+            </p>
+            <button onClick={() => setShowRule(false)} style={{ width: '100%', marginTop: 16, background: '#007bff', color: '#fff', border: 'none', borderRadius: 10, padding: '13px', fontWeight: 700, cursor: 'pointer' }}>I GOT IT</button>
           </div>
         </div>
       )}

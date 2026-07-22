@@ -17,7 +17,7 @@ const Task = () => {
         'registerEmail': 10,
         'firstRecharge': 50,
         'fiftyBets': 50,
-        'inviteFriend': 25,
+        'inviteFriend': 50,
         'dailyLogin': 5
       };
       setRewardAmount(rewardMap[taskId]);
@@ -64,7 +64,7 @@ const Task = () => {
       id: 'inviteFriend',
       title: 'Invite Friend',
       desc: 'Invite at least one friend to join the platform',
-      reward: 25,
+      reward: 50,
       icon: <Users size={24} />,
       iconBg: '#6f42c1'
     },

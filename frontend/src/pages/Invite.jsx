@@ -65,7 +65,7 @@ const Invite = () => {
           <div>
             <div style={{ fontWeight: '800', color: '#1e293b', fontSize: '1.05rem', marginBottom: 4 }}>Registration Reward</div>
             <div style={{ color: '#64748b', fontSize: '0.9rem', lineHeight: '1.5' }}>
-              When your friend registers using your link, you instantly receive a <strong style={{ color: '#ec4899' }}>₹25 Reward</strong> in your Main Wallet.
+              When your friend registers using your link, you instantly receive a <strong style={{ color: '#ec4899' }}>₹50 Reward</strong> in your Main Wallet.
             </div>
           </div>
         </div>
