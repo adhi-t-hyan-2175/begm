@@ -184,9 +184,10 @@ const Sapre = () => {
         </div>
         <div className="rui-ball-row" style={{ padding: '0 4px 4px', width: '100%' }}>
           {displayHistory.slice().reverse().map((rec, i) => {
-            const label = rec.label;
             const color = getBallColor(rec);
-            return (<div key={i} className="rui-ball-item"><div className="rui-ball" style={{ background: color }}>{rec.number !== undefined ? rec.number : (label?.charAt(0) || '?')}</div><div className="rui-ball-period">{String(rec.period).slice(-3)}</div></div>);
+            const lbl = String(rec.label || '').toLowerCase();
+            const ballText = lbl === 'green' ? 'G' : lbl === 'red' ? 'R' : lbl === 'violet' ? 'V' : '?';
+            return (<div key={i} className="rui-ball-item"><div className="rui-ball" style={{ background: color }}>{ballText}</div><div className="rui-ball-period">{String(rec.period).slice(-3)}</div></div>);
           })}
         </div>
       </div>

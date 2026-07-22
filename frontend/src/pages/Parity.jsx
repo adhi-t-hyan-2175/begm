@@ -194,10 +194,11 @@ const Parity = () => {
         <div className="fp-record-grid-alt">
           {displayHistory.slice().reverse().map((rec, i) => {
             const color = getBallColor(rec);
-            const num = rec.number !== undefined ? rec.number : '?';
+            const lbl = String(rec.label || '').toLowerCase();
+            const ballText = lbl === 'green' ? 'G' : lbl === 'red' ? 'R' : lbl === 'violet' ? 'V' : '?';
             return (
               <div key={i} className="fp-record-item-alt">
-                <div className="fp-rec-dot" style={{ background: color }}>{num}</div>
+                <div className="fp-rec-dot" style={{ background: color }}>{ballText}</div>
                 <div className="fp-rec-period">{String(rec.period).slice(-3)}</div>
               </div>
             );

@@ -749,8 +749,9 @@ exports.setGameResult = async (req, res) => {
     if (stateRow.round_id !== round_id) {
       return res.status(400).json({ success: false, error: `Too late. Round ${round_id} has already ended.` });
     }
-    if (stateRow.status !== 'resolving') {
-      return res.status(400).json({ success: false, error: `Overrides are only permitted during the Evaluation phase (current status: ${stateRow.status}).` });
+    // Allow override during betting OR resolving phase (not after revealing)
+    if (stateRow.status === 'revealing') {
+      return res.status(400).json({ success: false, error: `Too late — result is already being revealed.` });
     }
 
     if (!result) {

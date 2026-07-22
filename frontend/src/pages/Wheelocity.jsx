@@ -222,9 +222,11 @@ const Wheelocity = () => {
           {displayHistory.slice().reverse().map((rec, i) => {
             const label = rec.label;
             const color = getWheelColor(rec);
+            const lbl = String(label || '').toLowerCase();
+            const ballText = lbl.includes('2') ? '2' : lbl.includes('3') ? '3' : lbl.includes('5') ? '5' : '?';
             return (
               <div key={i} className="rui-ball-item">
-                <div className="rui-ball" style={{ background: color }}>{rec.number !== undefined ? rec.number : (label?.charAt(0) || '?')}</div>
+                <div className="rui-ball" style={{ background: color }}>{ballText}</div>
                 <div className="rui-ball-period">{String(rec.period).slice(-3)}</div>
               </div>
             );
