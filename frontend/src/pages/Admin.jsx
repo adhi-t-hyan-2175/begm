@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState, useContext } from 'react';
-import { calculateTimerState, useGameTimer } from '../hooks/useGameTimer';
+import { calculateTimerState, useGameTimer, deterministicRandom } from '../hooks/useGameTimer';
 import { GlobalGameContext } from '../contexts/GlobalGameContext';
 const API_BASE = import.meta.env.VITE_API_URL || 'https://begm.onrender.com';
 
