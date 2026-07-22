@@ -183,7 +183,7 @@ const Parity = () => {
             return (
               <div key={i} className="rui-ball-item">
                 <div className="rui-ball" style={{ background: color }}>{rec.number !== undefined ? rec.number : (label?.charAt(0) || '?')}</div>
-                <div className="rui-ball-period">{rec.period.slice(-3)}</div>
+                <div className="rui-ball-period">{String(rec.period).slice(-3)}</div>
               </div>
             );
           })}
@@ -260,7 +260,7 @@ const Parity = () => {
               {history.map((rec, i) => (
                 <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
                   <div style={{ width: 30, height: 30, borderRadius: '50%', background: getBallColor(rec), display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '0.75rem' }}>{rec.label?.charAt(0) || '?'}</div>
-                  <div style={{ fontSize: '0.6rem', color: '#999' }}>{rec.period.slice(-3)}</div>
+                  <div style={{ fontSize: '0.6rem', color: '#999' }}>{String(rec.period).slice(-3)}</div>
                 </div>
               ))}
             </div>

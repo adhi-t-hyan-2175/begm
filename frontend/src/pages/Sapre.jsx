@@ -173,7 +173,7 @@ const Sapre = () => {
           {displayHistory.slice().reverse().map((rec, i) => {
             const label = rec.label;
             const color = getBallColor(rec);
-            return (<div key={i} className="rui-ball-item"><div className="rui-ball" style={{ background: color }}>{rec.number !== undefined ? rec.number : (label?.charAt(0) || '?')}</div><div className="rui-ball-period">{rec.period.slice(-3)}</div></div>);
+            return (<div key={i} className="rui-ball-item"><div className="rui-ball" style={{ background: color }}>{rec.number !== undefined ? rec.number : (label?.charAt(0) || '?')}</div><div className="rui-ball-period">{String(rec.period).slice(-3)}</div></div>);
           })}
         </div>
       </div>
@@ -227,7 +227,7 @@ const Sapre = () => {
           <div className="rui-modal" onClick={e => e.stopPropagation()}>
             <div className="rui-modal-header"><span className="rui-modal-title">Sapre History</span><button className="rui-modal-close" onClick={() => setShowHistoryModal(false)}>×</button></div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-              {history.map((rec, i) => (<div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}><div style={{ width: 30, height: 30, borderRadius: '50%', background: getBallColor(rec), display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '0.75rem' }}>{rec.label?.charAt(0) || '?'}</div><div style={{ fontSize: '0.6rem', color: '#999' }}>{rec.period.slice(-3)}</div></div>))}
+              {history.map((rec, i) => (<div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}><div style={{ width: 30, height: 30, borderRadius: '50%', background: getBallColor(rec), display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '0.75rem' }}>{rec.label?.charAt(0) || '?'}</div><div style={{ fontSize: '0.6rem', color: '#999' }}>{String(rec.period).slice(-3)}</div></div>))}
             </div>
           </div>
         </div>

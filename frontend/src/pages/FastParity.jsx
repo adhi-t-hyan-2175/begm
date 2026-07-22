@@ -97,31 +97,40 @@ const FastParity = () => {
   useEffect(() => {
     // We only trigger when entering 'revealing' phase exactly once per round_id
     if (status === 'revealing' && settledRef.current !== round_id) {
-      settledRef.current = round_id;
-
-      // The result must already be in memory from Supabase realtime (Evaluation phase)
+      // The result must already be in memory from Supabase realtime
       const resultObj = realHistory.find(r => r.round_id === round_id);
       if (!resultObj) {
-        console.warn(`[Phase 6] Missing DB result for ${round_id} at reveal time.`);
+        // Wait for realtime event to deliver the result
         return;
       }
+
+      settledRef.current = round_id;
 
       setIsRevealing(true);
 
       setTimeout(() => {
         setIsRevealing(false);
 
-        // Calculate and show ResultCard based strictly on the DB result and our bets
+        // Calculate ResultCard payout strictly based on DB winner
         const myCurrentBets = myOrders.filter(o => o.game === GAME && o.round_id === round_id);
         if (myCurrentBets.length > 0) {
           const totalBet = myCurrentBets.reduce((sum, b) => sum + parseFloat(b.amount), 0);
-          const totalWin = myCurrentBets.reduce((sum, b) => sum + parseFloat(b.winAmount || 0), 0);
+          
+          const resultLabel = resultObj.label || resultObj.result?.label || 'Unknown';
+          
+          let totalWin = 0;
+          myCurrentBets.forEach(b => {
+            const betSel = String(b.selection).toLowerCase().trim();
+            const resSel = String(resultLabel).toLowerCase().trim();
+            if (betSel === resSel) {
+              const multiplier = betSel === 'violet' ? 4.5 : 1.9;
+              totalWin += parseFloat(b.amount) * multiplier;
+            }
+          });
           
           const won = totalWin > 0;
           const uniqueSelections = [...new Set(myCurrentBets.map(b => b.selection))];
           const selectionStr = uniqueSelections.join(' + ');
-          
-          const resultLabel = resultObj.result?.label || 'Unknown';
           
           setResultCard({
             won,
@@ -215,7 +224,7 @@ const FastParity = () => {
             return (
               <div key={i} className="rui-ball-item">
                 <div className="rui-ball" style={{ background: color }}>{rec.number !== undefined ? rec.number : (rec.label?.charAt(0) || '?')}</div>
-                <div className="rui-ball-period">{rec.period.slice(-3)}</div>
+                <div className="rui-ball-period">{String(rec.period).slice(-3)}</div>
               </div>
             );
           })}
@@ -362,7 +371,7 @@ const FastParity = () => {
                     <div style={{ width: 30, height: 30, borderRadius: '50%', background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '0.75rem' }}>
                       {rec.label?.charAt(0) || '?'}
                     </div>
-                    <div style={{ fontSize: '0.6rem', color: '#999' }}>{rec.period.slice(-3)}</div>
+                    <div style={{ fontSize: '0.6rem', color: '#999' }}>{String(rec.period).slice(-3)}</div>
                   </div>
                 );
               })}

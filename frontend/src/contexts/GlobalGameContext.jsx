@@ -122,7 +122,11 @@ export const GlobalGameProvider = ({ children }) => {
 // Hook to be used inside components
 export const useGlobalGame = (gameType) => {
   const { gameHistories, gameStates } = useContext(GlobalGameContext);
-  const realHistory = gameHistories[gameType] || [];
+  const rawHistory = gameHistories[gameType] || [];
+  const realHistory = rawHistory.map(rec => ({
+    ...rec,
+    ...(rec.result || {})
+  }));
   const state = gameStates?.[gameType] || {};
   
   const config = GAME_CONFIGS[gameType] || { duration: 60, bettingDuration: 30 };
