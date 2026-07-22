@@ -200,7 +200,7 @@ export const useGameTimer = (totalDuration = 60, bettingDuration = 15) => {
   };
 };
 
-export const EPOCH = 1784724978453; // Reset: 2026-07-22 — periods restart at 001
+export const EPOCH = 1784738400000; // Reset: 2026-07-22 — periods restart at 001
 
 export const formatPeriodIndex = (periodIndex) => {
   const periodInCycle = (periodIndex % 999) + 1;

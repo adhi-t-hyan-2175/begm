@@ -1,7 +1,7 @@
 const supabase = require('../config/supabase');
 const logger = require('../utils/logger');
 
-const EPOCH = 1784724978453; // Reset: 2026-07-22 — periods restart at 001
+const EPOCH = 1784738400000; // Reset: 2026-07-22 — periods restart at 001
 
 const gameConfigs = [
   { game: 'FastParity', totalDuration: 60, bettingDuration: 30, evaluationDuration: 30, revealBeforeEnd: 10 },

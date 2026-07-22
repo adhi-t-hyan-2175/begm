@@ -179,20 +179,23 @@ const AdminGameCard = ({ game, timerState, liveBets, selectedWinner, actualWinne
                 return (
                   <div
                     key={option}
-                    className={timerState.status !== 'resolving' ? 'btn-disabled' : ''}
                     onClick={() => {
-                      if (timerState.status !== 'resolving') {
-                        alert("⚠️ Overrides are ONLY permitted during the Evaluation phase (countdown 00:00, before reveal).");
+                      if (timerState.status === 'revealing') {
+                        alert("⚠️ Overrides are locked during the reveal phase.");
                         return;
                       }
-                      onSetWinner(option, timerState.round_id);
+                      if (isWinner) {
+                        onClearWinner(timerState.round_id);
+                      } else {
+                        onSetWinner(option, timerState.round_id);
+                      }
                     }}
                     style={{
                       background: isWinner ? '#1a3a2e' : '#0a1a2e',
                       padding: 12,
                       borderRadius: 6,
                       textAlign: 'center',
-                      cursor: timerState.status !== 'resolving' ? 'not-allowed' : 'pointer',
+                      cursor: timerState.status === 'revealing' ? 'not-allowed' : 'pointer',
                       border: isWinner ? '3px solid #0f0' : '1px solid #2a4a3e',
                       opacity: 1,
                       transition: 'all 0.2s'
