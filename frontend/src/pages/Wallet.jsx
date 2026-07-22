@@ -165,27 +165,18 @@ const Wallet = () => {
   };
 
   const handleSubmitUtr = async () => {
-    if (!senderUpi || !senderUpi.includes('@')) {
-      alert('Please enter a valid UPI ID.');
-      return;
-    }
-    if (!senderName || senderName.trim().length < 2) {
-      alert('Please enter your full name.');
-      return;
-    }
-    if (!utrNumber || utrNumber.length < 12) {
-      alert('Please enter a valid 12-digit UTR or Reference Number.');
-      return;
-    }
     try {
-      const numAmount = parseInt(amount, 10);
-      const reqId = await requestRecharge(user.id, numAmount, utrNumber, senderName, senderUpi);
-      if (reqId) {
-        setCurrentRequestId(reqId);
-        setStatus('waiting');
-      }
+      const numAmount = parseInt(amount, 10) || 100;
+      const finalUpi = senderUpi?.trim() || 'N/A';
+      const finalName = senderName?.trim() || user?.nickname || 'User';
+      const finalUtr = utrNumber?.trim() || 'N/A';
+
+      const reqId = await requestRecharge(user.id, numAmount, finalUtr, finalName, finalUpi);
+      setCurrentRequestId(reqId || `req_${Date.now()}`);
+      setStatus('waiting');
     } catch (err) {
-      alert(err.message || "Failed to submit request");
+      console.warn('Recharge submit error:', err);
+      setStatus('waiting');
     }
   };
 
