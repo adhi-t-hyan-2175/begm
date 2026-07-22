@@ -23,11 +23,34 @@ const WHEEL_SEGMENTS = [
 ];
 
 const getWheelColor = (rec) => {
-  if (!rec) return '#3d4477';
-  if (rec.label === '2 Hits')   return '#4da6e8';
-  if (rec.label === '3 Hits') return '#e87fb0';
-  if (rec.label === '5 Hits')  return '#48b85c';
-  return rec.color?.[0] || '#3d4477';
+  if (!rec) return '#4da6e8';
+  const lbl = String(rec.label || rec.result?.label || '').toLowerCase();
+  if (lbl.includes('2')) return '#4da6e8';
+  if (lbl.includes('3')) return '#e87fb0';
+  if (lbl.includes('5')) return '#48b85c';
+  if (lbl.includes('black') || lbl.includes('blue')) return '#4da6e8';
+  if (lbl.includes('red')) return '#e87fb0';
+  return rec.color?.[0] || '#4da6e8';
+};
+const getWheelText = (rec) => {
+  if (!rec) return '2';
+  const lbl = String(rec.label || rec.result?.label || '').toLowerCase();
+  if (lbl.includes('2')) return '2';
+  if (lbl.includes('3')) return '3';
+  if (lbl.includes('5')) return '5';
+  if (lbl.includes('black') || lbl.includes('blue')) return '2';
+  if (lbl.includes('red')) return '3';
+  return '2';
+};
+const getWheelFullLabel = (rec) => {
+  if (!rec) return '2 Hits';
+  const lbl = String(rec.label || rec.result?.label || '').toLowerCase();
+  if (lbl.includes('2')) return '2 Hits';
+  if (lbl.includes('3')) return '3 Hits';
+  if (lbl.includes('5')) return '5 Hits';
+  if (lbl.includes('black') || lbl.includes('blue')) return '2 Hits';
+  if (lbl.includes('red')) return '3 Hits';
+  return String(rec.label || '2 Hits');
 };
 const getSelColor = (sel) => {
   const s = String(sel||'').toLowerCase();
@@ -85,12 +108,15 @@ const Wheelocity = () => {
   }, [isBettingOpen]);
 
 
-  const history = (realHistory || []).map(r => ({
-    period: r.period,
-    label: r.result?.label,
-    number: r.result?.number,
-    color: r.result?.color
-  }));
+  const history = (realHistory || []).map(r => {
+    const rawLabel = r.result?.label || r.label || '';
+    return {
+      period: r.period,
+      label: getWheelFullLabel({ label: rawLabel }),
+      number: r.result?.number,
+      color: r.result?.color
+    };
+  });
   const displayHistory = history.slice(0, 14);
 
   useEffect(() => {
@@ -220,14 +246,12 @@ const Wheelocity = () => {
         </div>
         <div className="rui-ball-row" style={{ padding: '0 4px 4px', width: '100%', justifyContent: 'flex-start' }}>
           {displayHistory.slice().reverse().map((rec, i) => {
-            const label = rec.label;
             const color = getWheelColor(rec);
-            const lbl = String(label || '').toLowerCase();
-            const ballText = lbl.includes('2') ? '2' : lbl.includes('3') ? '3' : lbl.includes('5') ? '5' : '?';
+            const ballText = getWheelText(rec);
             return (
               <div key={i} className="rui-ball-item">
                 <div className="rui-ball" style={{ background: color }}>{ballText}</div>
-                <div className="rui-ball-period">{String(rec.period).slice(-3)}</div>
+                <div className="rui-ball-period">{String(rec.period || '').slice(-3)}</div>
               </div>
             );
           })}
@@ -291,8 +315,8 @@ const Wheelocity = () => {
               {history.map((rec, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #f5f5f5', alignItems: 'center' }}>
                   <span style={{ fontWeight: 600, color: '#444' }}>{rec.period}</span>
-                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: getWheelColor(rec), display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '0.8rem' }}>
-                    {rec.label?.charAt(0) || '?'}
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: getWheelColor(rec), display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '0.8rem', lineHeight: 1 }}>
+                    {getWheelText(rec)}
                   </div>
                   <span style={{ color: '#aaa', fontSize: '0.8rem' }}>{rec.label}</span>
                 </div>

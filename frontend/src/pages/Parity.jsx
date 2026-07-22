@@ -18,11 +18,19 @@ const randAvatar = (seed) => AVATARS[Math.abs(String(seed).split('').reduce((a,c
 
 const getBallColor = (rec) => {
   if (!rec) return '#3d4477';
-  const lbl = String(rec.label || '').toLowerCase();
-  if (lbl === 'green') return '#48b85c';
-  if (lbl === 'red') return '#e0413c';
-  if (lbl === 'violet') return '#7c4ab8';
+  const lbl = String(rec.label || rec.result?.label || '').toLowerCase();
+  if (lbl.includes('green') || lbl === 'g') return '#48b85c';
+  if (lbl.includes('red') || lbl === 'r') return '#e0413c';
+  if (lbl.includes('violet') || lbl === 'v') return '#7c4ab8';
   return rec.color?.[0] || '#3d4477';
+};
+const getBallText = (rec) => {
+  if (!rec) return '?';
+  const lbl = String(rec.label || rec.result?.label || '').toLowerCase();
+  if (lbl.includes('green') || lbl === 'g') return 'G';
+  if (lbl.includes('red') || lbl === 'r') return 'R';
+  if (lbl.includes('violet') || lbl === 'v') return 'V';
+  return '?';
 };
 const getSelColor = (sel) => {
   const s = String(sel||'').toLowerCase();
@@ -186,20 +194,19 @@ const Parity = () => {
         </button>
       </div>
 
-      <div className="fp-tab-content-alt" style={{ marginTop: 8 }}>
-        <div className="fp-record-header-alt">
-          <span className="fp-rec-title">Parity Record(s)</span>
-          <button className="fp-more-btn-alt" onClick={() => setShowHistoryModal(true)}>more &gt;</button>
+      <div className="rui-record-section">
+        <div className="rui-record-header">
+          <span className="rui-record-title">Parity Record</span>
+          <button className="rui-record-more" onClick={() => setShowHistoryModal(true)}>more &gt;</button>
         </div>
-        <div className="fp-record-grid-alt">
+        <div className="rui-ball-row" style={{ padding: '0 4px 4px', width: '100%' }}>
           {displayHistory.slice().reverse().map((rec, i) => {
             const color = getBallColor(rec);
-            const lbl = String(rec.label || '').toLowerCase();
-            const ballText = lbl === 'green' ? 'G' : lbl === 'red' ? 'R' : lbl === 'violet' ? 'V' : '?';
+            const ballText = getBallText(rec);
             return (
-              <div key={i} className="fp-record-item-alt">
-                <div className="fp-rec-dot" style={{ background: color }}>{ballText}</div>
-                <div className="fp-rec-period">{String(rec.period).slice(-3)}</div>
+              <div key={i} className="rui-ball-item">
+                <div className="rui-ball" style={{ background: color }}>{ballText}</div>
+                <div className="rui-ball-period">{String(rec.period || '').slice(-3)}</div>
               </div>
             );
           })}
@@ -275,8 +282,8 @@ const Parity = () => {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
               {history.map((rec, i) => (
                 <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-                  <div style={{ width: 30, height: 30, borderRadius: '50%', background: getBallColor(rec), display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '0.75rem' }}>{rec.label?.charAt(0) || '?'}</div>
-                  <div style={{ fontSize: '0.6rem', color: '#999' }}>{String(rec.period).slice(-3)}</div>
+                  <div style={{ width: 30, height: 30, borderRadius: '50%', background: getBallColor(rec), display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '0.75rem' }}>{getBallText(rec)}</div>
+                  <div style={{ fontSize: '0.6rem', color: '#999' }}>{String(rec.period || '').slice(-3)}</div>
                 </div>
               ))}
             </div>
