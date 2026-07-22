@@ -150,53 +150,55 @@ const Parity = () => {
   const myGameOrders = myOrders.filter(o => o.game === GAME);
 
   return (
-    <div className="rui-screen">
-      <div className="rui-header">
-        <button className="rui-header-back" onClick={() => navigate(-1)}><ChevronLeft size={22} /></button>
-        <div className="rui-header-title">Parity</div>
-        <button className="rui-header-rules">Rules</button>
+    <div className="alt-ui">
+      <div className="fp-header-alt">
+        <button className="fp-back-btn" onClick={() => navigate(-1)}>&lt; Parity</button>
+        <button className="fp-rule-btn">Rule</button>
       </div>
 
-      <div className="rui-timer-bar">
-        <div><div className="rui-timer-label">Period</div><div className="rui-timer-val">{period}</div></div>
-        <div style={{ textAlign: 'right' }}>
-          <div className="rui-timer-label">Count Down</div>
-          <div className="rui-timer-blocks">
-            <div className="rui-timer-digit">{timeStr.m1}</div><div className="rui-timer-digit">{timeStr.m2}</div>
-            <div className="rui-timer-colon">:</div>
-            <div className="rui-timer-digit">{timeStr.s1}</div><div className="rui-timer-digit">{timeStr.s2}</div>
+      <div className="fp-timer-bar-alt">
+        <div><div className="fp-label-alt">Period</div><div className="fp-period-val-alt">{period}</div></div>
+        <div className="fp-countdown-group text-right">
+          <div className="fp-label-alt">Count Down</div>
+          <div className="fp-countdown-blocks">
+            <div className="fp-block">{timeStr.m1}</div><div className="fp-block">{timeStr.m2}</div>
+            <div className="fp-colon">:</div>
+            <div className="fp-block">{timeStr.s1}</div><div className="fp-block">{timeStr.s2}</div>
           </div>
         </div>
       </div>
 
-      <div className="rui-bet-row">
-        <button className="rui-bet-pill rui-pill-green" onClick={() => openBetCard('Green')} disabled={!isBettingOpen}>
-          <span className="rui-bet-pill-label">Green</span>
-          <span className="rui-bet-pill-ratio">1:1.9</span>
+      <div className="fp-bet-buttons-alt">
+        <button className="fp-bet-btn-alt green" onClick={() => openBetCard('Green')} disabled={!isBettingOpen}>
+          <span className="fp-btn-icon">🚀</span>
+          <span className="fp-btn-title">Join Green</span>
+          <span className="fp-btn-ratio">1:2</span>
         </button>
-        <button className="rui-bet-pill rui-pill-violet" onClick={() => openBetCard('Violet')} disabled={!isBettingOpen}>
-          <span className="rui-bet-pill-label">Violet</span>
-          <span className="rui-bet-pill-ratio">1:4.5</span>
+        <button className="fp-bet-btn-alt violet" onClick={() => openBetCard('Violet')} disabled={!isBettingOpen}>
+          <span className="fp-btn-icon">🚀</span>
+          <span className="fp-btn-title">Join Violet</span>
+          <span className="fp-btn-ratio">1:4.5</span>
         </button>
-        <button className="rui-bet-pill rui-pill-red" onClick={() => openBetCard('Red')} disabled={!isBettingOpen}>
-          <span className="rui-bet-pill-label">Red</span>
-          <span className="rui-bet-pill-ratio">1:1.9</span>
+        <button className="fp-bet-btn-alt red" onClick={() => openBetCard('Red')} disabled={!isBettingOpen}>
+          <span className="fp-btn-icon">🚀</span>
+          <span className="fp-btn-title">Join Red</span>
+          <span className="fp-btn-ratio">1:2</span>
         </button>
       </div>
 
-      <div className="rui-record-section">
-        <div className="rui-record-header">
-          <span className="rui-record-title">Parity Record</span>
-          <button className="rui-record-more" onClick={() => setShowHistoryModal(true)}>more &gt;</button>
+      <div className="fp-tab-content-alt" style={{ marginTop: 8 }}>
+        <div className="fp-record-header-alt">
+          <span className="fp-rec-title">Parity Record(s)</span>
+          <button className="fp-more-btn-alt" onClick={() => setShowHistoryModal(true)}>more &gt;</button>
         </div>
-        <div className="rui-ball-row" style={{ padding: '0 4px 4px', width: '100%' }}>
+        <div className="fp-record-grid-alt">
           {displayHistory.slice().reverse().map((rec, i) => {
-            const label = rec.label;
             const color = getBallColor(rec);
+            const num = rec.number !== undefined ? rec.number : '?';
             return (
-              <div key={i} className="rui-ball-item">
-                <div className="rui-ball" style={{ background: color }}>{rec.number !== undefined ? rec.number : (label?.charAt(0) || '?')}</div>
-                <div className="rui-ball-period">{String(rec.period).slice(-3)}</div>
+              <div key={i} className="fp-record-item-alt">
+                <div className="fp-rec-dot" style={{ background: color }}>{num}</div>
+                <div className="fp-rec-period">{String(rec.period).slice(-3)}</div>
               </div>
             );
           })}
@@ -215,9 +217,9 @@ const Parity = () => {
         </div>
       )}
 
-      <div className="rui-tabs" style={{ marginTop: 8 }}>
-        <button className={`rui-tab ${activeTab === 'everyone' ? 'active' : ''}`} onClick={() => setActiveTab('everyone')}>Everyone's Order</button>
-        <button className={`rui-tab ${activeTab === 'my' ? 'active' : ''}`} onClick={() => setActiveTab('my')}>My Order</button>
+      <div className="fp-tabs-alt">
+        <button className={activeTab === 'everyone' ? 'active' : ''} onClick={() => setActiveTab('everyone')}>Everyone's Order</button>
+        <button className={activeTab === 'my' ? 'active' : ''} onClick={() => setActiveTab('my')}>My Order</button>
       </div>
 
       <div className="rui-order-section">
