@@ -361,6 +361,37 @@ export const WalletProvider = ({ children }) => {
         console.warn('[Wallet] Failed to fetch admin settings:', err.message);
       }
     })();
+
+    // Subscribe to real-time changes on platform_settings table
+    const settingsSub = supabase
+      .channel('wallet-context:platform_settings')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'platform_settings' },
+        payload => {
+          if (payload.new) {
+            const p = payload.new;
+            setAdminSettings(prev => ({
+              ...prev,
+              ...p,
+              telegramLink: p.telegram_link,
+              adminUpiId: p.upi_id,
+              adminUpiName: p.upi_name,
+              maintenanceMode: p.maintenance_mode,
+              firstRechargeBonusPercent: p.first_recharge_bonus_percent,
+              minRecharge: p.min_recharge,
+              maxRecharge: p.max_recharge,
+              minWithdrawal: p.min_withdrawal,
+              maxWithdrawal: p.max_withdrawal
+            }));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(settingsSub);
+    };
   }, []);
 
   useEffect(() => {
