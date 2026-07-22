@@ -90,7 +90,7 @@ const Parity = () => {
 
 
   useEffect(() => {
-    const myCurrentBets = myOrders.filter(o => o.game === GAME && o.period === period);
+    const myCurrentBets = myOrders.filter(o => o.game === GAME && o.round_id === round_id);
     if (myCurrentBets.length > 0) {
       // Check if ALL bets for this period have been settled
       const isSettled = myCurrentBets.every(b => b.status !== 'Pending');
@@ -127,9 +127,13 @@ const Parity = () => {
   }, [period, myOrders]);
 
   const openBetCard = (sel) => { if (!isBettingOpen) return; setPendingSelection(sel); setBetModalOpen(true); };
-  const handleConfirmBet = (selection, amount) => { setBetModalOpen(false); if (!placeBet(GAME, period, selection, amount)) alert('Insufficient balance'); };
+  const handleConfirmBet = (selection, amount) => { 
+    if (!round_id) { alert('Connecting to server...'); return; }
+    setBetModalOpen(false); 
+    if (!placeBet(GAME, period, round_id, selection, amount)) alert('Insufficient balance'); 
+  };
 
-  const myActiveBets = myOrders.filter(o => o.game === GAME && o.period === period);
+  const myActiveBets = myOrders.filter(o => o.game === GAME && o.round_id === round_id);
   const myGameOrders = myOrders.filter(o => o.game === GAME);
 
   return (

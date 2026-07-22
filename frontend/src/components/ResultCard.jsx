@@ -26,14 +26,15 @@ const ResultCard = ({ isOpen, result, onClose }) => {
   const isWin = result.won;
   const accentColor = isWin ? '#16a34a' : '#e53935';
   const bgGradient = isWin
-    ? 'linear-gradient(160deg, #f0fdf4 0%, #dcfce7 100%)'
-    : 'linear-gradient(160deg, #fff5f5 0%, #ffe8e8 100%)';
+    ? 'var(--glass-bg)'
+    : 'var(--glass-bg)';
 
   return (
     <div
       style={{
         position: 'fixed', inset: 0,
-        background: 'rgba(0,0,0,0.65)',
+        background: 'rgba(0,0,0,0.85)',
+        backdropFilter: 'blur(10px)',
         zIndex: 9000,
         display: 'flex',
         alignItems: 'center',
@@ -45,14 +46,12 @@ const ResultCard = ({ isOpen, result, onClose }) => {
       onClick={onClose}
     >
       <div
+        className={isWin ? 'result-glow-win glass-modal' : 'result-glow-loss glass-modal'}
         onClick={e => e.stopPropagation()}
         style={{
-          background: bgGradient,
-          borderRadius: 20,
           width: '100%',
           maxWidth: 340,
           overflow: 'hidden',
-          boxShadow: `0 20px 60px rgba(0,0,0,0.3), 0 0 0 3px ${accentColor}44`,
           transform: visible ? 'translateY(0) scale(1)' : 'translateY(40px) scale(0.92)',
           transition: 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
         }}
@@ -60,8 +59,8 @@ const ResultCard = ({ isOpen, result, onClose }) => {
         {/* Header banner */}
         <div style={{
           background: isWin
-            ? 'linear-gradient(135deg, #f59e0b, #ef6c00)'
-            : 'linear-gradient(135deg, #ef5350, #b71c1c)',
+            ? 'linear-gradient(135deg, rgba(0, 210, 106, 0.2), rgba(0, 210, 106, 0.05))'
+            : 'linear-gradient(135deg, rgba(183, 110, 121, 0.2), rgba(183, 110, 121, 0.05))',
           padding: '20px 24px 16px',
           textAlign: 'center',
           position: 'relative',
@@ -115,7 +114,7 @@ const ResultCard = ({ isOpen, result, onClose }) => {
             </span>
           } />
           <DetailRow label="Bet Amount" value={`₹${result.betAmount}`} />
-          <div style={{ borderTop: '1px dashed #ddd', margin: '12px 0' }} />
+          <div style={{ borderTop: '1px dashed var(--border)', margin: '12px 0' }} />
           <DetailRow
             label={isWin ? 'Winnings' : 'Lost'}
             value={
@@ -137,9 +136,9 @@ const ResultCard = ({ isOpen, result, onClose }) => {
             style={{
               width: '100%',
               background: isWin
-                ? 'linear-gradient(135deg, #f59e0b, #ef6c00)'
-                : 'linear-gradient(135deg, #ef5350, #b71c1c)',
-              color: '#fff',
+                ? 'var(--game-green)'
+                : 'var(--border)',
+              color: isWin ? '#000' : '#fff',
               border: 'none',
               borderRadius: 12,
               padding: '14px 0',
@@ -178,8 +177,8 @@ const DetailRow = ({ label, value }) => (
     padding: '8px 0',
     borderBottom: '1px solid rgba(0,0,0,0.06)',
   }}>
-    <span style={{ color: '#888', fontSize: '0.88rem' }}>{label}</span>
-    <span style={{ fontWeight: 600, color: '#333', fontSize: '0.9rem' }}>{value}</span>
+    <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>{label}</span>
+    <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{value}</span>
   </div>
 );
 

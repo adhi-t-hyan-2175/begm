@@ -55,6 +55,7 @@ export const WalletProvider = ({ children }) => {
             id: b.id,
             game: b.game_type,
             period: b.period,
+            round_id: b.round_id,
             amount: b.amount,
             selection: b.selection,
             status: b.status === 'won' ? 'Won' : b.status === 'lost' ? 'Lost' : 'Pending',
@@ -409,16 +410,17 @@ export const WalletProvider = ({ children }) => {
   const addBalance = (amount) => setBalance(prev => prev + amount);
   const addBonusBalance = (amount) => setBonusBalance(prev => prev + amount);
 
-  const recordGameProfit = (gameName, period, winningOption, profitAmount) => {
+  const recordGameProfit = (gameName, period, round_id, winningOption, profitAmount) => {
     setProfitRecords(prev => {
-      // Prevent duplicate period for the same game
-      if (prev.some(r => r.game === gameName && r.period === period)) {
+      // Prevent duplicate round_id for the same game
+      if (prev.some(r => r.game === gameName && r.round_id === round_id)) {
         return prev;
       }
       const newRecord = {
         id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
         game: gameName,
         period,
+        round_id,
         winningOption,
         profit: profitAmount,
         timestamp: Date.now(),

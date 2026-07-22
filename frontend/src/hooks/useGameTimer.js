@@ -200,7 +200,7 @@ export const useGameTimer = (totalDuration = 60, bettingDuration = 15) => {
   };
 };
 
-export const EPOCH = 1783617840000; // Reset to right now to force 001
+export const EPOCH = 1784628360000; // Synchronized with backend gameEngine.js
 
 export const formatPeriodIndex = (periodIndex) => {
   const periodInCycle = (periodIndex % 999) + 1;

@@ -114,12 +114,12 @@ const Wheelocity = () => {
   }, [isBettingOpen, period, realHistory]);
 
   useEffect(() => {
-    const myCurrentBets = myOrders.filter(o => o.game === GAME && o.period === period);
+    const myCurrentBets = myOrders.filter(o => o.game === GAME && o.round_id === round_id);
     if (myCurrentBets.length > 0) {
       // Check if ALL bets for this period have been settled
       const isSettled = myCurrentBets.every(b => b.status !== 'Pending');
-      if (isSettled && settledRef.current !== period) {
-        settledRef.current = period;
+      if (isSettled && settledRef.current !== round_id) {
+        settledRef.current = round_id;
         
         // Aggregate total bets and total winnings
         const totalBet = myCurrentBets.reduce((sum, b) => sum + parseFloat(b.amount), 0);
@@ -152,9 +152,13 @@ const Wheelocity = () => {
   }, [period, myOrders]);
 
   const openBetCard = (sel) => { if (!isBettingOpen) return; setPendingSelection(sel); setBetModalOpen(true); };
-  const handleConfirmBet = (selection, amount) => { setBetModalOpen(false); if (!placeBet(GAME, period, selection, amount)) alert('Insufficient balance'); };
+  const handleConfirmBet = (selection, amount) => { 
+    if (!round_id) { alert('Connecting to server...'); return; }
+    setBetModalOpen(false); 
+    if (!placeBet(GAME, period, round_id, selection, amount)) alert('Insufficient balance'); 
+  };
 
-  const myActiveBets = myOrders.filter(o => o.game === GAME && o.period === period);
+  const myActiveBets = myOrders.filter(o => o.game === GAME && o.round_id === round_id);
   const myGameOrders = myOrders.filter(o => o.game === GAME);
 
   return (

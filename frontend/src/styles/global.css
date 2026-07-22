@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import url('./polish.css');
 
 * {
   margin: 0;
@@ -7,30 +8,35 @@
 }
 
 :root {
-  --bg-main: #f0f2f5;
-  --bg-surface: #ffffff;
-  --text-primary: #1a1a1a;
-  --text-secondary: #666666;
-  --text-muted: #999999;
-  --border: #e0e0e0;
+  --bg-main: #0a0a0a;
+  --bg-surface: #111111;
+  --bg-elevated: #1a1a1a;
+  --text-primary: #f5f5f5;
+  --text-secondary: #a0a0a0;
+  --text-muted: #555555;
+  --border: #2a2a2a;
   
-  --primary-blue: #1877f2;
-  --btn-blue: #007bff;
-  --btn-gray: #e4e6eb;
+  --primary-blue: #00BFFF; /* Electric Blue */
+  --btn-blue: #00BFFF;
+  --btn-gray: #222222;
   
   --game-teal: #20c997;
   --game-purple: #6f42c1;
-  --game-red: #f17373;
-  --game-green: #66bb6a;
-  --game-blue: #4dabf7;
-  --game-orange: #fbad3c;
+  --game-red: #B76E79; /* Rose Gold / Muted Red */
+  --game-green: #00D26A; /* Bright Green */
+  --game-blue: #00BFFF;
+  --game-orange: #C8A96E; /* Luxury Gold */
   
-  --join-green: #28a745;
+  --join-green: #00D26A;
   --join-violet: #6f42c1;
-  --join-red: #dc3545;
+  --join-red: #B76E79;
   
-  --nav-active: #007bff;
-  --nav-inactive: #999999;
+  --nav-active: #C8A96E; /* Gold for nav active */
+  --nav-inactive: #555555;
+  
+  --glass-bg: rgba(17, 17, 17, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
 }
 
 html, body {
@@ -72,7 +78,7 @@ html, body {
 
 @media (min-width: 900px) {
   html, body {
-    background: linear-gradient(180deg, #edf2ff 0%, #eff6ff 100%);
+    background: linear-gradient(180deg, #0a0a0a 0%, #111111 100%);
   }
 }
 

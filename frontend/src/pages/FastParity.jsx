@@ -44,6 +44,7 @@ const FastParity = () => {
   const [pendingSelection, setPendingSelection] = useState('Green');
   const [resultCard, setResultCard] = useState(null);
   const [liveOrders, setLiveOrders] = useState([]);
+  const [isRevealing, setIsRevealing] = useState(false);
   const settledRef = useRef('');
 
   const {
@@ -90,28 +91,38 @@ const FastParity = () => {
   }, [isBettingOpen]);
 
 
-  // ─── Win/Loss settlement notification: fires once per period transition ───────────────
+  // ─── Phase 6: Sync Frontend Reveal from Database ───────────────
+  const REVEAL_ANIMATION_MS = 4000;
+
   useEffect(() => {
-    const myCurrentBets = myOrders.filter(o => o.game === GAME && o.period === period);
-    if (myCurrentBets.length > 0) {
-      // Check if ALL bets for this period have been settled
-      const isSettled = myCurrentBets.every(b => b.status !== 'Pending');
-      if (isSettled && settledRef.current !== period) {
-        settledRef.current = period;
-        
-        // Aggregate total bets and total winnings
-        const totalBet = myCurrentBets.reduce((sum, b) => sum + parseFloat(b.amount), 0);
-        const totalWin = myCurrentBets.reduce((sum, b) => sum + parseFloat(b.winAmount || 0), 0);
-        
-        const won = myCurrentBets.some(b => b.status === 'Won');
-        // If multiple selections, list them joined by ' + '
-        const uniqueSelections = [...new Set(myCurrentBets.map(b => b.selection))];
-        const selectionStr = uniqueSelections.join(' + ');
-        
-        // We use the first bet's result (which is identical across all of them)
-        const resultLabel = myCurrentBets[0].result;
-        
-        setTimeout(() => {
+    // We only trigger when entering 'revealing' phase exactly once per round_id
+    if (status === 'revealing' && settledRef.current !== round_id) {
+      settledRef.current = round_id;
+
+      // The result must already be in memory from Supabase realtime (Evaluation phase)
+      const resultObj = realHistory.find(r => r.round_id === round_id);
+      if (!resultObj) {
+        console.warn(`[Phase 6] Missing DB result for ${round_id} at reveal time.`);
+        return;
+      }
+
+      setIsRevealing(true);
+
+      setTimeout(() => {
+        setIsRevealing(false);
+
+        // Calculate and show ResultCard based strictly on the DB result and our bets
+        const myCurrentBets = myOrders.filter(o => o.game === GAME && o.round_id === round_id);
+        if (myCurrentBets.length > 0) {
+          const totalBet = myCurrentBets.reduce((sum, b) => sum + parseFloat(b.amount), 0);
+          const totalWin = myCurrentBets.reduce((sum, b) => sum + parseFloat(b.winAmount || 0), 0);
+          
+          const won = totalWin > 0;
+          const uniqueSelections = [...new Set(myCurrentBets.map(b => b.selection))];
+          const selectionStr = uniqueSelections.join(' + ');
+          
+          const resultLabel = resultObj.result?.label || 'Unknown';
+          
           setResultCard({
             won,
             period: period,
@@ -123,10 +134,10 @@ const FastParity = () => {
             betAmount: totalBet,
             winAmount: totalWin > 0 ? totalWin : 0,
           });
-        }, 800);
-      }
+        }
+      }, REVEAL_ANIMATION_MS);
     }
-  }, [period, myOrders]);
+  }, [status, round_id, realHistory, myOrders, period]);
 
   const openBetCard = (sel) => {
     if (!isBettingOpen) return;
@@ -144,7 +155,7 @@ const FastParity = () => {
     if (!ok) alert('Insufficient balance');
   };
 
-  const myActiveBets = myOrders.filter(o => o.game === GAME && o.period === period);
+  const myActiveBets = myOrders.filter(o => o.game === GAME && o.round_id === round_id);
   const myGameOrders = myOrders.filter(o => o.game === GAME);
 
   return (
@@ -166,7 +177,7 @@ const FastParity = () => {
         </div>
         <div style={{ textAlign: 'right' }}>
           <div className="rui-timer-label">Count Down</div>
-          <div className="rui-timer-blocks">
+          <div className={`rui-timer-blocks ${timeLeft <= 5 ? 'timer-pulse-red countdown-timer' : 'countdown-timer'}`}>
             <div className="rui-timer-digit">{timeStr.m1}</div>
             <div className="rui-timer-digit">{timeStr.m2}</div>
             <div className="rui-timer-colon">:</div>
@@ -178,15 +189,15 @@ const FastParity = () => {
 
       {/* Bet Buttons */}
       <div className="rui-bet-row">
-        <button className="rui-bet-pill rui-pill-green" onClick={() => openBetCard('Green')} disabled={!isBettingOpen}>
+        <button className={`rui-bet-pill rui-pill-green ${!isBettingOpen ? 'btn-disabled' : ''}`} onClick={() => openBetCard('Green')} disabled={!isBettingOpen}>
           <span className="rui-bet-pill-label">Green</span>
           <span className="rui-bet-pill-ratio">1:1.9</span>
         </button>
-        <button className="rui-bet-pill rui-pill-violet" onClick={() => openBetCard('Violet')} disabled={!isBettingOpen}>
+        <button className={`rui-bet-pill rui-pill-violet ${!isBettingOpen ? 'btn-disabled' : ''}`} onClick={() => openBetCard('Violet')} disabled={!isBettingOpen}>
           <span className="rui-bet-pill-label">Violet</span>
           <span className="rui-bet-pill-ratio">1:4.5</span>
         </button>
-        <button className="rui-bet-pill rui-pill-red" onClick={() => openBetCard('Red')} disabled={!isBettingOpen}>
+        <button className={`rui-bet-pill rui-pill-red ${!isBettingOpen ? 'btn-disabled' : ''}`} onClick={() => openBetCard('Red')} disabled={!isBettingOpen}>
           <span className="rui-bet-pill-label">Red</span>
           <span className="rui-bet-pill-ratio">1:1.9</span>
         </button>
@@ -360,10 +371,33 @@ const FastParity = () => {
         </div>
       )}
 
+      {/* Reveal Animation Overlay */}
+      {isRevealing && (
+        <div className="rui-modal-backdrop" style={{ zIndex: 9999 }}>
+          <div className="rui-modal glass-modal" style={{ background: 'var(--glass-bg)', padding: '40px', boxShadow: 'var(--glass-shadow)' }}>
+            <div className="spin-reveal-glow" style={{
+              width: 120, height: 120, borderRadius: '50%', background: 'linear-gradient(135deg, var(--game-purple), var(--primary-blue))',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#fff', fontSize: '4rem', fontWeight: 900,
+              margin: '0 auto',
+              border: '4px solid rgba(255,255,255,0.3)',
+            }}>
+              ?
+            </div>
+            <div style={{ marginTop: 24, color: '#fff', fontSize: '1.4rem', fontWeight: 800, textAlign: 'center', letterSpacing: '2px' }}>
+              REVEALING...
+            </div>
+          </div>
+        </div>
+      )}
+
       <style>{`
         @keyframes slideInRow {
           from { opacity: 0; transform: translateY(-8px); }
           to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes spinReveal { 
+          100% { transform: rotate(360deg); } 
         }
       `}</style>
     </div>

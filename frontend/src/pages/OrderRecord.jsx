@@ -3,10 +3,10 @@ import { ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useWallet } from '../contexts/WalletContext';
 
-const getStatusColor = (status) => {
-  if (status === 'Won') return '#16a34a'; // Green
-  if (status === 'Lost') return '#dc2626'; // Red
-  return '#f59e0b'; // Pending Yellow
+const getStatusPill = (status) => {
+  if (status === 'Won') return <div className="status-pill pill-won">WIN</div>;
+  if (status === 'Lost') return <div className="status-pill pill-lost">LOSE</div>;
+  return <div className="status-pill pill-pending">PENDING</div>;
 };
 
 const getSelectionBadge = (sel, game) => {
@@ -45,11 +45,11 @@ const OrderRecord = () => {
   const { myOrders } = useWallet();
 
   return (
-    <div style={{ background: 'linear-gradient(180deg, #f8fbff 0%, #eef4ff 100%)', minHeight: '100vh', display: 'flex', flexDirection: 'column', paddingBottom: 70 }}>
+    <div style={{ background: 'var(--bg-main)', minHeight: '100vh', display: 'flex', flexDirection: 'column', paddingBottom: 70 }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', padding: '16px 18px', background: 'rgba(255,255,255,0.95)', borderBottom: '1px solid #eef2f8', position: 'sticky', top: 0, zIndex: 10 }}>
-        <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', color: '#24324a', cursor: 'pointer', padding: 0 }}><ChevronLeft size={28} /></button>
-        <h2 style={{ flex: 1, textAlign: 'center', fontSize: '1.15rem', margin: 0, fontWeight: '800', color: '#24324a' }}>Order Record</h2>
+      <div style={{ display: 'flex', alignItems: 'center', padding: '16px 18px', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, zIndex: 10 }}>
+        <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', padding: 0 }}><ChevronLeft size={28} /></button>
+        <h2 style={{ flex: 1, textAlign: 'center', fontSize: '1.15rem', margin: 0, fontWeight: '800', color: 'var(--text-primary)' }}>Order Record</h2>
         <div style={{ width: 28 }}></div>
       </div>
 
@@ -63,47 +63,43 @@ const OrderRecord = () => {
           </div>
         ) : (
           myOrders.map(ord => (
-            <div key={ord.id} style={{
-              background: '#fff',
-              borderRadius: '16px',
+            <div key={ord.id} className="glass-panel" style={{
               padding: '16px',
               marginBottom: '12px',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
-              border: '1px solid #f1f5f9'
             }}>
               {/* Top Row: Game & Status */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, paddingBottom: 10, borderBottom: '1px dashed #e2e8f0' }}>
-                <div style={{ fontWeight: '700', color: '#1e293b', fontSize: '1.05rem' }}>
-                  {ord.game} <span style={{ color: '#94a3b8', fontSize: '0.85rem', fontWeight: '500', marginLeft: 8 }}>{ord.period}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, paddingBottom: 10, borderBottom: '1px dashed var(--border)' }}>
+                <div style={{ fontWeight: '700', color: 'var(--text-primary)', fontSize: '1.05rem' }}>
+                  {ord.game} <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: '500', marginLeft: 8 }}>{ord.period}</span>
                 </div>
-                <div style={{ fontWeight: '800', color: getStatusColor(ord.status), fontSize: '0.95rem' }}>
-                  {ord.status === 'Won' ? 'WIN' : ord.status === 'Lost' ? 'LOSE' : 'PENDING'}
+                <div>
+                  {getStatusPill(ord.status)}
                 </div>
               </div>
 
               {/* Detail Rows */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: 12 }}>
                 <div>
-                  <div style={{ color: '#64748b', fontSize: '0.8rem', marginBottom: 4 }}>Selection</div>
+                  <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginBottom: 4 }}>Selection</div>
                   {getSelectionBadge(ord.selection, ord.game)}
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ color: '#64748b', fontSize: '0.8rem', marginBottom: 4 }}>Bet Amount</div>
-                  <div style={{ fontWeight: '700', color: '#334155' }}>₹{ord.amount}</div>
+                  <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginBottom: 4 }}>Bet Amount</div>
+                  <div style={{ fontWeight: '700', color: 'var(--text-primary)' }}>₹{ord.amount}</div>
                 </div>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                <div style={{ color: '#94a3b8', fontSize: '0.75rem' }}>
+                <div style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
                   {new Date(ord.timestamp).toLocaleString()}
                 </div>
                 {ord.status !== 'Pending' && (
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ color: '#64748b', fontSize: '0.8rem', marginBottom: 2 }}>{ord.status === 'Won' ? 'Winnings' : 'Loss'}</div>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginBottom: 2 }}>{ord.status === 'Won' ? 'Winnings' : 'Loss'}</div>
                     <div style={{ 
                       fontWeight: '800', 
                       fontSize: '1.1rem',
-                      color: ord.status === 'Won' ? '#16a34a' : '#dc2626'
+                      color: ord.status === 'Won' ? 'var(--game-green)' : 'var(--text-muted)'
                     }}>
                       {ord.status === 'Won' ? `+ ₹${(ord.winAmount || ord.amount * 1.9).toFixed(2)}` : `- ₹${ord.amount}`}
                     </div>

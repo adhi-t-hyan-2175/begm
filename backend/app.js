@@ -5,7 +5,9 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const routes = require('./routes');
+const healthRoutes = require('./routes/health');
 const maintenanceMiddleware = require('./middleware/maintenance');
+const logger = require('./utils/logger');
 
 // ─── Security headers ─────────────────────────────────────────────────────────
 app.use(helmet());
@@ -58,6 +60,7 @@ app.use('/api/user', routes.user);
 app.use('/api/wallet', routes.wallet);
 app.use('/api/admin', routes.admin);
 app.use('/api/community', routes.community);
+app.use('/api', healthRoutes);
 
 // ─── 404 handler ─────────────────────────────────────────────────────────────
 app.use((req, res) => {
@@ -67,7 +70,7 @@ app.use((req, res) => {
 // ─── Global error handler ─────────────────────────────────────────────────────
 const supabase = require('./config/supabase');
 app.use(async (err, req, res, next) => {
-  console.error('[Unhandled Error]', err.stack || err.message);
+  logger.error({ action: 'Unhandled API Error', error: err.message, stack: err.stack, path: req.path });
   try {
     await supabase.from('system_logs').insert({
       type: 'API_ERROR',
@@ -75,7 +78,7 @@ app.use(async (err, req, res, next) => {
       stack_trace: err.stack || null
     });
   } catch (logErr) {
-    console.error('Failed to log error to database:', logErr.message);
+    logger.error({ action: 'Database Log Error', error: logErr.message });
   }
   res.status(500).json({ success: false, error: 'Internal server error' });
 });

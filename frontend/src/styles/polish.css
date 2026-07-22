@@ -1,0 +1,147 @@
+/* ==========================================================================
+   UI POLISH - LUXURY DARK MODE, GLASSMORPHISM, MICRO-ANIMATIONS
+   ========================================================================== */
+
+/* Universal smooth transitions and focus states for accessibility */
+button, a, input, select, .rui-card, .game-box {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--primary-blue);
+  outline-offset: 2px;
+}
+
+/* Ensure minimum touch targets */
+button, .nav-item {
+  min-height: 44px;
+}
+
+/* Glassmorphism Utilities */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  border-radius: 12px;
+}
+
+.glass-modal {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  border-radius: 16px;
+}
+
+/* Disabled Betting Buttons */
+.btn-disabled {
+  opacity: 0.5 !important;
+  filter: grayscale(100%);
+  cursor: not-allowed !important;
+  pointer-events: none; /* Prevents clicks strictly at UI level */
+}
+
+/* Tabular numbers for countdown */
+.countdown-timer, .timer-text {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 1px;
+}
+
+/* Pulsing Red for timeLeft <= 5 */
+.timer-pulse-red {
+  color: var(--game-red) !important;
+  animation: pulse-red 1s infinite;
+}
+
+@keyframes pulse-red {
+  0% { text-shadow: 0 0 5px rgba(183, 110, 121, 0.2); }
+  50% { text-shadow: 0 0 20px rgba(183, 110, 121, 0.8); transform: scale(1.05); }
+  100% { text-shadow: 0 0 5px rgba(183, 110, 121, 0.2); }
+}
+
+/* Result Card Enhancements */
+.result-card-container {
+  animation: slide-up-bounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
+}
+
+.result-glow-win {
+  border: 2px solid var(--game-green);
+  box-shadow: 0 0 30px rgba(0, 210, 106, 0.3);
+}
+
+.result-glow-loss {
+  border: 2px solid var(--border);
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+}
+
+@keyframes slide-up-bounce {
+  0% { transform: translateY(100px); opacity: 0; }
+  60% { transform: translateY(-10px); opacity: 1; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+/* Reveal Animation Upgrade (Spin to Glow) */
+.spin-reveal-glow {
+  animation: pulse-glow-reveal 2s ease-out forwards;
+}
+
+@keyframes pulse-glow-reveal {
+  0% { transform: scale(0.9); box-shadow: 0 0 0 rgba(200, 169, 110, 0); }
+  50% { transform: scale(1.1); box-shadow: 0 0 40px rgba(200, 169, 110, 0.6); }
+  100% { transform: scale(1); box-shadow: 0 0 15px rgba(200, 169, 110, 0.3); }
+}
+
+/* Toast Notification Styles */
+.toast-glass {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  padding: 12px 24px;
+  border-radius: 50px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  font-weight: 500;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+  animation: toast-slide-down 0.4s cubic-bezier(0.16, 1, 0.3, 1), toast-fade-out 0.4s ease 2.5s forwards;
+}
+
+@keyframes toast-slide-down {
+  0% { transform: translate(-50%, -100%); opacity: 0; }
+  100% { transform: translate(-50%, 0); opacity: 1; }
+}
+@keyframes toast-fade-out {
+  0% { opacity: 1; }
+  100% { opacity: 0; visibility: hidden; }
+}
+
+/* History Pills */
+.status-pill {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-block;
+  min-height: auto;
+}
+.pill-won { background: rgba(0, 210, 106, 0.15); color: var(--game-green); border: 1px solid rgba(0, 210, 106, 0.3); }
+.pill-lost { background: rgba(160, 160, 160, 0.1); color: var(--text-secondary); border: 1px solid rgba(160, 160, 160, 0.2); }
+.pill-pending { background: rgba(0, 191, 255, 0.15); color: var(--primary-blue); border: 1px solid rgba(0, 191, 255, 0.3); }
+
+/* Responsive Grid for Admin & History */
+@media (max-width: 768px) {
+  .admin-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .history-table {
+    display: block;
+    overflow-x: auto;
+  }
+}

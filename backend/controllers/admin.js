@@ -36,13 +36,6 @@ exports.adminLogin = async (req, res) => {
   const ADMIN_EMAIL    = 'adithyan3847@gmail.com';
   const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'TREESADHI@2175';
 
-  // ── Temporary debug logs (remove after verifying login works) ──
-  console.log('[AdminLogin] received email   :', JSON.stringify(email));
-  console.log('[AdminLogin] expected email   :', JSON.stringify(ADMIN_EMAIL));
-  console.log('[AdminLogin] email match      :', email === ADMIN_EMAIL);
-  console.log('[AdminLogin] password match   :', password === ADMIN_PASSWORD);
-  // ── End debug logs ──
-
   if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
     const payload = { admin: true, username: email, email };
     const token = jwt.sign(
@@ -742,10 +735,24 @@ exports.getGameAnalytics = async (req, res) => {
 // ─── POST /api/admin/set-game-result ───────────────────────────────────────────
 exports.setGameResult = async (req, res) => {
   try {
-    const { gameType, result } = req.body;
-    if (!gameType) return res.status(400).json({ success: false, error: 'Missing gameType' });
+    const { gameType, result, round_id } = req.body;
+    if (!gameType || !round_id) return res.status(400).json({ success: false, error: 'Missing gameType or round_id' });
 
-    // Write override into global_game_state (correct table — admin_settings no longer exists)
+    // Validate we are strictly in the 'resolving' (Evaluation) phase for this exact round_id
+    const { data: stateRow, error: stateErr } = await supabase
+      .from('global_game_state')
+      .select('status, round_id')
+      .eq('game', gameType)
+      .single();
+
+    if (stateErr) throw stateErr;
+    if (stateRow.round_id !== round_id) {
+      return res.status(400).json({ success: false, error: `Too late. Round ${round_id} has already ended.` });
+    }
+    if (stateRow.status !== 'resolving') {
+      return res.status(400).json({ success: false, error: `Overrides are only permitted during the Evaluation phase (current status: ${stateRow.status}).` });
+    }
+
     if (!result) {
       // Clear override
       const { error } = await supabase
@@ -806,9 +813,7 @@ exports.getLiveBets = async (req, res) => {
       .limit(1000);
 
     if (error) throw error;
-    // DEBUG: log all fetched bet IDs
-    console.log('[AdminLiveBets] fetched IDs:', data.map(b => b.id));
-    res.json({ success: true, bets: data || [] });
+    res.json({ success: true, count: data.length, bets: data });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }

@@ -61,10 +61,10 @@ export const GlobalGameProvider = ({ children }) => {
         if (row && row.game) {
           setGameStates(prev => {
             const oldState = prev[row.game];
-            // If transitioned from resolving to betting, or period changed
-            if (oldState && oldState.period !== row.period) {
+            // If transitioned from resolving to betting, or round_id changed
+            if (oldState && oldState.round_id !== row.round_id) {
               // Trigger a global event so components can hydrate
-              window.dispatchEvent(new CustomEvent('global_period_changed', { detail: { game: row.game, period: row.period } }));
+              window.dispatchEvent(new CustomEvent('global_period_changed', { detail: { game: row.game, period: row.period, round_id: row.round_id } }));
             }
             return {
               ...prev,
@@ -89,11 +89,11 @@ export const GlobalGameProvider = ({ children }) => {
             if (payload.eventType === 'UPDATE') {
               return {
                 ...prev,
-                [row.game]: currentList.map(item => (item.game === row.game && item.period === row.period) ? row : item)
+                [row.game]: currentList.map(item => (item.game === row.game && item.round_id === row.round_id) ? row : item)
               };
             }
             // If it's an INSERT, only add if it doesn't exist
-            if (!currentList.some(item => item.game === row.game && item.period === row.period)) {
+            if (!currentList.some(item => item.game === row.game && item.round_id === row.round_id)) {
               return {
                 ...prev,
                 [row.game]: [row, ...currentList]
@@ -101,7 +101,7 @@ export const GlobalGameProvider = ({ children }) => {
             }
             return prev;
           });
-          window.dispatchEvent(new CustomEvent('global_result_received', { detail: { game: row.game, period: row.period } }));
+          window.dispatchEvent(new CustomEvent('global_result_received', { detail: { game: row.game, period: row.period, round_id: row.round_id } }));
         }
       })
       .subscribe();

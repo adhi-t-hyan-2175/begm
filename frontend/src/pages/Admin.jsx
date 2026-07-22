@@ -78,7 +78,7 @@ const AdminGameCard = ({ game, timerState, liveBets, selectedWinner, actualWinne
     return `${mStr}:${sStr}`;
   };
 
-  const phaseLabel = liveBets.total === 0 ? 'Idle' : timerState.isBettingOpen ? 'Betting Open' : 'Result Pending';
+  const phaseLabel = liveBets.total === 0 && !timerState.isBettingOpen ? 'Idle' : timerState.status === 'resolving' ? 'Evaluation (Override Allowed)' : timerState.status === 'revealing' ? 'Revealing (Locked)' : timerState.status === 'locked' ? 'Round Ended' : 'Betting Open';
   const totalPlayers = liveBets.orders ? liveBets.orders.length : 0;
   const betPercentages = {};
   
@@ -179,19 +179,20 @@ const AdminGameCard = ({ game, timerState, liveBets, selectedWinner, actualWinne
                 return (
                   <div
                     key={option}
+                    className={timerState.status !== 'resolving' ? 'btn-disabled' : ''}
                     onClick={() => {
-                      if (!timerState.isBettingOpen) {
-                        alert("⚠️ Too late! You must select the winner DURING the betting phase (countdown > 00:00). The game engine has already processed this period.");
+                      if (timerState.status !== 'resolving') {
+                        alert("⚠️ Overrides are ONLY permitted during the Evaluation phase (countdown 00:00, before reveal).");
                         return;
                       }
-                      onSetWinner(option);
+                      onSetWinner(option, timerState.round_id);
                     }}
                     style={{
                       background: isWinner ? '#1a3a2e' : '#0a1a2e',
                       padding: 12,
                       borderRadius: 6,
                       textAlign: 'center',
-                      cursor: 'pointer',
+                      cursor: timerState.status !== 'resolving' ? 'not-allowed' : 'pointer',
                       border: isWinner ? '3px solid #0f0' : '1px solid #2a4a3e',
                       opacity: 1,
                       transition: 'all 0.2s'
@@ -264,7 +265,7 @@ const AdminGameCard = ({ game, timerState, liveBets, selectedWinner, actualWinne
               </div>
               {selectedWinner && (
                 <button
-                  onClick={onClearWinner}
+                  onClick={() => onClearWinner(timerState.round_id)}
                   style={{
                     padding: '6px 12px',
                     background: '#8b0000',
@@ -527,12 +528,12 @@ const Admin = () => {
     return null;
   };
 
-  const setSelectedWinner = async (gameKey, period, winner) => {
+  const setSelectedWinner = async (gameKey, period, winner, round_id) => {
     try {
       const res = await fetch(`${API_BASE}/api/admin/set-game-result`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sessionStorage.getItem('admin_token')}` },
-        body: JSON.stringify({ gameType: gameKey, result: winner })
+        body: JSON.stringify({ gameType: gameKey, result: winner, round_id })
       });
       if (res.ok) {
         setAdminSettings(prev => ({
@@ -545,12 +546,12 @@ const Admin = () => {
     }
   };
 
-  const clearSelectedWinner = async (gameKey, period) => {
+  const clearSelectedWinner = async (gameKey, period, round_id) => {
     try {
       const res = await fetch(`${API_BASE}/api/admin/set-game-result`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sessionStorage.getItem('admin_token')}` },
-        body: JSON.stringify({ gameType: gameKey, result: null })
+        body: JSON.stringify({ gameType: gameKey, result: null, round_id })
       });
       if (res.ok) {
         setAdminSettings(prev => ({
@@ -1019,11 +1020,11 @@ const Admin = () => {
                   liveBets={liveBets}
                   selectedWinner={selectedWinner}
                   actualWinner={actualWinner}
-                  onSetWinner={(winner) => {
-                    setSelectedWinner(game.key, timerState.period, winner);
+                  onSetWinner={(winner, round_id) => {
+                    setSelectedWinner(game.key, timerState.period, winner, round_id);
                   }}
-                  onClearWinner={() => {
-                    clearSelectedWinner(game.key, timerState.period);
+                  onClearWinner={(round_id) => {
+                    clearSelectedWinner(game.key, timerState.period, round_id);
                   }}
                 />
               );

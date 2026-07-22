@@ -1,4 +1,5 @@
 const supabase = require('../config/supabase');
+const logger = require('../utils/logger');
 
 const EPOCH = 1784628360000;
 
@@ -52,7 +53,7 @@ const calculateTimerState = (totalDuration, bettingDuration, now = Date.now()) =
 // Initialise the global_game_state rows at server start
 // This runs once before the periodic tick loop.
 const initializeState = async () => {
-  console.log('[GameEngine] Initializing global game state...');
+  logger.info({ action: 'Engine Initialization', status: 'Starting global game state initialization' });
   const now = Date.now();
   for (const config of gameConfigs) {
     const state = calculateTimerState(config.totalDuration, config.bettingDuration, now);
@@ -67,9 +68,9 @@ const initializeState = async () => {
         status: currentStatus,
         updated_at: new Date(now).toISOString()
       }, { onConflict: 'game' });
-      console.log(`[GameEngine] Initialized ${config.game} period ${state.period} round ${state.round_id} status ${currentStatus}`);
+      logger.info({ game: config.game, round_id: state.round_id, action: 'Initialize Game', status: currentStatus });
     } catch (e) {
-      console.error(`[GameEngine] Failed to init ${config.game}:`, e.message);
+      logger.error({ game: config.game, round_id: state.round_id, action: 'Initialize Game', error: e.message });
     }
   }
 };
@@ -114,8 +115,8 @@ const getPossibleOutcomes = (gameType) => {
   return [{ label: 'Green', color: ['#28a745'] }];
 };
 
-const generateBaseResult = (gameType, period) => {
-  const rnd = deterministicRandom(gameType + period);
+const generateBaseResult = (gameType, round_id) => {
+  const rnd = deterministicRandom(gameType + round_id);
   let result = {};
   
   if (gameType === 'FastParity' || gameType === 'PrimePick' || gameType === 'LuckyPick' || gameType === 'Parity' || gameType === 'Sapre') {
@@ -133,7 +134,7 @@ const generateBaseResult = (gameType, period) => {
     if (selected === '3 Hits') result.color = ['#ff8cec'];
     if (selected === '5 Hits') result.color = ['#88f29f'];
   } else if (gameType === 'Dice') {
-    const sum = (Math.floor(rnd * 6) + 1) + (Math.floor(deterministicRandom(gameType + period + '-2') * 6) + 1);
+    const sum = (Math.floor(rnd * 6) + 1) + (Math.floor(deterministicRandom(gameType + round_id + '-2') * 6) + 1);
     result.number = sum;
     if (sum === 7) {
       result.label = 'Tie'; result.color = ['#f1c40f'];
@@ -157,7 +158,7 @@ const generateBaseResult = (gameType, period) => {
 // ─── Settlement Logic ───
 const resolvePeriod = async (gameConfig, period, round_id) => {
   const game = gameConfig.game;
-  console.log(`[GameEngine] Resolving ${game} Period ${period} (Round ${round_id})`);
+  logger.info({ game, round_id, action: 'Resolve Period', status: 'Resolving started' });
   
   try {
     // 1. Fetch real bets for the current round
@@ -194,7 +195,7 @@ const resolvePeriod = async (gameConfig, period, round_id) => {
       } else if (overrideObj.color) {
         match = outcomes.find(o => JSON.stringify(o.color) === JSON.stringify(overrideObj.color));
       }
-      const base = generateBaseResult(game, period);
+      const base = generateBaseResult(game, round_id);
       finalResult = match ? { ...base, ...match } : { ...base, ...overrideObj };
       // Calculate profit for admin override
       let payout = 0;
@@ -208,7 +209,7 @@ const resolvePeriod = async (gameConfig, period, round_id) => {
     } else {
       // Calculate Rigged Result
       if (allBets.length === 0) {
-        finalResult = generateBaseResult(game, period);
+        finalResult = generateBaseResult(game, round_id);
         maxProfit = 0;
       } else {
         const outcomes = getPossibleOutcomes(game);
@@ -231,7 +232,7 @@ const resolvePeriod = async (gameConfig, period, round_id) => {
           }
         }
         
-        const base = generateBaseResult(game, period);
+        const base = generateBaseResult(game, round_id);
         finalResult = bestOutcome ? { ...base, ...bestOutcome } : base;
       }
     }
@@ -240,20 +241,26 @@ const resolvePeriod = async (gameConfig, period, round_id) => {
     const { data: existing } = await supabase.from('game_results').select('id, is_override, result').eq('game', game).eq('round_id', round_id).maybeSingle();
     
     if (existing) {
-      console.log(`[GameEngine] Result already exists for ${game} Round ${round_id}. Skipping overwrite to enforce immutable results.`);
+      logger.info({ game, round_id, action: 'Resolve Period', status: 'Skipped - Result already exists' });
       return; // Skip everything else - winner is written only once per round_id
     }
 
+    const nowISO = new Date().toISOString();
     await supabase.from('game_results').insert({
       game,
       period,
       round_id,
       result: finalResult,
-      is_override: !!adminOverride,
+      is_override: !!adminOverride, // kept for legacy compat if any frontend relies on it
+      result_source: adminOverride ? 'Admin' : 'AI',
+      locked_at: nowISO,
       profit: maxProfit,
       total_bets: allBets.length,
-      created_at: new Date().toISOString()
+      created_at: nowISO
     });
+
+    // Mark global_game_state as locked
+    await supabase.from('global_game_state').update({ status: 'locked', updated_at: nowISO }).eq('game', game).eq('round_id', round_id);
 
     // 5. Settle real bets
     if (realBets && realBets.length > 0) {
@@ -294,7 +301,7 @@ const resolvePeriod = async (gameConfig, period, round_id) => {
               };
               const { error: txError } = await supabase.from('transactions').insert(txPayload);
               if (txError) {
-                console.error('Transaction insert error:', txError.message);
+                logger.error({ game, round_id, user_id: bet.user_id, action: 'Insert Transaction', error: txError.message });
                 throw txError;
               }
               
@@ -313,7 +320,7 @@ const resolvePeriod = async (gameConfig, period, round_id) => {
           if (betUpdateErr) throw new Error(`Bet update failed: ${betUpdateErr.message}`);
 
         } catch (betError) {
-          console.error(`[GameEngine Error] Failed to process bet ${bet.id} for ${game} ${period}:`, betError.message);
+          logger.error({ game, round_id, user_id: bet.user_id, action: 'Process Bet Settlement', error: betError.message });
           // Continue to the next bet even if this one failed
         }
       }
@@ -324,9 +331,10 @@ const resolvePeriod = async (gameConfig, period, round_id) => {
       await supabase.from('global_game_state').update({ admin_override: null }).eq('game', game);
     }
     
-    console.log(`[GameEngine] Successfully resolved ${game} Period ${period}. Winner: ${finalResult?.label}`);
+    console.log(`[GameEngine] Successfully resolved ${game} Round ${round_id}. Winner: ${finalResult?.label}`);
+    logger.info({ game, round_id, action: 'Resolve Period', status: `Successfully resolved. Winner: ${finalResult?.label}` });
   } catch (err) {
-    console.error(`[GameEngine Error] Failed to resolve ${game} ${period}:`, err.message);
+    logger.error({ game, round_id, action: 'Resolve Period', error: err.message });
   }
 };
 
@@ -352,7 +360,7 @@ const tick = async () => {
       }
     }
     
-    const stateKey = `${state.period}-${currentStatus}`;
+    const stateKey = `${state.round_id}-${currentStatus}`;
     
     if (lastStateMap[game] !== stateKey) {
       lastStateMap[game] = stateKey;
@@ -374,7 +382,7 @@ const tick = async () => {
           .from('global_game_state')
           .update({ status: 'resolving', updated_at: new Date(now).toISOString() })
           .eq('game', game)
-          .eq('period', state.period)
+          .eq('round_id', state.round_id)
           .eq('status', 'betting');
       } else if (currentStatus === 'revealing') {
         // The reveal moment has arrived! Attempt to acquire lock to resolve.
@@ -382,19 +390,19 @@ const tick = async () => {
           .from('global_game_state')
           .update({ status: 'revealing', updated_at: new Date(now).toISOString() })
           .eq('game', game)
-          .eq('period', state.period)
+          .eq('round_id', state.round_id)
           .eq('status', 'resolving') // Only succeed if it was currently in resolving phase
           .select()
           .maybeSingle();
           
         if (lockResult && !lockErr) {
           // 🏆 THIS INSTANCE ACQUIRED THE LOCK!
-          console.log(`[GameEngine] Lock acquired for ${game} Period ${state.period}. Calling resolvePeriod...`);
+          logger.info({ game, round_id: state.round_id, action: 'Acquire Lock', status: 'Success' });
           
           // No setTimeout needed! We naturally waited by tracking time.
           resolvePeriod(config, state.period, state.round_id);
         } else {
-          console.log(`[GameEngine] Instance skipped revealing ${game} ${state.period} (lock acquired by another instance or already revealed).`);
+          logger.info({ game, round_id: state.round_id, action: 'Acquire Lock', status: 'Skipped - Lock acquired by another instance' });
         }
       }
     }
@@ -402,7 +410,7 @@ const tick = async () => {
 };
 
 const startGameEngine = async () => {
-  console.log('🎮 [GameEngine] Starting Global Game Engine...');
+  logger.info({ action: 'Engine Boot', status: 'Starting Global Game Engine' });
   // Initialise state before ticking
   await initializeState();
   // Run tick every 500ms for precision
