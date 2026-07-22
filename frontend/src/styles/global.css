@@ -1020,19 +1020,12 @@ html, body {
 }
 
 .game-timer-box {
-  background: var(--bg-surface);
+  background: white;
   padding: 16px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid var(--border);
-}
-
-.rui-record-header {
-  display: flex;
-  justify-content: space-between;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid #f5f5f5;
 }
 
 .timer-display {
@@ -1043,8 +1036,8 @@ html, body {
 }
 
 .timer-digit {
-  background: var(--bg-main);
-  color: var(--primary-blue);
+  background: linear-gradient(135deg, #e0e8ff 0%, #d5dbff 100%);
+  color: #0056b3;
   padding: 6px 10px;
   border-radius: 6px;
   min-width: 32px;
@@ -1064,7 +1057,7 @@ html, body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: var(--bg-surface);
+  background: rgba(255, 255, 255, 0.92);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1076,7 +1069,7 @@ html, body {
 .betting-closed-text {
   font-size: 1.8rem;
   font-weight: 800;
-  color: var(--join-red);
+  color: #dc3545;
   text-align: center;
   line-height: 1.4;
 }
@@ -1149,7 +1142,7 @@ html, body {
 
 .game-record-period {
   font-size: 0.7rem;
-  color: var(--text-muted);
+  color: #999;
   font-weight: 600;
 }
 
@@ -1167,7 +1160,7 @@ html, body {
 }
 
 .game-modal-content {
-  background: var(--bg-surface);
+  background: white;
   width: 100%;
   max-width: 480px;
   margin: 0 auto;
@@ -1179,7 +1172,7 @@ html, body {
 /* Shared game page styles */
 .game-screen {
   min-height: 100vh;
-  background: var(--bg-main);
+  background: #f5f7fb;
   padding-bottom: 96px;
 }
 
@@ -1190,10 +1183,10 @@ html, body {
 }
 
 .game-card-panel {
-  background: var(--bg-surface);
+  background: white;
   border-radius: 20px;
   padding: 18px;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 12px 30px rgba(40, 65, 152, 0.06);
 }
 
 .game-bet-grid {
@@ -1204,8 +1197,8 @@ html, body {
 
 .game-tab-row {
   display: flex;
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-surface);
+  border-bottom: 1px solid #eee;
+  background: white;
 }
 
 .game-tab-row > div {
@@ -1218,8 +1211,8 @@ html, body {
 }
 
 .game-tab-row > div.active {
-  color: var(--primary-blue);
-  border-bottom: 2px solid var(--primary-blue);
+  color: #007bff;
+  border-bottom: 2px solid #007bff;
 }
 
 .game-section-header {
@@ -1233,12 +1226,12 @@ html, body {
 .game-section-title {
   font-size: 1rem;
   font-weight: 700;
-  color: var(--text-primary);
+  color: #222;
 }
 
 .game-section-subtitle {
   font-size: 0.85rem;
-  color: var(--text-secondary);
+  color: #666;
 }
 
 .game-table-panel {
@@ -1255,11 +1248,11 @@ html, body {
 .game-order-table th,
 .game-order-table td {
   padding: 12px 0;
-  color: var(--text-secondary);
+  color: #555;
 }
 
 .game-order-table th {
-  color: var(--text-muted);
+  color: #777;
   font-weight: 600;
 }
 
@@ -1272,7 +1265,7 @@ html, body {
 .game-table-row-empty td {
   text-align: center;
   padding: 20px 0;
-  color: var(--text-muted);
+  color: #999;
 }
 
 .game-mobile-tight .game-card-panel,
@@ -1289,7 +1282,7 @@ html, body {
 /* Fast Parity page */
 .fast-parity-screen {
   min-height: 100vh;
-  background: var(--bg-main);
+  background: #f5f7fb;
   padding-bottom: 96px;
 }
 
@@ -1304,10 +1297,10 @@ html, body {
 .fast-parity-lines-card,
 .fast-parity-history-card,
 .fast-parity-orders-card {
-  background: var(--bg-surface);
+  background: white;
   border-radius: 20px;
   padding: 18px;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 12px 30px rgba(40, 65, 152, 0.06);
 }
 
 .fast-parity-summary-grid {
@@ -1318,14 +1311,14 @@ html, body {
 
 .summary-label {
   font-size: 0.8rem;
-  color: var(--text-secondary);
+  color: #7f8fa4;
   margin-bottom: 6px;
 }
 
 .summary-value {
   font-size: 1.35rem;
   font-weight: 700;
-  color: var(--text-primary);
+  color: #18223d;
 }
 
 .betting-pill {
@@ -1340,11 +1333,11 @@ html, body {
 }
 
 .betting-pill.open {
-  background: var(--join-green);
+  background: #28a745;
 }
 
 .betting-pill.closed {
-  background: var(--join-red);
+  background: #dc3545;
 }
 
 .fast-parity-timer {
@@ -1355,7 +1348,7 @@ html, body {
 .fast-parity-section-title {
   font-size: 1rem;
   font-weight: 700;
-  color: var(--text-primary);
+  color: #202840;
   margin-bottom: 14px;
 }
 
@@ -1380,7 +1373,7 @@ html, body {
 
 .fast-parity-selection-card:hover:not(:disabled) {
   transform: translateY(-3px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 12px 24px rgba(44, 84, 206, 0.12);
 }
 
 .numbers-grid {
@@ -1390,10 +1383,10 @@ html, body {
 }
 
 .number-cell {
-  border: 1px solid var(--border);
+  border: 1px solid #dde3f0;
   border-radius: 16px;
-  background: var(--bg-main);
-  color: var(--text-primary);
+  background: #f8f9fc;
+  color: #2b3d61;
   font-size: 1.15rem;
   font-weight: 700;
   padding: 18px 0;
@@ -1402,13 +1395,13 @@ html, body {
 }
 
 .number-cell:hover:not(:disabled) {
-  background: var(--bg-surface);
+  background: #e9efff;
   transform: translateY(-1px);
 }
 
 .numbers-note {
   margin-top: 12px;
-  color: var(--text-secondary);
+  color: #68718f;
   font-size: 0.85rem;
   text-align: center;
 }
@@ -1424,19 +1417,19 @@ html, body {
 .fast-parity-card-title {
   font-size: 1rem;
   font-weight: 700;
-  color: var(--text-primary);
+  color: #18223d;
 }
 
 .fast-parity-card-subtitle {
   font-size: 0.8rem;
-  color: var(--text-secondary);
+  color: #7f8fa4;
   margin-top: 4px;
 }
 
 .fast-parity-more-btn {
   border: none;
-  background: var(--bg-main);
-  color: var(--primary-blue);
+  background: #eef2ff;
+  color: #3c55c3;
   font-weight: 700;
   border-radius: 14px;
   padding: 10px 14px;
@@ -1455,7 +1448,7 @@ html, body {
   gap: 12px;
   padding: 14px 16px;
   border-radius: 18px;
-  background: var(--bg-main);
+  background: #f8f9fc;
   animation: slideInUp 0.35s ease forwards;
   opacity: 0;
 }
@@ -1480,12 +1473,12 @@ html, body {
     text-transform: uppercase;
     letter-spacing: 0.01em;
   font-size: 0.85rem;
-  color: var(--text-secondary);
+  color: #6f7c99;
 }
 
 .order-item-meta {
   font-size: 0.8rem;
-  color: var(--text-secondary);
+  color: #7f8fa4;
 }
 
 .history-sheet-header {
@@ -1499,23 +1492,23 @@ html, body {
 .history-sheet-header h3 {
   margin: 0;
   font-size: 1.1rem;
-  color: var(--text-primary);
+  color: #15203a;
 }
 
 .history-sheet-header p {
   margin: 6px 0 0;
-  color: var(--text-secondary);
+  color: #6c748e;
   font-size: 0.9rem;
 }
 
 .history-close-button {
   border: none;
-  background: var(--bg-main);
+  background: #f1f4ff;
   width: 40px;
   height: 40px;
   border-radius: 14px;
   font-size: 1.35rem;
-  color: var(--text-primary);
+  color: #4b5cc4;
   cursor: pointer;
 }
 
@@ -1534,7 +1527,7 @@ html, body {
   gap: 12px;
   padding: 14px 16px;
   border-radius: 18px;
-  background: var(--bg-main);
+  background: #f7f8ff;
   animation: slideInUp 0.28s ease forwards;
   opacity: 0;
 }
@@ -1551,7 +1544,7 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  color: var(--text-primary);
+  color: #2a334f;
 }
 
 .history-detail span:first-child {
@@ -1559,11 +1552,11 @@ html, body {
 }
 
 .history-detail span:last-child {
-  color: var(--text-secondary);
+  color: #6f7c99;
 }
 
 .history-time {
-  color: var(--text-secondary);
+  color: #7f8fa4;
   font-size: 0.8rem;
 }
 
@@ -1572,8 +1565,8 @@ html, body {
   height: 44px;
   border-radius: 14px;
   border: none;
-  background: var(--bg-surface);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.06);
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgba(18, 30, 60, 0.06);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1711,12 +1704,12 @@ html, body {
 .bet-card-modal {
   width: 100%;
   max-width: 420px;
-  background: var(--bg-surface);
+  background: #f8fcff;
   border-radius: 24px;
-  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 28px 80px rgba(15, 41, 89, 0.12);
   padding: 22px;
   position: relative;
-  border: 1px solid var(--border);
+  border: 1px solid rgba(255, 255, 255, 0.8);
 }
 
 .bet-card-close {
@@ -1724,7 +1717,7 @@ html, body {
   right: 18px;
   top: 18px;
   border: none;
-  background: var(--bg-main);
+  background: rgba(255, 255, 255, 0.8);
   width: 42px;
   height: 42px;
   border-radius: 14px;
@@ -1732,7 +1725,7 @@ html, body {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: var(--text-primary);
+  color: #364163;
 }
 
 .bet-card-header {
@@ -1745,7 +1738,7 @@ html, body {
 
 .bet-card-subtitle {
   font-size: 0.85rem;
-  color: var(--text-secondary);
+  color: #5f6f95;
   text-transform: uppercase;
   letter-spacing: 0.12em;
   margin-bottom: 8px;
@@ -1754,7 +1747,7 @@ html, body {
 .bet-card-title {
   font-size: 1.85rem;
   font-weight: 800;
-  color: var(--text-primary);
+  color: #2b3860;
 }
 
 .bet-card-balance-row {
@@ -1768,16 +1761,16 @@ html, body {
   flex: 1;
   font-size: 2rem;
   font-weight: 800;
-  color: var(--text-primary);
-  background: var(--bg-main);
+  color: #1a2b55;
+  background: white;
   border-radius: 18px;
   padding: 18px 20px;
-  box-shadow: inset 0 1px 0 var(--border);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
 .recharge-button {
   border: none;
-  background: var(--primary-blue);
+  background: #1f64ff;
   color: white;
   border-radius: 16px;
   padding: 14px 18px;
@@ -1786,7 +1779,7 @@ html, body {
 }
 
 .bet-card-section {
-  background: var(--bg-main);
+  background: white;
   border-radius: 20px;
   padding: 16px;
   margin-bottom: 14px;
@@ -1794,7 +1787,7 @@ html, body {
 
 .bet-card-section-label {
   font-size: 0.85rem;
-  color: var(--text-secondary);
+  color: #7a84a0;
   margin-bottom: 12px;
 }
 
@@ -1805,19 +1798,19 @@ html, body {
 }
 
 .contract-button {
-  border: 1px solid var(--border);
+  border: 1px solid #dce3f1;
   border-radius: 14px;
-  background: var(--bg-surface);
-  color: var(--text-primary);
+  background: #f8fbff;
+  color: #4a5d89;
   font-weight: 700;
   padding: 14px 0;
   cursor: pointer;
 }
 
 .contract-button.active {
-  background: var(--bg-main);
-  border-color: var(--primary-blue);
-  color: var(--primary-blue);
+  background: #e8f7ff;
+  border-color: #a3d3ff;
+  color: #1f4dd0;
 }
 
 .number-selector {
@@ -1828,10 +1821,10 @@ html, body {
 }
 
 .number-button {
-  border: 1px solid var(--border);
+  border: 1px solid #dce3f1;
   border-radius: 14px;
-  background: var(--bg-surface);
-  color: var(--text-primary);
+  background: white;
+  color: #3c4c7c;
   font-weight: 700;
   padding: 14px 0;
   cursor: pointer;
@@ -1841,11 +1834,11 @@ html, body {
   font-size: 1.8rem;
   font-weight: 800;
   text-align: center;
-  color: var(--primary-blue);
+  color: #1f3f78;
 }
 
 .bet-card-note {
-  color: var(--text-secondary);
+  color: #4d5d84;
   font-size: 0.9rem;
   text-align: center;
   margin: 16px 0 18px;
@@ -1860,20 +1853,20 @@ html, body {
 
 .bet-card-stat-label {
   font-size: 0.8rem;
-  color: var(--text-secondary);
+  color: #7d86a2;
   margin-bottom: 6px;
 }
 
 .bet-card-stat-value {
   font-size: 1rem;
   font-weight: 700;
-  color: var(--text-primary);
+  color: #1a2d58;
 }
 
 .bet-card-confirm {
   width: 100%;
   border: none;
-  background: var(--primary-blue);
+  background: #0095ff;
   color: white;
   font-size: 1rem;
   font-weight: 800;
@@ -1886,7 +1879,7 @@ html, body {
   margin-top: 16px;
   text-align: center;
   font-size: 0.88rem;
-  color: var(--text-secondary);
+  color: #6f7c9c;
 }
 .admin-shell {
   min-height: 100vh;
@@ -2121,7 +2114,7 @@ html, body {
 
 /* --- Fast Parity Alt UI (Image 4 style) --- */
 .alt-ui {
-  background: var(--bg-main);
+  background: #f8f9fa;
   min-height: 100vh;
 }
 .fp-header-alt {
@@ -2129,37 +2122,37 @@ html, body {
   align-items: center;
   justify-content: space-between;
   padding: 16px;
-  background: var(--bg-surface);
+  background: #fff;
   font-weight: bold;
 }
 .fp-back-btn, .fp-rule-btn {
   background: none;
   border: none;
-  color: var(--text-secondary);
+  color: #666;
   font-size: 14px;
   cursor: pointer;
 }
 .fp-title-text {
   font-size: 1.1rem;
   font-weight: bold;
-  color: var(--text-primary);
+  color: #333;
 }
 .fp-timer-bar-alt {
   display: flex;
   justify-content: space-between;
   padding: 16px;
-  background: var(--bg-surface);
+  background: #fff;
   margin-top: 8px;
 }
 .fp-label-alt {
   font-size: 12px;
-  color: var(--text-secondary);
+  color: #999;
   margin-bottom: 4px;
 }
 .fp-period-val-alt {
   font-size: 1.2rem;
   font-weight: 700;
-  color: var(--text-primary);
+  color: #333;
 }
 .fp-countdown-group .text-right {
   text-align: right;
@@ -2170,22 +2163,22 @@ html, body {
   align-items: center;
 }
 .fp-block {
-  background: var(--bg-main);
-  color: var(--primary-blue);
+  background: #eef2ff;
+  color: #6f42c1;
   font-weight: bold;
   padding: 4px 6px;
   border-radius: 4px;
   font-size: 1rem;
 }
 .fp-colon {
-  color: var(--primary-blue);
+  color: #6f42c1;
   font-weight: bold;
 }
 .fp-bet-buttons-alt {
   display: flex;
   gap: 8px;
   padding: 16px;
-  background: var(--bg-surface);
+  background: #fff;
 }
 .fp-bet-btn-alt {
   flex: 1;
@@ -2204,9 +2197,9 @@ html, body {
   opacity: 0.6;
   cursor: not-allowed;
 }
-.fp-bet-btn-alt.green { background: var(--join-green); }
-.fp-bet-btn-alt.violet { background: var(--join-violet); }
-.fp-bet-btn-alt.red { background: var(--join-red); }
+.fp-bet-btn-alt.green { background: #28a745; }
+.fp-bet-btn-alt.violet { background: #6f42c1; }
+.fp-bet-btn-alt.red { background: #dc3545; }
 .fp-btn-icon {
   font-size: 1.2rem;
   margin-bottom: 4px;
@@ -2224,11 +2217,11 @@ html, body {
   grid-template-columns: repeat(5, 1fr);
   gap: 8px;
   padding: 0 16px;
-  background: var(--bg-surface);
+  background: #fff;
 }
 .fp-number-btn-alt {
-  background: var(--bg-main);
-  border: 1px solid var(--border);
+  background: #f8f9fa;
+  border: 1px solid #eee;
   border-radius: 4px;
   padding: 12px 0;
   display: flex;
@@ -2237,7 +2230,7 @@ html, body {
   position: relative;
   font-size: 1.2rem;
   font-weight: bold;
-  color: var(--text-primary);
+  color: #555;
   cursor: pointer;
 }
 .fp-number-btn-alt:disabled {
@@ -2257,29 +2250,29 @@ html, body {
 .fp-ratio-label-alt {
   text-align: center;
   padding: 8px;
-  background: var(--bg-surface);
-  color: var(--text-secondary);
+  background: #fff;
+  color: #999;
   font-size: 0.85rem;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid #eee;
 }
 .fp-tabs-alt {
   display: flex;
-  background: var(--bg-surface);
-  border-bottom: 1px solid var(--border);
+  background: #fff;
+  border-bottom: 1px solid #eee;
 }
-.fp-tabs-alt .rui-tab {
+.fp-tabs-alt button {
   flex: 1;
-  padding: 12px;
-  background: var(--bg-surface);
+  padding: 16px 0;
+  background: none;
   border: none;
-  border-bottom: 2px solid transparent;
-  color: var(--text-secondary);
+  font-size: 1rem;
+  color: #999;
   font-weight: 600;
-  font-size: 0.95rem;
+  position: relative;
+  cursor: pointer;
 }
-.rui-tab.active {
-  border-bottom: 2px solid var(--primary-blue);
-  color: var(--primary-blue);
+.fp-tabs-alt button.active {
+  color: #333;
 }
 .fp-tabs-alt button.active::after {
   content: '';
@@ -2288,11 +2281,11 @@ html, body {
   left: 20%;
   right: 20%;
   height: 3px;
-  background: var(--primary-blue);
+  background: #4dabf7;
   border-radius: 3px 3px 0 0;
 }
 .fp-tab-content-alt {
-  background: var(--bg-surface);
+  background: #fff;
   min-height: 200px;
 }
 .fp-record-header-alt {
@@ -2301,13 +2294,13 @@ html, body {
   padding: 16px;
 }
 .fp-rec-title {
-  color: var(--text-secondary);
+  color: #666;
   font-size: 0.9rem;
 }
 .fp-more-btn-alt {
   background: none;
   border: none;
-  color: var(--text-secondary);
+  color: #999;
   font-size: 0.85rem;
   cursor: pointer;
 }
@@ -2325,14 +2318,14 @@ html, body {
 }
 .fp-rec-period {
   font-size: 10px;
-  color: var(--text-primary);
+  color: #333;
   font-weight: 600;
 }
 .fp-rec-dot {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  color: white;
+  color: #fff;
   display: flex;
   justify-content: center;
   font-size: 12px;
@@ -2341,23 +2334,23 @@ html, body {
 
 /* --- Dice UI (Image 1 style) --- */
 .dice-ui {
-  background: var(--bg-surface);
+  background: #fff;
   min-height: 100vh;
 }
 .dice-header-row {
   display: flex;
   justify-content: space-between;
   padding: 16px;
-  background: var(--bg-surface);
+  background: #fff;
 }
 .dice-period-label, .dice-countdown-label {
   font-size: 12px;
-  color: var(--text-secondary);
+  color: #999;
 }
 .dice-period-val {
   font-size: 1.4rem;
   font-weight: 800;
-  color: var(--text-primary);
+  color: #333;
 }
 .dice-countdown-blocks {
   display: flex;
@@ -2365,15 +2358,15 @@ html, body {
   align-items: center;
 }
 .dice-block {
-  background: var(--bg-main);
-  color: var(--text-primary);
+  background: #f0f0f0;
+  color: #333;
   font-weight: bold;
   padding: 4px 6px;
   border-radius: 4px;
   font-size: 1.1rem;
 }
 .dice-stats-box {
-  background: var(--bg-main);
+  background: #f0f2ff;
   border-radius: 8px;
   margin: 16px;
   padding: 16px;
@@ -2384,10 +2377,10 @@ html, body {
   text-align: center;
 }
 .dice-stats-col:first-child {
-  border-right: 1px solid var(--border);
+  border-right: 1px solid #d0d7ff;
 }
 .dice-stats-label {
-  color: var(--text-secondary);
+  color: #666;
   font-weight: bold;
   font-size: 0.95rem;
   margin-bottom: 8px;
@@ -2395,7 +2388,7 @@ html, body {
 .dice-stats-val {
   font-size: 2rem;
   font-weight: 900;
-  color: var(--text-primary);
+  color: #3b3b58;
 }
 .dice-slider-container {
   margin: 32px 16px;
@@ -2404,7 +2397,7 @@ html, body {
 .dice-slider-track-bg {
   width: 100%;
   height: 12px;
-  background: var(--bg-main);
+  background: #eef2ff;
   border-radius: 6px;
   position: absolute;
   top: 15px;
@@ -2412,7 +2405,7 @@ html, body {
 }
 .dice-slider-track-fill {
   height: 12px;
-  background: var(--primary-blue);
+  background: #ff6b00;
   border-radius: 6px 0 0 6px;
   position: absolute;
   top: 15px;
@@ -2424,7 +2417,7 @@ html, body {
   width: 24px;
   height: 24px;
   background: white;
-  border: 4px solid var(--primary-blue);
+  border: 4px solid #ff6b00;
   border-radius: 50%;
   z-index: 4;
   pointer-events: none;
@@ -2435,7 +2428,7 @@ html, body {
   top: -25px;
   left: 50%;
   transform: translateX(-50%);
-  background: var(--primary-blue);
+  background: #ff6b00;
   color: white;
   padding: 2px 6px;
   border-radius: 4px;
@@ -2450,7 +2443,7 @@ html, body {
   transform: translateX(-50%);
   border-left: 4px solid transparent;
   border-right: 4px solid transparent;
-  border-top: 4px solid var(--primary-blue);
+  border-top: 4px solid #ff6b00;
 }
 .dice-slider-input {
   width: 100%;
@@ -2464,11 +2457,11 @@ html, body {
   display: flex;
   justify-content: space-between;
   margin-top: 8px;
-  color: var(--text-secondary);
+  color: #666;
   font-size: 0.9rem;
 }
 .dice-bet-btn {
-  background: var(--primary-blue);
+  background: #007bff;
   color: white;
   border: none;
   width: calc(100% - 32px);
@@ -2480,7 +2473,7 @@ html, body {
   cursor: pointer;
 }
 .dice-bet-btn:disabled {
-  background: var(--bg-main);
+  background: #ccc;
   cursor: not-allowed;
 }
 .dice-record-header {
@@ -2488,19 +2481,19 @@ html, body {
   justify-content: space-between;
   align-items: center;
   padding: 16px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid #eee;
   margin-top: 16px;
 }
 .dice-record-title {
   font-weight: 800;
-  color: var(--text-primary);
+  color: #333;
 }
 .dice-record-grid {
   display: grid;
   grid-template-columns: repeat(13, 1fr);
   gap: 4px;
   padding: 0 8px 16px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid #eee;
 }
 .dice-rec-item {
   display: flex;
@@ -2509,14 +2502,14 @@ html, body {
 }
 .dice-rec-period {
   font-size: 9px;
-  color: var(--text-secondary);
+  color: #999;
 }
 .dice-rec-dot {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: var(--bg-main);
-  color: var(--text-primary);
+  background: #4d5377;
+  color: white;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2524,10 +2517,10 @@ html, body {
   font-size: 11px;
 }
 .dice-rec-dot.active {
-  background: var(--primary-blue);
+  background: #ff6b00;
 }
 .dice-everyone-title {
-  color: var(--primary-blue);
+  color: #00acc1;
   font-weight: bold;
   padding: 16px;
   font-size: 1.1rem;
@@ -2543,7 +2536,7 @@ html, body {
   height: 0;
   border-left: 18px solid transparent;
   border-right: 18px solid transparent;
-  border-bottom: 24px solid var(--primary-blue);
+  border-bottom: 24px solid #ffbe76;
   z-index: 20;
   filter: drop-shadow(0 8px 12px rgba(0,0,0,0.12));
 }
@@ -2568,29 +2561,27 @@ html, body {
 
 .rui-screen {
   min-height: 100vh;
-  background: var(--bg-main);
+  background: #f5f7fa;
   padding-bottom: 90px;
 }
 
 /* Header */
 .rui-header {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  background: var(--bg-surface);
-  border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  color: var(--text-primary);
+  padding: 10px 16px;
+  background: #fff;
+  border-bottom: 1px solid #efefef;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 .rui-header-back {
   background: none;
   border: none;
   cursor: pointer;
   padding: 4px;
-  color: var(--text-secondary);
+  color: #444;
   display: flex;
   align-items: center;
 }
@@ -2599,13 +2590,13 @@ html, body {
   text-align: center;
   font-size: 1.05rem;
   font-weight: 700;
-  color: var(--text-primary);
+  color: #222;
   letter-spacing: 0.5px;
 }
 .rui-header-rules {
   background: none;
   border: none;
-  color: var(--text-secondary);
+  color: #666;
   font-size: 0.9rem;
   cursor: pointer;
   padding: 4px 8px;
@@ -2613,22 +2604,22 @@ html, body {
 
 /* Timer bar */
 .rui-timer-bar {
-  background: var(--bg-surface);
+  background: #fff;
   padding: 10px 16px 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid #f0f0f0;
 }
 .rui-timer-label {
   font-size: 0.75rem;
-  color: var(--text-secondary);
+  color: #999;
   margin-bottom: 3px;
 }
 .rui-timer-val {
   font-size: 1.1rem;
   font-weight: 700;
-  color: var(--text-primary);
+  color: #222;
 }
 .rui-timer-blocks {
   display: flex;
@@ -2636,8 +2627,8 @@ html, body {
   gap: 3px;
 }
 .rui-timer-digit {
-  background: var(--text-primary);
-  color: white;
+  background: #3d3d3d;
+  color: #fff;
   font-size: 1.2rem;
   font-weight: 800;
   width: 32px;
@@ -2650,7 +2641,7 @@ html, body {
 .rui-timer-colon {
   font-size: 1.2rem;
   font-weight: 900;
-  color: var(--text-primary);
+  color: #333;
   margin: 0 1px;
 }
 
@@ -2659,7 +2650,7 @@ html, body {
   display: flex;
   gap: 8px;
   padding: 12px 14px;
-  background: var(--bg-surface);
+  background: #fff;
 }
 .rui-bet-pill {
   flex: 1;
@@ -2686,19 +2677,18 @@ html, body {
 .rui-bet-pill-label { font-size: 0.82rem; font-weight: 700; }
 .rui-bet-pill-ratio { font-size: 0.72rem; opacity: 0.85; }
 
-.rui-pill-green  { background: var(--join-green); }
-.rui-pill-violet { background: var(--join-violet); }
-.rui-pill-red    { background: var(--join-red); }
-.rui-pill-blue   { background: var(--primary-blue); }
+.rui-pill-green  { background: #48b85c; }
+.rui-pill-violet { background: #7c4ab8; }
+.rui-pill-red    { background: #e0413c; }
+.rui-pill-blue   { background: #4da6e8; }
 .rui-pill-yellow { background: #e8b84d; }
 .rui-pill-pink   { background: #e87fb0; }
 .rui-pill-teal   { background: #36b6ad; }
 
 /* Record strip */
-.rui-record-section,
-.rui-order-section,
-.rui-active-bets {
-  background: var(--bg-surface);
+.rui-record-section {
+  background: #fff;
+  padding: 12px 14px 10px;
   margin-top: 8px;
 }
 .rui-record-header {
@@ -2706,17 +2696,16 @@ html, body {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
-  padding: 12px 14px;
 }
 .rui-record-title {
   font-size: 0.95rem;
   font-weight: 700;
-  color: var(--text-primary);
+  color: #222;
 }
 .rui-record-more {
   background: none;
   border: none;
-  color: var(--text-secondary);
+  color: #888;
   font-size: 0.82rem;
   cursor: pointer;
 }
@@ -2732,14 +2721,14 @@ html, body {
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: var(--primary-blue);
+  background: #3d4477;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
   font-size: 1.5rem;
   font-weight: 800;
-  box-shadow: 0 8px 22px rgba(0,0,0,0.25);
+  box-shadow: 0 8px 22px rgba(61,68,119,0.25);
 }
 .rui-ball-row {
   display: flex;
@@ -2768,18 +2757,20 @@ html, body {
 }
 .rui-ball-period {
   font-size: 0.58rem;
-  color: var(--text-secondary);
+  color: #bbb;
   text-align: center;
 }
 
 /* Everyone's Order table */
 .rui-order-section {
+  background: #fff;
+  margin-top: 8px;
   padding: 12px 14px;
 }
 .rui-order-title {
   font-size: 0.95rem;
   font-weight: 700;
-  color: var(--primary-blue);
+  color: #00b8d4;
   margin-bottom: 10px;
 }
 .rui-order-table {
@@ -2788,23 +2779,19 @@ html, body {
   font-size: 0.88rem;
 }
 .rui-order-table th {
-  padding: 12px 8px;
+  color: #aaa;
+  font-weight: 500;
+  padding: 0 0 10px;
   text-align: left;
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  border-bottom: 1px solid var(--border);
-  font-weight: 600;
 }
 .rui-order-table th:last-child { text-align: right; }
 .rui-order-table td {
-  padding: 12px 8px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  border-bottom: 1px solid var(--border);
-  color: var(--text-primary);
+  padding: 10px 0;
+  border-bottom: 1px solid #f5f5f5;
+  color: #444;
   vertical-align: middle;
 }
-.rui-order-table td:last-child { text-align: right; font-weight: 700; color: var(--text-primary); }
+.rui-order-table td:last-child { text-align: right; font-weight: 700; color: #222; }
 .rui-order-table tr:last-child td { border-bottom: none; }
 
 .rui-user-cell {
