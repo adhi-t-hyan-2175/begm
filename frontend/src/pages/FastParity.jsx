@@ -62,9 +62,9 @@ const FastParity = () => {
 
   const history = (realHistory || []).map(r => ({
     period: r.period,
-    label: r.result?.label,
-    number: r.result?.number,
-    color: r.result?.color
+    label: r.label || r.result?.label,
+    number: r.number !== undefined ? r.number : r.result?.number,
+    color: r.color || r.result?.color
   }));
   const displayHistory = history.slice(0, 14);
 

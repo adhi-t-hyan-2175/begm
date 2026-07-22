@@ -78,7 +78,7 @@ const AdminGameCard = ({ game, timerState, liveBets, selectedWinner, actualWinne
     return `${mStr}:${sStr}`;
   };
 
-  const phaseLabel = liveBets.total === 0 && !timerState.isBettingOpen ? 'Idle' : timerState.status === 'resolving' ? 'Evaluation (Override Allowed)' : timerState.status === 'revealing' ? 'Revealing (Locked)' : timerState.status === 'locked' ? 'Round Ended' : 'Betting Open';
+  const phaseLabel = !timerState.isBettingOpen ? (timerState.status === 'revealing' ? 'Revealing (Locked)' : 'Evaluation Phase (Override Allowed)') : 'Betting Open';
   const totalPlayers = liveBets.orders ? liveBets.orders.length : 0;
   const betPercentages = {};
   
@@ -120,16 +120,21 @@ const AdminGameCard = ({ game, timerState, liveBets, selectedWinner, actualWinne
     return { stake, target, remaining, ratio };
   };
 
-  let projectedWinner = null;
-  if (!timerState.isBettingOpen && !selectedWinner && liveBets.total > 0) {
-    let maxRemaining = -Infinity;
-    displayOptions.forEach(opt => {
-      const { remaining } = getPayoutSummary(opt);
-      if (remaining > maxRemaining) {
-        maxRemaining = remaining;
-        projectedWinner = opt;
-      }
-    });
+  let projectedWinner = actualWinner || selectedWinner;
+  if (!timerState.isBettingOpen && !projectedWinner) {
+    if (liveBets.total > 0) {
+      let maxRemaining = -Infinity;
+      displayOptions.forEach(opt => {
+        const { remaining } = getPayoutSummary(opt);
+        if (remaining > maxRemaining) {
+          maxRemaining = remaining;
+          projectedWinner = opt;
+        }
+      });
+    } else {
+      const rnd = deterministicRandom(game.key + timerState.period);
+      projectedWinner = displayOptions[Math.floor(rnd * displayOptions.length)];
+    }
   }
 
   return (

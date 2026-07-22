@@ -109,12 +109,12 @@ const Wheelocity = () => {
 
 
   const history = (realHistory || []).map(r => {
-    const rawLabel = r.result?.label || r.label || '';
+    const rawLabel = r.label || r.result?.label || '';
     return {
       period: r.period,
       label: getWheelFullLabel({ label: rawLabel }),
-      number: r.result?.number,
-      color: r.result?.color
+      number: r.number !== undefined ? r.number : r.result?.number,
+      color: r.color || r.result?.color
     };
   });
   const displayHistory = history.slice(0, 14);

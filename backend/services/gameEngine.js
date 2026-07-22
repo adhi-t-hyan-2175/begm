@@ -384,26 +384,18 @@ const tick = async () => {
           .eq('game', game)
           .eq('round_id', state.round_id)
           .eq('status', 'betting');
+        
+        // Immediately resolve the period so the winning option is written to game_results
+        await resolvePeriod(config, state.period, state.round_id);
       } else if (currentStatus === 'revealing') {
-        // The reveal moment has arrived! Attempt to acquire lock to resolve.
-        const { data: lockResult, error: lockErr } = await supabase
+        // The reveal moment has arrived! Ensure result is resolved & state updated.
+        await supabase
           .from('global_game_state')
           .update({ status: 'revealing', updated_at: new Date(now).toISOString() })
           .eq('game', game)
-          .eq('round_id', state.round_id)
-          .eq('status', 'resolving') // Only succeed if it was currently in resolving phase
-          .select()
-          .maybeSingle();
+          .eq('round_id', state.round_id);
           
-        if (lockResult && !lockErr) {
-          // 🏆 THIS INSTANCE ACQUIRED THE LOCK!
-          logger.info({ game, round_id: state.round_id, action: 'Acquire Lock', status: 'Success' });
-          
-          // No setTimeout needed! We naturally waited by tracking time.
-          resolvePeriod(config, state.period, state.round_id);
-        } else {
-          logger.info({ game, round_id: state.round_id, action: 'Acquire Lock', status: 'Skipped - Lock acquired by another instance' });
-        }
+        await resolvePeriod(config, state.period, state.round_id);
       }
     }
   }
