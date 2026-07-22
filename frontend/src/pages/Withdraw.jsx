@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 const Withdraw = () => {
   const navigate = useNavigate();
-  const { balance, requestWithdrawal, pendingWithdrawals, financialRecords, myOrders, adminSettings } = useWallet();
+  const { balance, requestWithdrawal, pendingWithdrawals, userWithdrawalRequests, financialRecords, myOrders, adminSettings } = useWallet();
   const { user } = useAuth();
   
   const [amount, setAmount] = useState('');
@@ -23,7 +23,7 @@ const Withdraw = () => {
   const fee = isValidAmount ? (numAmount * 0.1).toFixed(2) : '0.00';
   const received = isValidAmount ? (numAmount - parseFloat(fee)).toFixed(2) : '0.00';
 
-  const hasRecharged = financialRecords.some(r => r.type === 'Recharge' && r.status === 'Success');
+  const hasRecharged = (user?.total_recharge > 0 || user?.totalRecharge > 0) || financialRecords.some(r => (r.type === 'Recharge' || r.type === 'Deposit') && (r.status === 'Success' || r.status === 'approved' || r.status === 'Approved' || r.status === 'completed' || r.status === 'Completed'));
   const totalBets = myOrders ? myOrders.length : 0;
   const isUnlocked = hasRecharged && totalBets >= 50;
 
@@ -63,16 +63,25 @@ const Withdraw = () => {
     setTimeout(() => setSubmitted(false), 4000);
   };
 
-  const withdrawRecords = [
-    ...pendingWithdrawals.filter(req => String(req.userId) === String(user.id)).map(req => ({
+  const allRequests = (userWithdrawalRequests && userWithdrawalRequests.length > 0)
+    ? userWithdrawalRequests
+    : pendingWithdrawals.filter(req => String(req.userId) === String(user?.id));
+
+  const withdrawRecords = allRequests.map(req => {
+    const rawStatus = String(req.status || 'pending').toLowerCase();
+    const isCompleted = rawStatus === 'completed' || rawStatus === 'approved' || rawStatus === 'success';
+    const isRejected = rawStatus === 'rejected' || rawStatus === 'failed';
+    const displayStatus = isCompleted ? 'Completed' : isRejected ? 'Rejected' : 'Pending';
+    const displayColor = isCompleted ? '#10b981' : isRejected ? '#ef4444' : '#f59e0b';
+
+    return {
       id: req.id,
       amount: `₹${req.amount}`,
-      status: 'Pending',
-      time: new Date(req.timestamp).toLocaleString(),
-      color: '#f59e0b'
-    })),
-    ...financialRecords.filter(r => r.type === 'Withdraw')
-  ];
+      status: displayStatus,
+      time: new Date(req.created_at || req.timestamp || Date.now()).toLocaleString(),
+      color: displayColor
+    };
+  });
 
   return (
     <div style={{ background: 'linear-gradient(180deg, #f9fbff 0%, #f3f6fb 100%)', minHeight: '100vh', display: 'flex', flexDirection: 'column', paddingBottom: 80 }}>

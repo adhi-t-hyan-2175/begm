@@ -152,6 +152,8 @@ export const WalletProvider = ({ children }) => {
         // Pending withdrawals for admin panel
         const withdrawals = await getAll('withdrawal_requests', null, 'created_at');
         if (withdrawals.length > 0) {
+          const userWithdrawals = withdrawals.filter(w => String(w.user_id) === String(currentUser.id));
+          setUserWithdrawalRequests(userWithdrawals);
           const mapped = withdrawals
             .filter(w => w.status === 'pending')
             .map(w => ({
@@ -236,6 +238,26 @@ export const WalletProvider = ({ children }) => {
             setPendingRecharges(mapped);
           });
         })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'withdrawal_requests', filter: `user_id=eq.${currentUser.id}` }, payload => {
+          // Refresh pending withdrawals and user withdrawal list
+          getAll('withdrawal_requests', { column: 'user_id', value: currentUser.id }, 'created_at').then(withdrawals => {
+            if (withdrawals) {
+              setUserWithdrawalRequests(withdrawals);
+              const mappedPending = withdrawals
+                .filter(w => w.status === 'pending')
+                .map(w => ({
+                  id: String(w.id),
+                  userId: String(w.user_id),
+                  amount: w.amount,
+                  upiId: `${w.upi_name} - ${w.upi_id}`,
+                  status: w.status,
+                  timestamp: w.created_at,
+                }));
+              setPendingWithdrawals(mappedPending);
+            }
+          });
+          hydrateWallet();
+        })
         .subscribe();
     }
 
@@ -296,6 +318,8 @@ export const WalletProvider = ({ children }) => {
     const saved = localStorage.getItem('pending_withdrawals');
     return saved ? JSON.parse(saved) : [];
   });
+
+  const [userWithdrawalRequests, setUserWithdrawalRequests] = useState([]);
 
   const [myOrders, setMyOrders] = useState([]);
 
@@ -797,6 +821,7 @@ export const WalletProvider = ({ children }) => {
       pendingRecharges,
       requestRecharge,
       pendingWithdrawals,
+      userWithdrawalRequests,
       requestWithdrawal,
       myOrders,
       liveBets,
