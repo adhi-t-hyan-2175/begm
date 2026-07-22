@@ -89,26 +89,39 @@ const Parity = () => {
   }, [isBettingOpen]);
 
 
+  const REVEAL_ANIMATION_MS = 4000;
+
   useEffect(() => {
-    const myCurrentBets = myOrders.filter(o => o.game === GAME && o.round_id === round_id);
-    if (myCurrentBets.length > 0) {
-      // Check if ALL bets for this period have been settled
-      const isSettled = myCurrentBets.every(b => b.status !== 'Pending');
-      if (isSettled && settledRef.current !== period) {
-        settledRef.current = period;
-        
-        // Aggregate total bets and total winnings
+    // We only trigger when entering 'revealing' phase exactly once per round_id
+    if (status === 'revealing' && settledRef.current !== round_id) {
+      // The result must already be in memory from Supabase realtime
+      const resultObj = realHistory.find(r => r.round_id === round_id);
+      if (!resultObj) return; // Wait for realtime event to deliver the result
+
+      settledRef.current = round_id;
+      
+      // Calculate ResultCard payout strictly based on DB winner
+      const myCurrentBets = myOrders.filter(o => o.game === GAME && o.round_id === round_id);
+      if (myCurrentBets.length > 0) {
         const totalBet = myCurrentBets.reduce((sum, b) => sum + parseFloat(b.amount), 0);
-        const totalWin = myCurrentBets.reduce((sum, b) => sum + parseFloat(b.winAmount || 0), 0);
         
-        const won = myCurrentBets.some(b => b.status === 'Won');
-        // If multiple selections, list them joined by ' + '
+        const resultLabel = resultObj.label || resultObj.result?.label || 'Unknown';
+        
+        let totalWin = 0;
+        myCurrentBets.forEach(b => {
+          const betSel = String(b.selection).toLowerCase().trim();
+          const resSel = String(resultLabel).toLowerCase().trim();
+          if (betSel === resSel) {
+            const multiplier = betSel === 'violet' ? 4.5 : 1.9;
+            totalWin += parseFloat(b.amount) * multiplier;
+          }
+        });
+        
+        const won = totalWin > 0;
         const uniqueSelections = [...new Set(myCurrentBets.map(b => b.selection))];
         const selectionStr = uniqueSelections.join(' + ');
         
-        // We use the first bet's result (which is identical across all of them)
-        const resultLabel = myCurrentBets[0].result;
-        
+        // Wait for the reveal spin to finish before popping up
         setTimeout(() => {
           setResultCard({
             won,
@@ -121,10 +134,10 @@ const Parity = () => {
             betAmount: totalBet,
             winAmount: totalWin > 0 ? totalWin : 0,
           });
-        }, 800);
+        }, REVEAL_ANIMATION_MS);
       }
     }
-  }, [period, myOrders]);
+  }, [status, round_id, realHistory, myOrders, period]);
 
   const openBetCard = (sel) => { if (!isBettingOpen) return; setPendingSelection(sel); setBetModalOpen(true); };
   const handleConfirmBet = (selection, amount) => { 
