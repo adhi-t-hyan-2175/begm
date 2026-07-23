@@ -259,8 +259,8 @@ const resolvePeriod = async (gameConfig, period, round_id) => {
       created_at: nowISO
     });
 
-    // Mark global_game_state as locked
-    await supabase.from('global_game_state').update({ status: 'locked', updated_at: nowISO }).eq('game', game).eq('round_id', round_id);
+    // Mark global_game_state as locked and clear single-round admin_override
+    await supabase.from('global_game_state').update({ status: 'locked', admin_override: null, updated_at: nowISO }).eq('game', game).eq('round_id', round_id);
 
     // 5. Settle real bets
     if (realBets && realBets.length > 0) {

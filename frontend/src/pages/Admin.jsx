@@ -137,17 +137,33 @@ const AdminGameCard = ({ game, timerState, liveBets, selectedWinner, actualWinne
     }
   }
 
+  const isManualMode = !!selectedWinner;
+
   return (
     <div style={{
       background: '#1a1a2e',
-      border: '1px solid #2a2a4e',
+      border: isManualMode ? '1px solid #eab308' : '1px solid #2a2a4e',
       borderRadius: 8,
       padding: 16,
-      marginBottom: 16
+      marginBottom: 16,
+      position: 'relative'
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 12 }}>
         <div>
-          <h4 style={{ margin: 0, color: '#fff', fontSize: '1.1rem' }}>{game.name}</h4>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+            <h4 style={{ margin: 0, color: '#fff', fontSize: '1.1rem' }}>{game.name}</h4>
+            <span style={{
+              padding: '3px 10px',
+              borderRadius: 12,
+              fontSize: '0.78rem',
+              fontWeight: 'bold',
+              background: isManualMode ? 'rgba(234, 179, 8, 0.18)' : 'rgba(16, 185, 129, 0.18)',
+              color: isManualMode ? '#fde047' : '#34d399',
+              border: isManualMode ? '1px solid rgba(234, 179, 8, 0.4)' : '1px solid rgba(16, 185, 129, 0.4)'
+            }}>
+              {isManualMode ? '👑 Admin Selection Mode' : '🤖 AI Engine Mode'}
+            </span>
+          </div>
           <p style={{ margin: '4px 0', color: '#aaa', fontSize: '0.9rem' }}>Period: <strong style={{ color: '#0ff' }}>{timerState.period}</strong></p>
         </div>
         <div style={{ textAlign: 'right' }}>
@@ -176,11 +192,18 @@ const AdminGameCard = ({ game, timerState, liveBets, selectedWinner, actualWinne
       {liveBets.total >= 0 && (
         <>
           <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: '0.9rem', color: '#aaa', marginBottom: 8 }}>💰 Bet Breakdown by Selection:</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <div style={{ fontSize: '0.9rem', color: '#aaa' }}>💰 Bet Breakdown by Selection:</div>
+              <div style={{ fontSize: '0.78rem', color: isManualMode ? '#fde047' : '#94a3b8' }}>
+                {isManualMode ? '👉 Click selected option to revert to AI Engine' : '👉 Click any option for Admin Selection'}
+              </div>
+            </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))', gap: 8, marginBottom: 16 }}>
               {displayOptions.map(option => {
                 const amt = liveBets.bySelection[option] || 0;
                 const isWinner = selectedWinner === option;
+                const isAiPick = !selectedWinner && projectedWinner === option;
+
                 return (
                   <div
                     key={option}
@@ -196,13 +219,13 @@ const AdminGameCard = ({ game, timerState, liveBets, selectedWinner, actualWinne
                       }
                     }}
                     style={{
-                      background: isWinner ? '#1a3a2e' : '#0a1a2e',
+                      background: isWinner ? '#3a2e0a' : isAiPick ? '#0a2a3e' : '#0a1a2e',
                       padding: 12,
                       borderRadius: 6,
                       textAlign: 'center',
                       cursor: timerState.status === 'revealing' ? 'not-allowed' : 'pointer',
-                      border: isWinner ? '3px solid #0f0' : '1px solid #2a4a3e',
-                      opacity: 1,
+                      border: isWinner ? '3px solid #ffd700' : isAiPick ? '2px solid #00f0ff' : '1px solid #2a4a3e',
+                      boxShadow: isWinner ? '0 0 12px rgba(255, 215, 0, 0.4)' : isAiPick ? '0 0 8px rgba(0, 240, 255, 0.25)' : 'none',
                       transition: 'all 0.2s'
                     }}
                   >
@@ -218,8 +241,8 @@ const AdminGameCard = ({ game, timerState, liveBets, selectedWinner, actualWinne
                     </div>
                     <div style={{ fontSize: '0.85rem', color: '#aaa', marginBottom: 6 }}>₹{amt.toFixed(0)}</div>
                     {amt > 0 && <div style={{ fontSize: '0.75rem', color: '#7c8fa3' }}>{betPercentages[option] || 0}%</div>}
-                    {isWinner && <div style={{ marginTop: 6, fontSize: '0.82rem', color: '#0f0', fontWeight: 'bold' }}>✓ WINNER</div>}
-                    {projectedWinner === option && <div style={{ marginTop: 6, fontSize: '0.82rem', color: '#0ff', fontWeight: 'bold' }}>✓ AUTO WINNER</div>}
+                    {isWinner && <div style={{ marginTop: 6, fontSize: '0.8rem', color: '#ffd700', fontWeight: 'bold' }}>👑 ADMIN SELECTED</div>}
+                    {isAiPick && <div style={{ marginTop: 6, fontSize: '0.8rem', color: '#00f0ff', fontWeight: 'bold' }}>🤖 AI PICK</div>}
                   </div>
                 );
               })}
@@ -256,18 +279,19 @@ const AdminGameCard = ({ game, timerState, liveBets, selectedWinner, actualWinne
               display: 'flex',
               gap: 8,
               padding: 12,
-              background: '#1a3a2e',
+              background: isManualMode ? '#2b230a' : '#1a3a2e',
+              border: isManualMode ? '1px solid #ca8a04' : '1px solid #10b981',
               borderRadius: 6,
               alignItems: 'center',
               marginBottom: 12
             }}>
-              <div style={{ flex: 1, color: '#0f0' }}>
+              <div style={{ flex: 1, color: isManualMode ? '#fde047' : '#0f0' }}>
                 <strong>
                   {selectedWinner 
-                    ? `✓ Manual Winner Selected: ${selectedWinner}` 
+                    ? `👑 Admin Selected Winner: ${selectedWinner} (Manual Override)` 
                     : actualWinner 
                       ? `🏆 Final DB Result: ${actualWinner}`
-                      : `✓ Auto-Selected Winner: ${projectedWinner}`
+                      : `🤖 AI Engine Auto-Selected Winner: ${projectedWinner} (Max Profit Calculation)`
                   }
                 </strong>
               </div>
@@ -275,16 +299,17 @@ const AdminGameCard = ({ game, timerState, liveBets, selectedWinner, actualWinne
                 <button
                   onClick={() => onClearWinner(timerState.round_id)}
                   style={{
-                    padding: '6px 12px',
+                    padding: '6px 14px',
                     background: '#8b0000',
                     color: '#fff',
                     border: 'none',
                     borderRadius: 4,
                     cursor: 'pointer',
-                    fontSize: '0.85rem'
+                    fontSize: '0.85rem',
+                    fontWeight: 'bold'
                   }}
                 >
-                  Reset
+                  ↺ Revert to AI Engine
                 </button>
               )}
             </div>
