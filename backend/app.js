@@ -1,6 +1,10 @@
 require('dotenv').config({ path: __dirname + '/.env' });
 const express = require('express');
 const app = express();
+
+// ─── Trust Proxy (Render / Vercel / Reverse Proxies) ───────────────────────────
+app.set('trust proxy', 1);
+
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
