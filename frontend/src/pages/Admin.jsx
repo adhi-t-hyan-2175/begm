@@ -1051,8 +1051,8 @@ const Admin = () => {
               const calcState = calculateTimerState(game.duration, game.bettingDuration);
               const timerState = {
                 ...calcState,
-                period: dbState.period || calcState.period,
-                round_id: dbState.round_id || calcState.round_id,
+                period: calcState.period,
+                round_id: calcState.round_id,
                 status: dbState.status || (calcState.isBettingOpen ? 'betting' : 'resolving')
               };
               let liveBets = getGlobalLiveBetStats(game.key, timerState.period);

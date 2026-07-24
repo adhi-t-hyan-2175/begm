@@ -156,13 +156,12 @@ export const useGlobalGame = (gameType) => {
   const config = GAME_CONFIGS[gameType] || { duration: 60, bettingDuration: 30 };
   const localTimer = useGameTimer(config.duration, config.bettingDuration);
 
-  const activePeriodStr = state.period || localTimer.period;
-  const currentRoundId = state.round_id || localTimer.round_id;
+  const activePeriodStr = localTimer.period;
+  const currentRoundId = localTimer.round_id;
 
   const historyMap = {};
   rawHistory.forEach(rec => {
     if (rec.round_id) historyMap[Number(rec.round_id)] = rec;
-    if (rec.period) historyMap[`p_${rec.period}`] = rec;
   });
 
   const sanitizedHistory = [];
@@ -173,7 +172,7 @@ export const useGlobalGame = (gameType) => {
       if (periodIdx < 0) break;
       const pStr = ((periodIdx % 999) + 1).toString().padStart(3, '0');
       
-      const existing = historyMap[rId] || historyMap[`p_${pStr}`];
+      const existing = historyMap[rId];
       if (existing) {
         sanitizedHistory.push({
           ...existing,
