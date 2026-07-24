@@ -331,7 +331,7 @@ const Admin = () => {
   const [loginError, setLoginError] = useState('');
   const [activeTab, setActiveTab] = useState('games');
   const globalTimer = useGameTimer(60, 15);
-  const { gameHistories } = useContext(GlobalGameContext);
+  const { gameHistories = {}, gameStates = {} } = useContext(GlobalGameContext) || {};
 
   const [adminSettings, setAdminSettings] = useState({ platform: {}, tasks: {}, vip_levels: [], games: [] });
   const [profitRecords, setProfitRecords] = useState([]);
