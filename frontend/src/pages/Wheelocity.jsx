@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
-  
+  calculateTimerState,
   getOrderBadgeColor, deterministicRandom
 } from '../hooks/useGameTimer';
 import { useGlobalGame } from '../contexts/GlobalGameContext';
@@ -292,7 +292,30 @@ const Wheelocity = () => {
                       <td style={{ color: '#666', fontSize: '0.82rem' }}>{ord.period}</td>
                       <td><div className="rui-select-badge" style={{ background: getSelColor(ord.selection) }}>{ord.selection?.charAt(0)}</div></td>
                       <td>₹{ord.amount}</td>
-                      <td>{ord.status === 'Pending' ? <span style={{ color: '#f59e0b', fontWeight: 700, fontSize: '0.82rem' }}>Pending</span> : ord.status === 'Won' ? <span style={{ color: '#16a34a', fontWeight: 800, fontSize: '0.88rem' }}>▲ +₹{ord.winAmount?.toFixed(2)}</span> : <span style={{ color: '#dc2626', fontWeight: 700, fontSize: '0.88rem' }}>✗ Lost</span>}</td>
+                      <td>
+                        {(() => {
+                          const rawStatus = String(ord.status || '').toLowerCase();
+                          if (rawStatus === 'won') return <span style={{ color: '#16a34a', fontWeight: 800, fontSize: '0.88rem' }}>▲ +₹{(ord.winAmount || parseFloat(ord.amount) * 1.9).toFixed(2)}</span>;
+                          if (rawStatus === 'lost') return <span style={{ color: '#dc2626', fontWeight: 700, fontSize: '0.88rem' }}>✗ Lost</span>;
+                          const settled = (realHistory || []).find(r => 
+                            (r.round_id && ord.round_id && Number(r.round_id) === Number(ord.round_id)) ||
+                            (r.period && String(r.period) === String(ord.period))
+                          );
+                          if (settled) {
+                            const resLabel = String(settled.label || settled.result?.label || '').toLowerCase().trim();
+                            const selLabel = String(ord.selection || '').toLowerCase().trim();
+                            const won = selLabel === resLabel || (selLabel.includes('2') && resLabel.includes('2')) || (selLabel.includes('3') && resLabel.includes('3')) || (selLabel.includes('5') && resLabel.includes('5'));
+                            if (won) {
+                              const multi = MULTIPLIERS[ord.selection] || 1.9;
+                              const winAmt = parseFloat(ord.amount) * multi;
+                              return <span style={{ color: '#16a34a', fontWeight: 800, fontSize: '0.88rem' }}>▲ +₹{winAmt.toFixed(2)}</span>;
+                            } else {
+                              return <span style={{ color: '#dc2626', fontWeight: 700, fontSize: '0.88rem' }}>✗ Lost</span>;
+                            }
+                          }
+                          return <span style={{ color: '#f59e0b', fontWeight: 700, fontSize: '0.82rem' }}>Pending</span>;
+                        })()}
+                      </td>
                     </tr>
                   ))}
             </tbody>

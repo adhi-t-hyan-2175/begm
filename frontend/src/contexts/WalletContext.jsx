@@ -88,9 +88,14 @@ export const WalletProvider = ({ children }) => {
         hydrateOrders();
       }, 500);
     };
+    const pollInterval = setInterval(() => {
+      hydrateWallet();
+      hydrateOrders();
+    }, 3000);
     window.addEventListener('global_period_changed', handlePeriodChange);
     window.addEventListener('global_result_received', handlePeriodChange);
     return () => {
+      clearInterval(pollInterval);
       window.removeEventListener('global_period_changed', handlePeriodChange);
       window.removeEventListener('global_result_received', handlePeriodChange);
     };
