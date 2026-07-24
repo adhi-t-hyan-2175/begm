@@ -15,19 +15,22 @@ const placeBet = async (req, res) => {
   }
 
   try {
-    // 1. Ensure betting phase is strictly open globally
-    const { data: gameState, error: gsError } = await supabase
-      .from('global_game_state')
-      .select('status, period, round_id')
-      .eq('game', game_type)
-      .single();
-      
-    if (gsError || !gameState) {
-      return res.status(400).json({ success: false, error: 'Game state not found' });
-    }
-    
-    // Strict block if round_id mismatch or not in betting phase
-    if (gameState.round_id !== round_id || gameState.status !== 'betting') {
+    // 1. Ensure betting phase is open based on deterministic time calculation (closes after 00:30 countdown)
+    const EPOCH = 1784738400000;
+    const GAME_CONFIGS = {
+      FastParity: { duration: 60, bettingDuration: 30 },
+      Parity: { duration: 180, bettingDuration: 150 },
+      Sapre: { duration: 180, bettingDuration: 150 },
+      Dice: { duration: 60, bettingDuration: 30 },
+      Wheelocity: { duration: 180, bettingDuration: 150 },
+      AndarBahar: { duration: 60, bettingDuration: 30 }
+    };
+    const config = GAME_CONFIGS[game_type] || { duration: 60, bettingDuration: 30 };
+    const elapsedSeconds = Math.max(0, Math.floor((Date.now() - EPOCH) / 1000));
+    const secondsIntoPeriod = elapsedSeconds % config.duration;
+    const isBettingOpen = secondsIntoPeriod < config.bettingDuration;
+
+    if (!isBettingOpen) {
       return res.status(400).json({ success: false, error: 'Betting phase is closed for this period.' });
     }
 
