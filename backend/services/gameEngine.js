@@ -240,6 +240,25 @@ const resolvePeriod = async (gameConfig, period, round_id) => {
     const allBets = (realBets || []).map(o => ({ select: o.selection, point: parseFloat(o.amount) }));
     const totalPool = allBets.reduce((sum, b) => sum + b.point, 0);
 
+    const getMultiplier = (gameType, selection) => {
+      const sel = String(selection || '').toLowerCase().trim();
+      const g = String(gameType || '').toLowerCase().trim();
+      if (g.includes('parity') || g.includes('fastparity') || g.includes('sapre')) {
+        if (sel === 'violet') return 4.5;
+        return 1.9;
+      }
+      if (g.includes('wheelocity')) {
+        if (sel.includes('3')) return 3.0;
+        if (sel.includes('5')) return 5.0;
+        return 1.9;
+      }
+      if (g.includes('dice')) {
+        if (sel === 'tie' || sel === '7') return 4.9;
+        return 1.9;
+      }
+      return 1.9;
+    };
+
     if (adminOverride) {
       const overrideObj = typeof adminOverride === 'string' ? JSON.parse(adminOverride) : adminOverride;
       const outcomes = getPossibleOutcomes(game);
@@ -251,44 +270,40 @@ const resolvePeriod = async (gameConfig, period, round_id) => {
       }
       const base = generateBaseResult(game, round_id);
       finalResult = match ? { ...base, ...match } : { ...base, ...overrideObj };
-      // Calculate profit for admin override
       let payout = 0;
       for (const bet of allBets) {
         if (String(bet.select).toLowerCase().trim() === String(finalResult.label).toLowerCase().trim()) {
-          const multi = multipliersMap[bet.select] || multipliersMap[String(bet.select).toLowerCase().trim()] || 2;
+          const multi = getMultiplier(game, bet.select);
           payout += bet.point * multi;
         }
       }
       maxProfit = totalPool - payout;
     } else {
-      // Calculate Rigged Result
-      if (allBets.length === 0) {
-        finalResult = generateBaseResult(game, round_id);
-        maxProfit = 0;
-      } else {
-        const outcomes = getPossibleOutcomes(game);
-        let bestOutcome = null;
-        
-        for (const outcome of outcomes) {
-          let payout = 0;
-          for (const bet of allBets) {
-            const betSel = String(bet.select).toLowerCase().trim();
-            const outLbl = String(outcome.label).toLowerCase().trim();
-            if (betSel === outLbl) {
-              const multi = multipliersMap[bet.select] || multipliersMap[betSel] || 2;
-              payout += bet.point * multi;
-            }
-          }
-          const profit = totalPool - payout;
-          if (profit > maxProfit) {
-            maxProfit = profit;
-            bestOutcome = outcome;
+      // Calculate AI Winner: STRICTLY pick the outcome that leaves the HIGHEST POOL REMAINING (Maximum House Profit)
+      const outcomes = getPossibleOutcomes(game);
+      let bestOutcome = null;
+      let highestPoolRemaining = -Infinity;
+
+      for (const outcome of outcomes) {
+        let payout = 0;
+        for (const bet of allBets) {
+          const betSel = String(bet.select).toLowerCase().trim();
+          const outLbl = String(outcome.label).toLowerCase().trim();
+          if (betSel === outLbl) {
+            const multi = getMultiplier(game, bet.select);
+            payout += bet.point * multi;
           }
         }
-        
-        const base = generateBaseResult(game, round_id);
-        finalResult = bestOutcome ? { ...base, ...bestOutcome } : base;
+        const poolRemaining = totalPool - payout;
+        if (poolRemaining > highestPoolRemaining) {
+          highestPoolRemaining = poolRemaining;
+          bestOutcome = outcome;
+        }
       }
+      
+      maxProfit = highestPoolRemaining === -Infinity ? 0 : highestPoolRemaining;
+      const base = generateBaseResult(game, round_id);
+      finalResult = bestOutcome ? { ...base, ...bestOutcome } : base;
     }
 
     // 4. Save to game_results safely (prevent overwrite by multiple instances)
@@ -305,7 +320,7 @@ const resolvePeriod = async (gameConfig, period, round_id) => {
       period,
       round_id,
       result: finalResult,
-      is_override: !!adminOverride, // kept for legacy compat if any frontend relies on it
+      is_override: !!adminOverride,
       result_source: adminOverride ? 'Admin' : 'AI',
       locked_at: nowISO,
       profit: maxProfit,
@@ -321,7 +336,7 @@ const resolvePeriod = async (gameConfig, period, round_id) => {
       for (const bet of realBets) {
         try {
           const won = String(bet.selection).toLowerCase().trim() === String(finalResult.label).toLowerCase().trim();
-          const multiplier = multipliersMap[bet.selection] || multipliersMap[String(bet.selection).toLowerCase().trim()] || 2;
+          const multiplier = getMultiplier(game, bet.selection);
           const payoutAmount = won ? parseFloat(bet.amount) * multiplier : 0;
           const betProfit = won ? payoutAmount - parseFloat(bet.amount) : -parseFloat(bet.amount);
           const newStatus = won ? 'won' : 'lost';
@@ -331,20 +346,11 @@ const resolvePeriod = async (gameConfig, period, round_id) => {
           if (won && payoutAmount > 0) {
             // Credit wallet
             const { data: wallet, error: walletErr } = await supabase.from('wallets').select('main_balance').eq('user_id', bet.user_id).single();
-            if (walletErr) throw new Error(`Wallet fetch failed for user ${bet.user_id}: ${walletErr.message}`);
-            
-            if (wallet) {
+            if (!walletErr && wallet) {
               currentBalance = parseFloat(wallet.main_balance || 0);
               const newBalance = currentBalance + payoutAmount;
               
-              const { error: walletUpdateErr } = await supabase.from('wallets').update({ main_balance: newBalance, updated_at: new Date().toISOString() }).eq('user_id', bet.user_id);
-              if (walletUpdateErr) throw new Error(`Wallet update failed: ${walletUpdateErr.message}`);
-              
-              // Verify user exists before inserting transaction
-              const { data: userRow, error: userErr } = await supabase.from('users').select('*').eq('id', bet.user_id).single();
-              if (userErr || !userRow) {
-                throw new Error(`User with id ${bet.user_id} not found. Aborting transaction insert.`);
-              }
+              await supabase.from('wallets').update({ main_balance: newBalance, updated_at: new Date().toISOString() }).eq('user_id', bet.user_id);
               
               const txPayload = {
                 user_id: bet.user_id,
@@ -353,12 +359,7 @@ const resolvePeriod = async (gameConfig, period, round_id) => {
                 status: 'Success',
                 notes: `${game} Period ${period} — Won`
               };
-              const { error: txError } = await supabase.from('transactions').insert(txPayload);
-              if (txError) {
-                logger.error({ game, round_id, user_id: bet.user_id, action: 'Insert Transaction', error: txError.message });
-                throw txError;
-              }
-              
+              await supabase.from('transactions').insert(txPayload);
               currentBalance = newBalance;
             }
           }
@@ -371,11 +372,14 @@ const resolvePeriod = async (gameConfig, period, round_id) => {
             wallet_after: currentBalance
           }).eq('id', bet.id);
           
-          if (betUpdateErr) throw new Error(`Bet update failed: ${betUpdateErr.message}`);
+          if (betUpdateErr) {
+            logger.error({ game, round_id, user_id: bet.user_id, action: 'Update Bet Status', error: betUpdateErr.message });
+          } else {
+            console.log(`[GameEngine] Bet ${bet.id} settled as ${newStatus}. Payout: ${payoutAmount}`);
+          }
 
         } catch (betError) {
           logger.error({ game, round_id, user_id: bet.user_id, action: 'Process Bet Settlement', error: betError.message });
-          // Continue to the next bet even if this one failed
         }
       }
     }
