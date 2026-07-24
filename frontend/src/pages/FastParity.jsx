@@ -154,7 +154,7 @@ const FastParity = () => {
   };
 
   const handleConfirmBet = (selection, amount) => {
-    const activeRoundId = round_id || (period ? Number(period) + 1000000 : Date.now());
+    const activeRoundId = round_id || calculateTimerState(60, 30).round_id;
     setBetModalOpen(false);
     const ok = placeBet(GAME, period, activeRoundId, selection, amount);
     if (!ok) alert('Insufficient balance');

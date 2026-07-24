@@ -215,12 +215,12 @@ const resolvePeriod = async (gameConfig, period, round_id) => {
   logger.info({ game, round_id, action: 'Resolve Period', status: 'Resolving started' });
   
   try {
-    // 1. Fetch real bets for the current round
+    // 1. Fetch real bets for the current round (matching either round_id or period)
     const { data: realBets } = await supabase
       .from('bets')
       .select('*')
       .eq('game_type', game)
-      .eq('round_id', round_id)
+      .or(`round_id.eq.${round_id},period.eq.${period}`)
       .eq('status', 'pending');
 
     // 2. Fetch admin override from global_game_state

@@ -187,7 +187,7 @@ const Wheelocity = () => {
 
   const openBetCard = (sel) => { if (!isBettingOpen) return; setPendingSelection(sel); setBetModalOpen(true); };
   const handleConfirmBet = (selection, amount) => { 
-    const activeRoundId = round_id || (period ? Number(period) + 1000000 : Date.now());
+    const activeRoundId = round_id || calculateTimerState(180, 150).round_id;
     setBetModalOpen(false); 
     if (!placeBet(GAME, period, activeRoundId, selection, amount)) alert('Insufficient balance'); 
   };
