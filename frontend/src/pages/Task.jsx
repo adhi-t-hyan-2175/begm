@@ -14,7 +14,7 @@ const Task = () => {
     const success = await claimTaskReward(taskId);
     if (success) {
       const rewardMap = {
-        'registerEmail': 10,
+        'registerEmail': 300,
         'firstRecharge': 50,
         'fiftyBets': 50,
         'inviteFriend': 50,
@@ -40,7 +40,7 @@ const Task = () => {
       id: 'registerEmail',
       title: 'Register with Google',
       desc: 'Create an account using your Google account',
-      reward: 10,
+      reward: 300,
       icon: <Gift size={24} />,
       iconBg: '#fbad3c'
     },

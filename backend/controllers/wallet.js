@@ -302,7 +302,7 @@ async function claimTask(req, res) {
     
     // Define task rewards
     const tasks = {
-      'registerEmail': { reward: 10, title: 'Register with Google' },
+      'registerEmail': { reward: 300, title: 'Register with Google' },
       'firstRecharge': { reward: 50, title: 'First Recharge' },
       'fiftyBets': { reward: 50, title: '50 Bets Milestone' },
       'inviteFriend': { reward: 50, title: 'Invite Friend' },
