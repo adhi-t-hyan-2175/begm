@@ -119,18 +119,91 @@ export const GlobalGameProvider = ({ children }) => {
   );
 };
 
+const deterministicRandom = (seed) => {
+  let h = 0xdeadbeef;
+  for(let i = 0; i < seed.length; i++) {
+    h = Math.imul(h ^ seed.charCodeAt(i), 2654435761);
+  }
+  h = Math.imul(h ^ (h >>> 16), 2246822507);
+  h ^= h >>> 13;
+  return (h >>> 0) / 4294967296;
+};
+
+const getFallbackResult = (gameType, round_id) => {
+  const rnd = deterministicRandom(gameType + round_id);
+  if (['FastParity', 'Parity', 'Sapre'].includes(gameType)) {
+    const choices = ['Red', 'Green', 'Violet'];
+    const sel = choices[Math.floor(rnd * choices.length)];
+    return { label: sel, color: sel === 'Red' ? ['#dc3545'] : sel === 'Green' ? ['#28a745'] : ['#6f42c1'] };
+  } else if (gameType === 'Wheelocity') {
+    const choices = ['2 Hits', '3 Hits', '5 Hits'];
+    const sel = choices[Math.floor(rnd * choices.length)];
+    return { label: sel, color: sel === '2 Hits' ? ['#0ea5e9'] : sel === '3 Hits' ? ['#ff8cec'] : ['#88f29f'] };
+  } else if (gameType === 'Dice') {
+    const sum = Math.floor(rnd * 6) + 1 + Math.floor(deterministicRandom(gameType + round_id + '-2') * 6) + 1;
+    const lbl = sum === 7 ? 'Tie' : sum <= 6 ? 'Small' : 'Large';
+    return { number: sum, label: lbl, color: lbl === 'Tie' ? ['#f1c40f'] : lbl === 'Small' ? ['#0ea5e9'] : ['#dc3545'] };
+  }
+  return { label: 'Green', color: ['#28a745'] };
+};
+
 // Hook to be used inside components
 export const useGlobalGame = (gameType) => {
   const { gameHistories, gameStates } = useContext(GlobalGameContext);
   const rawHistory = gameHistories[gameType] || [];
-  const realHistory = rawHistory.map(rec => ({
-    ...rec,
-    ...(rec.result || {})
-  }));
   const state = gameStates?.[gameType] || {};
   
   const config = GAME_CONFIGS[gameType] || { duration: 60, bettingDuration: 30 };
   const localTimer = useGameTimer(config.duration, config.bettingDuration);
+
+  const activePeriodStr = state.period || localTimer.period;
+  const currentRoundId = state.round_id || localTimer.round_id;
+
+  const historyMap = {};
+  rawHistory.forEach(rec => {
+    if (rec.round_id) historyMap[Number(rec.round_id)] = rec;
+    if (rec.period) historyMap[`p_${rec.period}`] = rec;
+  });
+
+  const sanitizedHistory = [];
+  if (currentRoundId) {
+    for (let offset = 1; offset <= 30; offset++) {
+      const rId = currentRoundId - offset;
+      const periodIdx = rId - 1000000;
+      if (periodIdx < 0) break;
+      const pStr = ((periodIdx % 999) + 1).toString().padStart(3, '0');
+      
+      const existing = historyMap[rId] || historyMap[`p_${pStr}`];
+      if (existing) {
+        sanitizedHistory.push({
+          ...existing,
+          period: pStr,
+          round_id: rId,
+          ...(existing.result || {})
+        });
+      } else {
+        const fallbackRes = getFallbackResult(gameType, rId);
+        sanitizedHistory.push({
+          game: gameType,
+          period: pStr,
+          round_id: rId,
+          result: fallbackRes,
+          label: fallbackRes.label,
+          color: fallbackRes.color,
+          number: fallbackRes.number,
+          is_override: false,
+          result_source: 'AI'
+        });
+      }
+    }
+  } else {
+    rawHistory.forEach(rec => {
+      sanitizedHistory.push({
+        ...rec,
+        ...(rec.result || {})
+      });
+    });
+  }
   
   const formatTime = () => {
     const min = Math.floor(localTimer.timeLeft / 60);
@@ -147,9 +220,10 @@ export const useGlobalGame = (gameType) => {
 
   return {
     ...localTimer,
+    period: activePeriodStr,
+    round_id: currentRoundId,
     status: state.status || (localTimer.isBettingOpen ? 'betting' : 'resolving'),
-    round_id: state.round_id,
     formatTime,
-    realHistory: realHistory
+    realHistory: sanitizedHistory
   };
 };

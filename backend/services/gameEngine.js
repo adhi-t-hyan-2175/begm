@@ -57,6 +57,7 @@ const initializeState = async () => {
   const now = Date.now();
   for (const config of gameConfigs) {
     const state = calculateTimerState(config.totalDuration, config.bettingDuration, now);
+    await backfillMissingPeriods(config, state.round_id);
     const currentStatus = state.isBettingOpen ? 'betting' : 'resolving';
     try {
       await supabase.from('global_game_state').upsert({
@@ -151,6 +152,59 @@ const generateBaseResult = (gameType, round_id) => {
   }
   
   return result;
+};
+
+const backfillMissingPeriods = async (config, currentRoundId) => {
+  try {
+    const game = config.game;
+    const { data: latest } = await supabase
+      .from('game_results')
+      .select('round_id')
+      .eq('game', game)
+      .order('round_id', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    let startRound = latest?.round_id ? Number(latest.round_id) + 1 : currentRoundId - 50;
+    if (startRound >= currentRoundId) return;
+
+    if (currentRoundId - startRound > 100) {
+      startRound = currentRoundId - 100;
+    }
+
+    const missing = [];
+    for (let r = startRound; r < currentRoundId; r++) {
+      const periodIdx = r - 1000000;
+      if (periodIdx < 0) continue;
+      const periodStr = formatPeriodIndex(periodIdx);
+      const resultObj = generateBaseResult(game, r);
+      const periodEndTimeMs = EPOCH + (periodIdx * config.totalDuration * 1000) + (config.totalDuration * 1000);
+      const createdISO = new Date(periodEndTimeMs).toISOString();
+
+      missing.push({
+        game,
+        period: periodStr,
+        round_id: r,
+        result: resultObj,
+        is_override: false,
+        result_source: 'AI',
+        locked_at: createdISO,
+        profit: 0,
+        total_bets: 0,
+        created_at: createdISO
+      });
+    }
+
+    if (missing.length > 0) {
+      for (let i = 0; i < missing.length; i += 50) {
+        const batch = missing.slice(i, i + 50);
+        await supabase.from('game_results').upsert(batch, { onConflict: 'game,period' });
+      }
+      logger.info({ game, count: missing.length, action: 'Backfill Periods', status: 'Successfully backfilled missing periods' });
+    }
+  } catch (err) {
+    logger.error({ game: config.game, action: 'Backfill Error', error: err.message });
+  }
 };
 
 
@@ -366,6 +420,8 @@ const tick = async () => {
       lastStateMap[game] = stateKey;
       
       if (currentStatus === 'betting') {
+        // Auto-backfill any missed periods before starting new period
+        await backfillMissingPeriods(config, state.round_id);
         // Start of a new betting phase (new period). Upsert safely.
         await supabase.from('global_game_state').upsert({
           game,

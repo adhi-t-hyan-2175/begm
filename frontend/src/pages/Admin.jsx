@@ -551,6 +551,11 @@ const Admin = () => {
 
   const getSelectedWinner = (gameKey) => {
     try {
+      const dbOverride = gameStates?.[gameKey]?.admin_override;
+      if (dbOverride) {
+        const parsed = typeof dbOverride === 'string' ? JSON.parse(dbOverride) : dbOverride;
+        return parsed.label || parsed.result || (typeof parsed === 'string' ? parsed : null);
+      }
       if (adminSettings?.forced_game_result) {
         const forced = JSON.parse(adminSettings.forced_game_result);
         if (forced.gameType === gameKey && Date.now() - forced.timestamp < 120000) {
@@ -563,16 +568,20 @@ const Admin = () => {
 
   const setSelectedWinner = async (gameKey, period, winner, round_id) => {
     try {
+      const activeRoundId = round_id || gameStates?.[gameKey]?.round_id;
       const res = await fetch(`${API_BASE}/api/admin/set-game-result`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sessionStorage.getItem('admin_token')}` },
-        body: JSON.stringify({ gameType: gameKey, result: winner, round_id })
+        body: JSON.stringify({ gameType: gameKey, result: winner, round_id: activeRoundId })
       });
-      if (res.ok) {
+      const data = await res.json();
+      if (res.ok && data.success) {
         setAdminSettings(prev => ({
           ...prev,
           forced_game_result: JSON.stringify({ gameType: gameKey, result: winner, timestamp: Date.now() })
         }));
+      } else {
+        alert(data.error || 'Failed to set admin winner selection');
       }
     } catch (e) {
       console.error(e);
@@ -581,16 +590,20 @@ const Admin = () => {
 
   const clearSelectedWinner = async (gameKey, period, round_id) => {
     try {
+      const activeRoundId = round_id || gameStates?.[gameKey]?.round_id;
       const res = await fetch(`${API_BASE}/api/admin/set-game-result`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sessionStorage.getItem('admin_token')}` },
-        body: JSON.stringify({ gameType: gameKey, result: null, round_id })
+        body: JSON.stringify({ gameType: gameKey, result: null, round_id: activeRoundId })
       });
-      if (res.ok) {
+      const data = await res.json();
+      if (res.ok && data.success) {
         setAdminSettings(prev => ({
           ...prev,
           forced_game_result: JSON.stringify({ gameType: gameKey, result: null, timestamp: Date.now() })
         }));
+      } else {
+        alert(data.error || 'Failed to clear winner selection');
       }
     } catch (e) {
       console.error(e);
@@ -1034,7 +1047,14 @@ const Admin = () => {
               </p>
             </div>
             {gameConfigs.map(game => {
-              const timerState = timerStates[game.key] || calculateTimerState(game.duration, game.bettingDuration);
+              const dbState = gameStates?.[game.key] || {};
+              const calcState = calculateTimerState(game.duration, game.bettingDuration);
+              const timerState = {
+                ...calcState,
+                period: dbState.period || calcState.period,
+                round_id: dbState.round_id || calcState.round_id,
+                status: dbState.status || (calcState.isBettingOpen ? 'betting' : 'resolving')
+              };
               let liveBets = getGlobalLiveBetStats(game.key, timerState.period);
               const selectedWinner = getSelectedWinner(game.key);
               

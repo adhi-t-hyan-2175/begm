@@ -222,9 +222,7 @@ export const calculateTimerState = (totalDuration = 60, bettingDuration = 15, no
   const isBettingOpen = secondsIntoCurrentBlock < bettingDuration;
   
   const period = formatPeriodIndex(elapsedPeriods);
-  const previousPeriod = formatPeriodIndex(Math.max(0, elapsedPeriods - 1));
-  const nextPeriod = formatPeriodIndex(elapsedPeriods + 1);
-  const secondsIntoPeriod = secondsIntoCurrentBlock;
+  const round_id = elapsedPeriods + 1000000;
   
-  return { timeLeft, isBettingOpen, period, previousPeriod, nextPeriod, secondsIntoPeriod };
+  return { timeLeft, isBettingOpen, period, round_id, previousPeriod, nextPeriod, secondsIntoPeriod };
 };
