@@ -52,7 +52,22 @@ export const GlobalGameProvider = ({ children }) => {
         setGameHistories(hists);
       }
     };
+    fetchStates();
     fetchHistories();
+
+    // 3-second background polling to guarantee fresh game history even if WebSocket drops
+    const pollInterval = setInterval(() => {
+      fetchStates();
+      fetchHistories();
+    }, 3000);
+
+    const handleSyncTrigger = () => {
+      fetchStates();
+      fetchHistories();
+    };
+
+    window.addEventListener('global_period_changed', handleSyncTrigger);
+    window.addEventListener('global_result_received', handleSyncTrigger);
 
     const subscription = supabase
       .channel('global-game:state')
@@ -107,6 +122,9 @@ export const GlobalGameProvider = ({ children }) => {
       .subscribe();
 
     return () => {
+      clearInterval(pollInterval);
+      window.removeEventListener('global_period_changed', handleSyncTrigger);
+      window.removeEventListener('global_result_received', handleSyncTrigger);
       supabase.removeChannel(subscription);
       supabase.removeChannel(historySub);
     };
