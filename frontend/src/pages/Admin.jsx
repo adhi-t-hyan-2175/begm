@@ -121,7 +121,7 @@ const AdminGameCard = ({ game, timerState, liveBets, selectedWinner, actualWinne
   };
 
   let projectedWinner = actualWinner || selectedWinner;
-  if (!timerState.isBettingOpen && !projectedWinner) {
+  if (!projectedWinner) {
     if (liveBets.total > 0) {
       let maxRemaining = -Infinity;
       displayOptions.forEach(opt => {

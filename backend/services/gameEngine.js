@@ -279,31 +279,43 @@ const resolvePeriod = async (gameConfig, period, round_id) => {
       }
       maxProfit = totalPool - payout;
     } else {
-      // Calculate AI Winner: STRICTLY pick the outcome that leaves the HIGHEST POOL REMAINING (Maximum House Profit)
       const outcomes = getPossibleOutcomes(game);
-      let bestOutcome = null;
-      let highestPoolRemaining = -Infinity;
+      if (allBets.length === 0 || totalPool === 0) {
+        // If 0 bets placed in this period: pick a RANDOM outcome so colors/options are randomly distributed
+        const rnd = deterministicRandom(game + round_id);
+        const randomOutcome = outcomes[Math.floor(rnd * outcomes.length)];
+        const base = generateBaseResult(game, round_id);
+        finalResult = { ...base, ...randomOutcome };
+        maxProfit = 0;
+      } else {
+        // If bets placed: STRICTLY pick the outcome that leaves the HIGHEST POOL REMAINING (Maximum House Profit)
+        let maxRemaining = -Infinity;
+        let bestOutcomes = [];
 
-      for (const outcome of outcomes) {
-        let payout = 0;
-        for (const bet of allBets) {
-          const betSel = String(bet.select).toLowerCase().trim();
-          const outLbl = String(outcome.label).toLowerCase().trim();
-          if (betSel === outLbl) {
-            const multi = getMultiplier(game, bet.select);
-            payout += bet.point * multi;
+        for (const outcome of outcomes) {
+          let payout = 0;
+          for (const bet of allBets) {
+            const betSel = String(bet.select).toLowerCase().trim();
+            const outLbl = String(outcome.label).toLowerCase().trim();
+            if (betSel === outLbl) {
+              const multi = getMultiplier(game, bet.select);
+              payout += bet.point * multi;
+            }
+          }
+          const poolRemaining = totalPool - payout;
+          if (poolRemaining > maxRemaining) {
+            maxRemaining = poolRemaining;
+            bestOutcomes = [outcome];
+          } else if (poolRemaining === maxRemaining) {
+            bestOutcomes.push(outcome);
           }
         }
-        const poolRemaining = totalPool - payout;
-        if (poolRemaining > highestPoolRemaining) {
-          highestPoolRemaining = poolRemaining;
-          bestOutcome = outcome;
-        }
+
+        const selectedOutcome = bestOutcomes[0] || outcomes[0];
+        maxProfit = maxRemaining;
+        const base = generateBaseResult(game, round_id);
+        finalResult = { ...base, ...selectedOutcome };
       }
-      
-      maxProfit = highestPoolRemaining === -Infinity ? 0 : highestPoolRemaining;
-      const base = generateBaseResult(game, round_id);
-      finalResult = bestOutcome ? { ...base, ...bestOutcome } : base;
     }
 
     // 4. Save to game_results safely (prevent overwrite by multiple instances)
