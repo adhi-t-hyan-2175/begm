@@ -141,59 +141,55 @@ const Wheelocity = () => {
 
   const REVEAL_ANIMATION_MS = 4000;
 
-  useEffect(() => {
-    // We only trigger when entering 'revealing' phase exactly once per round_id
-    if (status === 'revealing' && settledRef.current !== round_id) {
-      // The result must already be in memory from Supabase realtime
-      const resultObj = realHistory.find(r => r.round_id === round_id);
-      if (!resultObj) return; // Wait for realtime event to deliver the result
+  const shownResultsRef = useRef(new Set());
 
-      settledRef.current = round_id;
-      
-      // Calculate ResultCard payout strictly based on DB winner
-      const myCurrentBets = myOrders.filter(o => o.game === GAME && o.round_id === round_id);
-      if (myCurrentBets.length > 0) {
-        const totalBet = myCurrentBets.reduce((sum, b) => sum + parseFloat(b.amount), 0);
-        
+  useEffect(() => {
+    if (!myOrders || myOrders.length === 0 || !realHistory || realHistory.length === 0) return;
+
+    const myGameBets = myOrders.filter(o => o.game === GAME);
+    if (myGameBets.length === 0) return;
+
+    for (const bet of myGameBets) {
+      const betKey = `${bet.id || bet.round_id || bet.period}-${bet.selection}`;
+      if (shownResultsRef.current.has(betKey)) continue;
+
+      const resultObj = realHistory.find(r => 
+        (r.round_id && bet.round_id && Number(r.round_id) === Number(bet.round_id)) ||
+        (r.period && String(r.period) === String(bet.period))
+      );
+
+      if (resultObj) {
+        shownResultsRef.current.add(betKey);
+
         const resultLabel = resultObj.label || resultObj.result?.label || 'Unknown';
-        
-        let totalWin = 0;
-        myCurrentBets.forEach(b => {
-          const betSel = String(b.selection).toLowerCase().trim();
-          const resSel = String(resultLabel).toLowerCase().trim();
-          if (betSel === resSel) {
-            const multiplier = betSel === 'green' ? 50 : betSel === 'blue' ? 5 : betSel === 'red' ? 3 : 2;
-            totalWin += parseFloat(b.amount) * multiplier;
-          }
+        const betSel = String(bet.selection).toLowerCase().trim();
+        const resSel = String(resultLabel).toLowerCase().trim();
+
+        const multiplier = betSel === 'green' ? 50 : betSel === 'blue' ? 5 : betSel === 'red' ? 3 : 2;
+        const won = (betSel === resSel);
+        const winAmount = won ? parseFloat(bet.amount) * multiplier : 0;
+
+        setResultCard({
+          won,
+          period: bet.period || resultObj.period,
+          game: GAME,
+          selection: bet.selection,
+          selectionColor: getSelColor(bet.selection),
+          resultLabel,
+          resultColor: getSelColor(resultLabel),
+          betAmount: parseFloat(bet.amount),
+          winAmount: winAmount > 0 ? winAmount : 0,
         });
-        
-        const won = totalWin > 0;
-        const uniqueSelections = [...new Set(myCurrentBets.map(b => b.selection))];
-        const selectionStr = uniqueSelections.join(' + ');
-        
-        // Wait for the reveal spin to finish before popping up
-        setTimeout(() => {
-          setResultCard({
-            won,
-            period: period,
-            game: GAME,
-            selection: selectionStr,
-            selectionColor: uniqueSelections.length > 1 ? '#555' : getSelColor(selectionStr),
-            resultLabel,
-            resultColor: getSelColor(resultLabel),
-            betAmount: totalBet,
-            winAmount: totalWin > 0 ? totalWin : 0,
-          });
-        }, REVEAL_ANIMATION_MS);
+        break;
       }
     }
-  }, [status, round_id, realHistory, myOrders, period]);
+  }, [realHistory, myOrders]);
 
   const openBetCard = (sel) => { if (!isBettingOpen) return; setPendingSelection(sel); setBetModalOpen(true); };
   const handleConfirmBet = (selection, amount) => { 
-    if (!round_id) { alert('Connecting to server...'); return; }
+    const activeRoundId = round_id || (period ? Number(period) + 1000000 : Date.now());
     setBetModalOpen(false); 
-    if (!placeBet(GAME, period, round_id, selection, amount)) alert('Insufficient balance'); 
+    if (!placeBet(GAME, period, activeRoundId, selection, amount)) alert('Insufficient balance'); 
   };
 
   const myActiveBets = myOrders.filter(o => o.game === GAME && o.round_id === round_id);

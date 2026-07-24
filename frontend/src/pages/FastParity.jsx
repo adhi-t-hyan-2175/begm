@@ -103,59 +103,49 @@ const FastParity = () => {
   // ─── Phase 6: Sync Frontend Reveal from Database ───────────────
   const REVEAL_ANIMATION_MS = 4000;
 
+  const shownResultsRef = useRef(new Set());
+
   useEffect(() => {
-    // We only trigger when entering 'revealing' phase exactly once per round_id
-    if (status === 'revealing' && settledRef.current !== round_id) {
-      // The result must already be in memory from Supabase realtime
-      const resultObj = realHistory.find(r => r.round_id === round_id);
-      if (!resultObj) {
-        // Wait for realtime event to deliver the result
-        return;
+    if (!myOrders || myOrders.length === 0 || !realHistory || realHistory.length === 0) return;
+
+    const myGameBets = myOrders.filter(o => o.game === GAME);
+    if (myGameBets.length === 0) return;
+
+    for (const bet of myGameBets) {
+      const betKey = `${bet.id || bet.round_id || bet.period}-${bet.selection}`;
+      if (shownResultsRef.current.has(betKey)) continue;
+
+      const resultObj = realHistory.find(r => 
+        (r.round_id && bet.round_id && Number(r.round_id) === Number(bet.round_id)) ||
+        (r.period && String(r.period) === String(bet.period))
+      );
+
+      if (resultObj) {
+        shownResultsRef.current.add(betKey);
+
+        const resultLabel = resultObj.label || resultObj.result?.label || 'Unknown';
+        const betSel = String(bet.selection).toLowerCase().trim();
+        const resSel = String(resultLabel).toLowerCase().trim();
+
+        const multiplier = betSel === 'violet' ? 4.5 : 1.9;
+        const won = (betSel === resSel);
+        const winAmount = won ? parseFloat(bet.amount) * multiplier : 0;
+
+        setResultCard({
+          won,
+          period: bet.period || resultObj.period,
+          game: GAME,
+          selection: bet.selection,
+          selectionColor: getSelColor(bet.selection),
+          resultLabel,
+          resultColor: getSelColor(resultLabel),
+          betAmount: parseFloat(bet.amount),
+          winAmount: winAmount > 0 ? winAmount : 0,
+        });
+        break;
       }
-
-      settledRef.current = round_id;
-
-      setIsRevealing(true);
-
-      setTimeout(() => {
-        setIsRevealing(false);
-
-        // Calculate ResultCard payout strictly based on DB winner
-        const myCurrentBets = myOrders.filter(o => o.game === GAME && o.round_id === round_id);
-        if (myCurrentBets.length > 0) {
-          const totalBet = myCurrentBets.reduce((sum, b) => sum + parseFloat(b.amount), 0);
-          
-          const resultLabel = resultObj.label || resultObj.result?.label || 'Unknown';
-          
-          let totalWin = 0;
-          myCurrentBets.forEach(b => {
-            const betSel = String(b.selection).toLowerCase().trim();
-            const resSel = String(resultLabel).toLowerCase().trim();
-            if (betSel === resSel) {
-              const multiplier = betSel === 'violet' ? 4.5 : 1.9;
-              totalWin += parseFloat(b.amount) * multiplier;
-            }
-          });
-          
-          const won = totalWin > 0;
-          const uniqueSelections = [...new Set(myCurrentBets.map(b => b.selection))];
-          const selectionStr = uniqueSelections.join(' + ');
-          
-          setResultCard({
-            won,
-            period: period,
-            game: GAME,
-            selection: selectionStr,
-            selectionColor: uniqueSelections.length > 1 ? '#555' : getSelColor(selectionStr),
-            resultLabel,
-            resultColor: getSelColor(resultLabel),
-            betAmount: totalBet,
-            winAmount: totalWin > 0 ? totalWin : 0,
-          });
-        }
-      }, REVEAL_ANIMATION_MS);
     }
-  }, [status, round_id, realHistory, myOrders, period]);
+  }, [realHistory, myOrders]);
 
   const openBetCard = (sel) => {
     if (!isBettingOpen) return;
@@ -164,12 +154,9 @@ const FastParity = () => {
   };
 
   const handleConfirmBet = (selection, amount) => {
-    if (!round_id) {
-      alert('Connecting to game server... please wait.');
-      return;
-    }
+    const activeRoundId = round_id || (period ? Number(period) + 1000000 : Date.now());
     setBetModalOpen(false);
-    const ok = placeBet(GAME, period, round_id, selection, amount);
+    const ok = placeBet(GAME, period, activeRoundId, selection, amount);
     if (!ok) alert('Insufficient balance');
   };
 
