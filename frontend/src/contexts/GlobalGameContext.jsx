@@ -176,22 +176,22 @@ export const useGlobalGame = (gameType) => {
       if (existing) {
         sanitizedHistory.push({
           ...existing,
+          ...(existing.result || {}),
           period: pStr,
-          round_id: rId,
-          ...(existing.result || {})
+          round_id: rId
         });
       } else {
         const fallbackRes = getFallbackResult(gameType, rId);
         sanitizedHistory.push({
           game: gameType,
-          period: pStr,
-          round_id: rId,
           result: fallbackRes,
           label: fallbackRes.label,
           color: fallbackRes.color,
           number: fallbackRes.number,
           is_override: false,
-          result_source: 'AI'
+          result_source: 'AI',
+          period: pStr,
+          round_id: rId
         });
       }
     }
